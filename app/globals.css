@@ -50,3 +50,7 @@ button {
   outline: 3px solid var(--ink);
   outline-offset: 2px;
 }
+
+[id] {
+  scroll-margin-top: 84px;
+}

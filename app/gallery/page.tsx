@@ -104,10 +104,8 @@ export default function GalleryPage() {
           <p className={styles.body}>No public media is available yet. Private media is hidden until reveal.</p>
         </div>
       ) : (
-        <div style={{ columns: 2, columnGap: 8 }}>
-          {shown.map((it, i) =>
-            cell(it, i, { width: "100%", display: "block", marginBottom: 8, height: i % 3 === 0 ? 200 : 125 }),
-          )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoRows: 125, gap: 8, gridAutoFlow: "dense" }}>
+          {shown.map((it, i) => cell(it, i, { width: "100%", height: "100%", gridRow: i % 3 === 0 ? "span 2" : "span 1" }))}
         </div>
       )}
 
@@ -130,7 +128,7 @@ export default function GalleryPage() {
       </div>
 
       <p className={styles.body} style={{ lineHeight: 1.4 }}>
-        {msg || `2 new videos · ${processing} uploads processing · private media hidden until reveal`}
+        {msg || `2 new videos · ${processing} upload${processing === 1 ? "" : "s"} processing · private media hidden until reveal`}
       </p>
 
       {viewer !== null && shown[viewer] && (

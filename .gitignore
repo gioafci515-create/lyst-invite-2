@@ -42,3 +42,6 @@ next-env.d.ts
 
 # rsvp data
 /data/
+
+# local screenshots
+/shots/

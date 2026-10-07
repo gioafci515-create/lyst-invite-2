@@ -170,57 +170,6 @@
   letter-spacing: -2px;
   margin-top: 10px;
 }
-.gallery {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-.gallery > div {
-  flex: 1;
-  min-width: 0;
-  height: 420px;
-  position: relative;
-  overflow: hidden;
-}
-.gallery > div:nth-child(2) {
-  height: 520px;
-}
-.gallery img,
-.storyImg img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.storyImg {
-  display: none;
-  height: 280px;
-}
-.storyboard {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--ink);
-  padding: 14px 0;
-  min-height: 44px;
-  font-size: 14px;
-}
-.storyboard .label {
-  letter-spacing: 1.3px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.dots {
-  color: var(--red-text);
-  display: flex;
-  gap: 14px;
-}
-.dot {
-  background: none;
-  border: 0;
-  color: inherit;
-  padding: 0 2px;
-}
 
 /* Info cards */
 .info {
@@ -561,19 +510,6 @@
   }
   .h2 {
     font-size: 34px;
-  }
-  .gallery {
-    display: none;
-  }
-  .storyImg {
-    display: block;
-  }
-  .storyboard {
-    border: 0;
-    padding: 0;
-    flex-direction: column;
-    font-size: 14px;
-    letter-spacing: 1.1px;
   }
   .programme {
     gap: 24px;

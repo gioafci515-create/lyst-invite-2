@@ -64,7 +64,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 14px;
+  font-size: 12px;
   text-align: center;
   color: var(--muted);
 }
@@ -80,11 +80,6 @@
 }
 .stepLabel {
   overflow-wrap: anywhere;
-}
-@media (max-width: 380px) {
-  .step {
-    font-size: 12px;
-  }
 }
 
 .primary {

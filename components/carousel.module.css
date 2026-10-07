@@ -1,0 +1,152 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.viewport {
+  position: relative;
+}
+.track {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  height: 520px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+  user-select: none;
+}
+.track::-webkit-scrollbar {
+  display: none;
+}
+.track:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+}
+.dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+}
+.slide {
+  position: relative;
+  flex: 0 0 calc((100% - 32px) / 3);
+  height: 420px;
+  margin: 0;
+  overflow: hidden;
+  scroll-snap-align: start;
+  background: var(--ink);
+}
+.slide[data-tall="true"] {
+  height: 520px;
+}
+.slide img {
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.cursor {
+  position: absolute;
+  z-index: 2;
+  transform: translate(14px, 14px);
+  background: var(--ink);
+  color: var(--acid);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cursorActive {
+  background: var(--red);
+  color: var(--ink);
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  padding: 4px 0;
+  min-height: 52px;
+  font-size: 14px;
+}
+.label {
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--red-text);
+}
+.dots {
+  display: flex;
+}
+.dot,
+.arrow {
+  background: none;
+  border: 0;
+  color: inherit;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.arrow {
+  color: var(--ink);
+  font-size: 18px;
+}
+.arrow:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--cream);
+}
+.arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .wrap {
+    gap: 24px;
+  }
+  .track {
+    height: 280px;
+    cursor: auto;
+  }
+  .slide,
+  .slide[data-tall="true"] {
+    flex-basis: 85%;
+    height: 280px;
+  }
+  .cursor {
+    display: none;
+  }
+  .bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    border: 0;
+    padding: 0;
+  }
+  .label {
+    letter-spacing: 1.1px;
+  }
+}
+@media (hover: none) {
+  .cursor {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    scroll-behavior: auto;
+  }
+}

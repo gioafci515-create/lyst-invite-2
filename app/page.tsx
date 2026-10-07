@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import Carousel from "@/components/Carousel";
 import styles from "./page.module.css";
 
 const SCHEDULE = [
@@ -11,7 +12,12 @@ const SCHEDULE = [
   ["23:40", "Edition zero leaves press"],
 ];
 
-const GALLERY = ["/images/gallery1.png", "/images/gallery2.png", "/images/gallery3.png"];
+const SCENES = [
+  { src: "/images/gallery1.png", alt: "Torn brutalist typography poster pasted on concrete" },
+  { src: "/images/gallery2.png", alt: "Dancer in red walking over projected letters" },
+  { src: "/images/gallery3.png", alt: "Audience seated in the former print works" },
+  { src: "/images/story-mobile.png", alt: "Performers in front of projected type" },
+];
 
 function Arrow({ src, size }: { src: string; size: number }) {
   return <Image src={src} alt="" width={size} height={size} aria-hidden />;
@@ -51,7 +57,6 @@ export default function Page() {
       setSending(false);
     }
   }
-  const [scene, setScene] = useState(0);
 
   return (
     <main>
@@ -98,32 +103,7 @@ export default function Page() {
           <p className={styles.eyebrow}>The invitation, in scenes</p>
           <h2 className={styles.h2}>A visual language made for this moment.</h2>
         </div>
-        <div className={styles.gallery}>
-          {GALLERY.map((src, i) => (
-            <div key={src} style={{ opacity: scene === i ? 1 : 0.75 }}>
-              <Image src={src} alt="" fill sizes="33vw" style={{ objectFit: "cover" }} />
-            </div>
-          ))}
-        </div>
-        <div className={styles.storyImg} style={{ position: "relative" }}>
-          <Image src="/images/story-mobile.png" alt="" fill sizes="100vw" style={{ objectFit: "cover" }} />
-        </div>
-        <div className={styles.storyboard}>
-          <p className={styles.label}>Scroll sideways / cursor becomes annotation</p>
-          <div className={styles.dots} role="group" aria-label="Scenes">
-            {[0, 1, 2, 3].map((i) => (
-              <button
-                key={i}
-                className={styles.dot}
-                aria-label={`Scene ${i + 1}`}
-                aria-pressed={scene === i}
-                onClick={() => setScene(i)}
-              >
-                {scene === i ? "●" : "○"}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Carousel slides={SCENES} label="The invitation, in scenes" />
       </section>
 
       <section id="programme" className={styles.programme}>
