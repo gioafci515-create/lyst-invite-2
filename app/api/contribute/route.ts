@@ -1,4 +1,4 @@
-import { addContribution, MAX_FILE, TYPES, type ContribType } from "@/lib/contrib";
+import { addContribution, hasVoted, MAX_FILE, TYPES, type ContribType } from "@/lib/contrib";
 
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const FILE_OK = /^(audio|video|image)\//;
@@ -36,6 +36,16 @@ export async function POST(req: Request) {
 
   if (!text && !file && !Object.keys(meta).length) {
     return Response.json({ error: "Nothing to submit." }, { status: 400 });
+  }
+
+  // one poll vote per voter id per question
+  if (type === "poll") {
+    if (!meta.voter || !meta.question || !meta.choice) {
+      return Response.json({ error: "Invalid vote." }, { status: 400 });
+    }
+    if (await hasVoted(meta.voter, meta.question)) {
+      return Response.json({ error: "You have already voted." }, { status: 409 });
+    }
   }
 
   await addContribution({ type, name, text, meta }, file);

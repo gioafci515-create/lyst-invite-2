@@ -5,26 +5,43 @@ import { useEffect, useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { getGuest, submitContribution } from "@/lib/submit";
+import { useLive, voterId } from "@/lib/useLive";
 
-const SONGS = [
-  { id: "place", label: "This Must Be the Place", votes: 46 },
-  { id: "carvings", label: "Lovers' Carvings", votes: 32 },
-  { id: "other", label: "Something else", votes: 22 },
-];
+const lsGet = (k: string) => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const lsSet = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {}
+};
 
 export default function InteractPage() {
   const photo = useRef<HTMLInputElement>(null);
+  const { live, refresh } = useLive(10000);
   const [named, setNamed] = useState(true);
   const [guestName, setGuestName] = useState("");
   const [letter, setLetter] = useState("");
   const [question, setQuestion] = useState("");
   const [showLater, setShowLater] = useState(true);
-  const [done, setDone] = useState(3);
-  const [voted, setVoted] = useState<string | null>(null);
+  const [done, setDone] = useState(0);
+  const [votedFor, setVotedFor] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const pollKey = live ? `lyst_vote:${live.poll.question}` : "";
+  const challengeKey = live ? `lyst_challenge:${live.challenge.prompt}` : "";
+
   useEffect(() => setGuestName(getGuest().name), []);
+  useEffect(() => {
+    if (!live) return;
+    setVotedFor(lsGet(pollKey));
+    setDone(Number(lsGet(challengeKey) ?? 0));
+  }, [live?.poll.question, live?.challenge.prompt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const who = named ? guestName || "Guest" : "Anonymous";
 
@@ -36,6 +53,7 @@ export default function InteractPage() {
       setNotice(ok);
       after?.();
     } else setNotice(res.error);
+    return res.ok;
   }
 
   const sendLetter = () =>
@@ -46,28 +64,57 @@ export default function InteractPage() {
     question.trim()
       ? post({ type: "question", text: question, meta: { reveal: showLater ? "later" : "now" } }, "Question sent to the hosts.", () => setQuestion(""))
       : setNotice("Write your question first.");
-  const vote = (id: string) =>
-    !voted && post({ type: "poll", meta: { question: "Which song should close the night?", choice: id } }, "Vote counted.", () => setVoted(id));
-  const sendPhoto = (f?: File) =>
-    f && post({ type: "challenge", file: f, meta: { challenge: "Hidden moments" } }, "Photo submitted to the challenge.", () => setDone((d) => Math.min(4, d + 1)));
 
-  const total = SONGS.reduce((n, s) => n + s.votes, 0) + (voted ? 1 : 0);
-  const pct = Math.round((done / 4) * 100);
+  async function vote(choice: string) {
+    if (!live || votedFor || !live.poll.open) return;
+    const ok = await post(
+      { type: "poll", meta: { question: live.poll.question, choice, voter: voterId() } },
+      "Vote counted.",
+      () => {
+        setVotedFor(choice);
+        lsSet(pollKey, choice);
+        refresh();
+      },
+    );
+    if (!ok) setNotice((n) => (n === "You have already voted." ? n : n));
+  }
+
+  async function sendPhoto(f?: File) {
+    if (!f || !live) return;
+    await post({ type: "challenge", file: f, meta: { challenge: live.challenge.title } }, "Photo submitted to the challenge.", () => {
+      const next = Math.min(live.challenge.goal, done + 1);
+      setDone(next);
+      lsSet(challengeKey, String(next));
+    });
+  }
+
+  const goal = live?.challenge.goal ?? 4;
+  const pct = Math.round((done / goal) * 100);
+  const challengeOpen = !!live?.challenge.open && done < goal;
+  const tally = live?.tally ?? null;
+  const total = tally ? Object.values(tally).reduce((a, b) => a + b, 0) : 0;
+  const canSeeResults = !!tally && (!!votedFor || !live?.poll.open);
 
   return (
     <AppShell
       bg="var(--acid)"
       header={{ src: "/images/app/header-interact.svg", width: 44 }}
       step={3}
-      action={{ label: busy ? "Sending…" : "Submit to live room", onClick: () => (question.trim() ? sendQuestion() : sendLetter()), disabled: busy }}
+      action={{
+        label: busy ? "Sending…" : "Submit to live room",
+        onClick: () => (question.trim() ? sendQuestion() : sendLetter()),
+        disabled: busy,
+      }}
     >
-      <div className={styles.cardRed} style={{ whiteSpace: "normal" }}>
-        <div className={styles.between} style={{ fontSize: 14 }}>
-          <b style={{ textTransform: "uppercase" }}>Host announcement · priority</b>
-          <span>Now</span>
+      {live?.announcement.text && (
+        <div className={styles.cardRed} style={{ whiteSpace: "normal" }} role="status">
+          <div className={styles.between} style={{ fontSize: 14 }}>
+            <b style={{ textTransform: "uppercase" }}>{live.announcement.label}</b>
+            <span>Now</span>
+          </div>
+          <p style={{ fontFamily: "var(--f-display)", fontSize: 16 }}>{live.announcement.text}</p>
         </div>
-        <p style={{ fontFamily: "var(--f-display)", fontSize: 16 }}>Dinner begins in 18 minutes.</p>
-      </div>
+      )}
 
       <section className={styles.card}>
         <div className={styles.between}>
@@ -93,46 +140,68 @@ export default function InteractPage() {
         </div>
       </section>
 
-      <section className={styles.card}>
-        <div className={styles.between} style={{ fontSize: 14 }}>
-          <h2 style={{ fontFamily: "var(--f-display)", fontWeight: 400, fontSize: 15 }}>Hidden moments</h2>
-          <span style={{ color: "var(--red-text)" }}>{pct}%</span>
-        </div>
-        <p style={{ fontSize: 14 }}>Find the oldest friendship in the room and capture their hands.</p>
-        <div style={{ height: 5, background: `linear-gradient(90deg, var(--red) ${pct}%, rgba(10,10,10,.125) ${pct}%)` }} />
-        <div className={styles.between} style={{ alignItems: "center" }}>
-          <span className={styles.choice} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 44 }}>
-            <Image src="/images/app/status-dot.svg" alt="" width={6} height={6} />
-            {done} / 4 completed
-          </span>
-          <input ref={photo} type="file" accept="image/*" capture="environment" hidden onChange={(e) => sendPhoto(e.target.files?.[0])} />
-          <button className={styles.choice} aria-pressed onClick={() => photo.current?.click()} disabled={busy || done >= 4}>
-            Submit photo
-          </button>
-        </div>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.row}>
-          <Image src="/images/app/check-dark.svg" alt="" width={16} height={16} />
-          <p className={styles.muted} style={{ fontSize: 14, textTransform: "uppercase" }}>
-            Live poll · multiple choice · {voted ? "voted" : "open"}
-          </p>
-        </div>
-        <p style={{ fontFamily: "var(--f-display)", fontSize: 14 }}>Which song should close the night?</p>
-        <div className={styles.choices} role="group" aria-label="Poll choices">
-          {SONGS.map((s) => {
-            const v = s.votes + (voted === s.id ? 1 : 0);
-            return (
-              <button key={s.id} className={styles.choice} aria-pressed={voted === s.id} disabled={!!voted || busy} onClick={() => vote(s.id)}>
-                {s.label}
-                {voted ? ` · ${Math.round((v / total) * 100)}%` : ""}
+      {live &&
+        (live.challenge.open || done > 0 ? (
+          <section className={styles.card}>
+            <div className={styles.between} style={{ fontSize: 14 }}>
+              <h2 style={{ fontFamily: "var(--f-display)", fontWeight: 400, fontSize: 15 }}>{live.challenge.title}</h2>
+              <span style={{ color: "var(--red-text)" }}>{pct}%</span>
+            </div>
+            <p style={{ fontSize: 14 }}>{live.challenge.prompt}</p>
+            <div style={{ height: 5, background: `linear-gradient(90deg, var(--red) ${pct}%, rgba(10,10,10,.125) ${pct}%)` }} />
+            <div className={styles.between} style={{ alignItems: "center" }}>
+              <span className={styles.choice} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 44 }}>
+                <Image src="/images/app/status-dot.svg" alt="" width={6} height={6} />
+                {done} / {goal} completed
+              </span>
+              <input ref={photo} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { sendPhoto(e.target.files?.[0]); e.target.value = ""; }} />
+              <button className={styles.choice} aria-pressed onClick={() => photo.current?.click()} disabled={busy || !challengeOpen}>
+                Submit photo
               </button>
-            );
-          })}
+            </div>
+          </section>
+        ) : (
+          <div className={styles.card}>
+            <b style={{ fontSize: 12 }}>No active challenge</b>
+            <p className={styles.body}>The current challenge is closed. Wait for the next prompt.</p>
+          </div>
+        ))}
+      {live && live.challenge.open && done >= goal && (
+        <div className={styles.card}>
+          <b style={{ fontSize: 12 }}>Challenge complete</b>
+          <p className={styles.body}>You’ve found them all. Wait for the next prompt.</p>
         </div>
-        <p className={styles.body}>Yes / No · open answer · confirmation · live result · hidden result</p>
-      </section>
+      )}
+
+      {live &&
+        (live.poll.open || votedFor ? (
+          <section className={styles.card}>
+            <div className={styles.row}>
+              <Image src="/images/app/check-dark.svg" alt="" width={16} height={16} />
+              <p className={styles.muted} style={{ fontSize: 14, textTransform: "uppercase" }}>
+                Live poll · multiple choice · {votedFor ? "voted" : "open"}
+              </p>
+            </div>
+            <p style={{ fontFamily: "var(--f-display)", fontSize: 14 }}>{live.poll.question}</p>
+            <div className={styles.choices} role="group" aria-label="Poll choices">
+              {live.poll.options.map((o) => (
+                <button key={o} className={styles.choice} aria-pressed={votedFor === o} disabled={!!votedFor || busy} onClick={() => vote(o)}>
+                  {o}
+                  {canSeeResults && total > 0 ? ` · ${Math.round(((tally?.[o] ?? 0) / total) * 100)}%` : ""}
+                </button>
+              ))}
+            </div>
+            {votedFor && !live.poll.showResults && (
+              <p className={styles.body}>Your choice is recorded. Poll results are hidden until the end.</p>
+            )}
+            {canSeeResults && <p className={styles.body}>{total} vote{total === 1 ? "" : "s"} so far.</p>}
+          </section>
+        ) : (
+          <div className={styles.card}>
+            <b style={{ fontSize: 12 }}>No active poll</b>
+            <p className={styles.body}>The current poll is closed. Wait for the next question.</p>
+          </div>
+        ))}
 
       <section className={styles.card}>
         <label className={styles.field}>
@@ -148,19 +217,6 @@ export default function InteractPage() {
           </button>
         </div>
       </section>
-
-      {done >= 4 && (
-        <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>No active challenge</b>
-          <p className={styles.body}>The current challenge is closed. Wait for the next prompt.</p>
-        </div>
-      )}
-      {voted && (
-        <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>Already voted</b>
-          <p className={styles.body}>Your choice is recorded. Poll results are hidden until the end.</p>
-        </div>
-      )}
 
       {notice && (
         <p role="status" style={{ fontSize: 14, background: "var(--cream)", border: "1px solid var(--ink)", padding: 10 }}>

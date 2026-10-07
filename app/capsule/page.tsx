@@ -41,11 +41,11 @@ export default function CapsulePage() {
   }
 
   const stats: [number, string][] = [
-    [38 + (counts.photo ?? 0) + (counts.challenge ?? 0), "Photos"],
-    [14 + (counts.video ?? 0), "Video"],
-    [27 + (counts.voice ?? 0), "Voice"],
-    [42 + (counts.letter ?? 0) + (counts.later ?? 0), "Letters"],
-    [96 + (counts.poll ?? 0) + (counts.question ?? 0), "Answers"],
+    [(counts.photo ?? 0) + (counts.challenge ?? 0), "Photos"],
+    [counts.video ?? 0, "Video"],
+    [counts.voice ?? 0, "Voice"],
+    [(counts.letter ?? 0) + (counts.later ?? 0), "Letters"],
+    [(counts.poll ?? 0) + (counts.question ?? 0), "Answers"],
   ];
 
   return (
@@ -118,7 +118,7 @@ export default function CapsulePage() {
           <span style={{ fontSize: 12, textTransform: "uppercase" }}>Contributors</span>
         </div>
         <p style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
-          {142 + (counts.photo ?? 0)} guests · {stats[2][0]} voices · {stats[1][0]} films
+          {counts.rsvpGuests ?? 0} guests · {stats[2][0]} voices · {stats[1][0]} films
         </p>
         <div className={styles.between}>
           <span>{stats[3][0]} letters</span>

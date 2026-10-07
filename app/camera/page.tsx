@@ -16,9 +16,9 @@ export default function CameraPage() {
   const [live, setLive] = useState(false);
   const [denied, setDenied] = useState(false);
   const [facing, setFacing] = useState<"environment" | "user">("environment");
-  const [moments, setMoments] = useState(142);
-  const [uploading, setUploading] = useState(3);
-  const [taken, setTaken] = useState(18);
+  const [moments, setMoments] = useState(0);
+  const [uploading, setUploading] = useState(0);
+  const [taken, setTaken] = useState(0);
   const [reveal, setReveal] = useState(false);
   const [lowLight, setLowLight] = useState(false);
   const [failure, setFailure] = useState("");
@@ -47,18 +47,23 @@ export default function CameraPage() {
 
   useEffect(() => () => stream.current?.getTracks().forEach((t) => t.stop()), []);
 
-  // simulated processing queue draining
+  // shared roll size from the server + this device's roll counter
   useEffect(() => {
-    if (!uploading) return;
-    const t = setTimeout(() => setUploading((u) => u - 1), 1800);
-    return () => clearTimeout(t);
-  }, [uploading]);
+    fetch("/api/stats", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((s) => setMoments((s.photo ?? 0) + (s.challenge ?? 0)))
+      .catch(() => {});
+    try {
+      setTaken(Number(localStorage.getItem("lyst_roll") ?? 0));
+    } catch {}
+  }, []);
 
   const upload = useCallback(async (blob: Blob, name: string) => {
+    setUploading((u) => u + 1);
     const res = await submitContribution({ type: "photo", file: blob, filename: name, meta: { source: "disposable" } });
+    setUploading((u) => u - 1);
     if (res.ok) {
       setMoments((m) => m + 1);
-      setUploading((u) => u + 1);
       setFailure("");
       setMsg("Moment saved to your locked roll.");
     } else {
@@ -91,7 +96,13 @@ export default function CameraPage() {
     setLowLight(sum / n < 45);
     const blob: Blob | null = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85));
     if (!blob) return setFailure("Could not capture the frame.");
-    if (await upload(blob, "disposable.jpg")) setTaken((t) => t + 1);
+    if (await upload(blob, "disposable.jpg")) {
+      const next = taken + 1;
+      setTaken(next);
+      try {
+        localStorage.setItem("lyst_roll", String(next));
+      } catch {}
+    }
   }
 
   async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -100,7 +111,7 @@ export default function CameraPage() {
     for (const f of files) await upload(f, f.name);
   }
 
-  const pct = Math.round(((moments - uploading) / moments) * 100);
+  const pct = moments ? Math.round(((moments - uploading) / moments) * 100) : 100;
 
   return (
     <AppShell

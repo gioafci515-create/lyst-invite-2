@@ -22,6 +22,9 @@ async function Dashboard() {
           <h1 className={styles.h1}>Responses</h1>
         </div>
         <div className={styles.actions}>
+          <a className={styles.btnGhost} href="/admin/live">
+            Live room
+          </a>
           <a className={styles.btnGhost} href="/admin/contributions">
             Contributions
           </a>

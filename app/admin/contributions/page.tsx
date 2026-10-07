@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { countByType, listContributions, TYPES } from "@/lib/contrib";
-import { removeContribution } from "../actions";
+import { removeContribution, setMediaApproval } from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Contributions — LYST admin", robots: { index: false } };
@@ -91,6 +91,16 @@ async function List({ type }: { type?: string }) {
                       .join(" · ") || "—"}
                   </td>
                   <td>
+                    {r.file && /^(image|video)\//.test(r.file.mime) && (
+                      <form action={setMediaApproval} style={{ marginBottom: 4 }}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <input type="hidden" name="approve" value={r.approved ? "0" : "1"} />
+                        <span className={`${styles.status} ${r.approved ? styles.yes : styles.pending}`}>
+                          {r.approved ? "public" : "hidden"}
+                        </span>{" "}
+                        <button className={styles.del}>{r.approved ? "Hide" : "Approve"}</button>
+                      </form>
+                    )}
                     <form action={removeContribution}>
                       <input type="hidden" name="id" value={r.id} />
                       <button className={styles.del} aria-label="Delete contribution">

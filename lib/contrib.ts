@@ -23,6 +23,8 @@ export type Contribution = {
   text: string;
   meta: Record<string, string>;
   file?: { name: string; mime: string; size: number };
+  /** media only: visible in the public gallery once approved by an admin */
+  approved?: boolean;
 };
 
 const DIR = path.join(process.cwd(), "data");
@@ -94,4 +96,32 @@ export function deleteContribution(id: string): Promise<void> {
     await fs.writeFile(FILE, JSON.stringify(rows.filter((r) => r.id !== id), null, 2));
     if (/^[0-9a-f-]{36}$/.test(id)) await fs.rm(path.join(UPLOADS, id), { force: true });
   });
+}
+
+export function setApproved(id: string, approved: boolean): Promise<void> {
+  return locked(async () => {
+    const rows = await readAll();
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    row.approved = approved;
+    await fs.writeFile(FILE, JSON.stringify(rows, null, 2));
+  });
+}
+
+export async function approvedMedia(): Promise<Contribution[]> {
+  return (await readAll())
+    .filter((r) => r.approved && r.file && /^(image|video)\//.test(r.file.mime))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function hasVoted(voter: string, question: string) {
+  return (await readAll()).some((r) => r.type === "poll" && r.meta.voter === voter && r.meta.question === question);
+}
+
+export async function pollTally(question: string): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  for (const r of await readAll()) {
+    if (r.type === "poll" && r.meta.question === question && r.meta.choice) out[r.meta.choice] = (out[r.meta.choice] ?? 0) + 1;
+  }
+  return out;
 }

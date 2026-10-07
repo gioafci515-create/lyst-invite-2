@@ -18,8 +18,12 @@ export default function VideoPage() {
   const [pickedUrl, setPickedUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(0);
+  const [films, setFilms] = useState(0);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    fetch("/api/stats", { cache: "no-store" }).then((r) => r.json()).then((s) => setFilms(s.video ?? 0)).catch(() => {});
+  }, []);
   useEffect(() => {
     if (live.current) live.current.srcObject = r.liveStream;
   }, [r.liveStream]);
@@ -125,7 +129,7 @@ export default function VideoPage() {
           <span style={{ fontFamily: "var(--f-display)", fontSize: 16 }}>Future montage</span>
           <span className={styles.choice} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, minHeight: 0 }}>
             <Image src="/images/app/status-dot.svg" alt="" width={6} height={6} />
-            {14 + sent} films
+            {films + sent} film{films + sent === 1 ? "" : "s"}
           </span>
         </div>
         {sent > 0 && (
