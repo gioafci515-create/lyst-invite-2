@@ -19,9 +19,38 @@ function Arrow({ src, size }: { src: string; size: number }) {
 
 export default function Page() {
   const [attending, setAttending] = useState<"accept" | "decline">("accept");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [guest, setGuest] = useState("");
   const [diet, setDiet] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    setError("");
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, attending, companion: guest, dietary: diet }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setError(data.error ?? "Something went wrong. Try again.");
+      else {
+        setConfirmed(true);
+        try {
+          localStorage.setItem("lyst_guest", JSON.stringify({ name, email }));
+        } catch {}
+      }
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setSending(false);
+    }
+  }
   const [scene, setScene] = useState(0);
 
   return (
@@ -168,10 +197,7 @@ export default function Page() {
 
         <form
           className={styles.form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            setConfirmed(true);
-          }}
+          onSubmit={submit}
         >
           <div className={styles.options}>
             <button
@@ -192,22 +218,46 @@ export default function Page() {
             </button>
           </div>
           <label className={styles.field}>
-            <span>Guest name</span>
-            <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Add companion ＋" />
+            <span>Your name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required maxLength={100} />
+          </label>
+          <label className={styles.field}>
+            <span>Email</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required maxLength={200} />
+          </label>
+          <label className={styles.field}>
+            <span>Companion</span>
+            <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Add companion ＋" maxLength={100} />
           </label>
           <label className={styles.field}>
             <span>Dietary / access</span>
-            <input value={diet} onChange={(e) => setDiet(e.target.value)} placeholder="Edit privately" />
+            <input value={diet} onChange={(e) => setDiet(e.target.value)} placeholder="Edit privately" maxLength={500} />
           </label>
+          {error && (
+            <p role="alert" className={styles.formError}>
+              {error}
+            </p>
+          )}
           {confirmed ? (
             <p className={styles.confirmed} role="status">
               {attending === "accept"
                 ? "Position claimed. Your details stay private to the host."
                 : "Response recorded. Thank you for letting us know."}
+              {attending === "accept" && (
+                <>
+                  {" "}
+                  <a href="/respond" style={{ textDecoration: "underline" }}>
+                    Add meal &amp; guest details →
+                  </a>{" "}
+                  <a href="/hub" style={{ textDecoration: "underline" }}>
+                    Open event hub →
+                  </a>
+                </>
+              )}
             </p>
           ) : (
-            <button type="submit" className={`${styles.cta} ${styles.ctaFull}`}>
-              Confirm response <Arrow src="/images/arrow-right-2.svg" size={14} />
+            <button type="submit" disabled={sending} className={`${styles.cta} ${styles.ctaFull}`}>
+              {sending ? "Sending…" : "Confirm response"} <Arrow src="/images/arrow-right-2.svg" size={14} />
             </button>
           )}
         </form>

@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Header actions">
+<circle id="Live state" cx="3.5" cy="22" r="3.5" fill="#FF3B21"/>
+<g id="check-circle-2" clip-path="url(#clip0_0_37)">
+<path id="10 &#226;&#128;&#148; Experimental / Respond / check-circle-2 / Icon Path 1" d="M24.4998 22L26.1666 23.6668L29.5002 20.3332M35.334 22C35.334 26.6027 31.6027 30.334 27 30.334C22.3973 30.334 18.666 26.6027 18.666 22C18.666 17.3973 22.3973 13.666 27 13.666C31.6027 13.666 35.334 17.3973 35.334 22Z" stroke-width="2" stroke-linecap="round" stroke="#FF3B21"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_37">
+<rect width="20" height="20" fill="white" transform="translate(17 12)"/>
+</clipPath>
+</defs>
+</svg>

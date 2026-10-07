@@ -450,6 +450,15 @@
   line-height: 1.5;
 }
 
+.formError {
+  color: var(--red-text);
+  font-size: 14px;
+}
+.cta:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* Footer */
 .footer {
   background: var(--ink);
@@ -652,9 +661,8 @@
     padding: 0;
     gap: 24px;
   }
-  .form .field,
-  .form .desktopOnly {
-    display: none;
+  .form {
+    gap: 8px;
   }
   .states {
     display: none;
