@@ -9,7 +9,7 @@ import { readIds, useLive } from "@/lib/useLive";
 
 const KEY = "lyst_read";
 
-export default function NotificationsPage() {
+export default function NotificationsScreen() {
   const { live, failed } = useLive();
   const [read, setRead] = useState<string[]>([]);
   const [now, setNow] = useState(0);

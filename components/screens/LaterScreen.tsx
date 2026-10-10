@@ -14,7 +14,7 @@ function countdown(to: Date, now: number) {
   return `${d}d : ${String(h).padStart(2, "0")}h : ${String(m).padStart(2, "0")}m`;
 }
 
-export default function LaterPage() {
+export default function LaterScreen() {
   const photo = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);

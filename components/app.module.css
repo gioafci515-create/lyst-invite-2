@@ -97,10 +97,6 @@
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.primary:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
 .secondary {
   background: var(--cream);
   border: 1px solid var(--ink);
@@ -260,4 +256,18 @@
   font-size: 12px;
   padding: 6px 9px;
   align-self: flex-start;
+}
+
+/* Embedded as a section of the single page: no sticky chrome, natural height */
+.embedded {
+  min-height: 0;
+  margin: 0 auto;
+  width: 100%;
+}
+.embedded .bar,
+.embedded .dock {
+  position: static;
+}
+.embedded .content {
+  flex: none;
 }

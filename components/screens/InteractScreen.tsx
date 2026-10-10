@@ -20,7 +20,7 @@ const lsSet = (k: string, v: string) => {
   } catch {}
 };
 
-export default function InteractPage() {
+export default function InteractScreen() {
   const photo = useRef<HTMLInputElement>(null);
   const { live, refresh } = useLive(10000);
   const [named, setNamed] = useState(true);

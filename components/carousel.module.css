@@ -104,14 +104,6 @@
   color: var(--ink);
   font-size: 18px;
 }
-.arrow:hover:not(:disabled) {
-  background: var(--ink);
-  color: var(--cream);
-}
-.arrow:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
 
 @media (max-width: 760px) {
   .wrap {

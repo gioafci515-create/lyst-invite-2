@@ -8,7 +8,7 @@ import { RSVP_DEADLINE, RSVP_DEADLINE_LABEL } from "@/lib/event";
 
 const MEALS = ["Garden menu", "Fish", "Children's"];
 
-export default function RespondPage() {
+export default function RespondScreen() {
   const [attending, setAttending] = useState<"accept" | "decline">("accept");
   const [guests, setGuests] = useState(2);
   const [companion, setCompanion] = useState("");

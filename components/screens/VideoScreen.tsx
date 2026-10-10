@@ -9,7 +9,7 @@ import { submitContribution } from "@/lib/submit";
 
 const MAX = 60;
 
-export default function VideoPage() {
+export default function VideoScreen() {
   const r = useRecorder("video", MAX);
   const live = useRef<HTMLVideoElement>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -26,7 +26,7 @@ export default function VideoPage() {
   }, []);
   useEffect(() => {
     if (live.current) live.current.srcObject = r.liveStream;
-  }, [r.liveStream]);
+  }, [r.liveStream, r.state]);
   useEffect(() => () => { if (pickedUrl) URL.revokeObjectURL(pickedUrl); }, [pickedUrl]);
 
   const clip: Blob | null = mode === "upload" ? picked : r.blob;

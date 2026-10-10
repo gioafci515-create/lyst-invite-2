@@ -11,7 +11,7 @@ function remaining(to: Date, now: number) {
   return `${Math.floor(ms / 864e5)}d : ${String(Math.floor((ms % 864e5) / 36e5)).padStart(2, "0")}h`;
 }
 
-export default function CapsulePage() {
+export default function CapsuleScreen() {
   const [name, setName] = useState("UN/FOLD 2026 · Edition 01");
   const [date, setDate] = useState("2027-11-14");
   const [editDate, setEditDate] = useState(false);

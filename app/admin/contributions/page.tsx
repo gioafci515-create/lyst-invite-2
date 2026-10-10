@@ -33,18 +33,18 @@ async function List({ type }: { type?: string }) {
           <h1 className={styles.h1}>Contributions</h1>
         </div>
         <div className={styles.actions}>
-          <Link className={styles.btnGhost} href="/admin">
+          <Link className={styles.btnGhost} data-btn href="/admin">
             RSVPs
           </Link>
         </div>
       </header>
 
       <nav className={styles.filters} aria-label="Filter by type">
-        <Link href="/admin/contributions" aria-current={!type ? "page" : undefined}>
+        <Link href="/admin/contributions" data-btn aria-current={!type ? "page" : undefined}>
           All
         </Link>
         {TYPES.map((t) => (
-          <Link key={t} href={`/admin/contributions?type=${t}`} aria-current={type === t ? "page" : undefined}>
+          <Link key={t} href={`/admin/contributions?type=${t}`} data-btn aria-current={type === t ? "page" : undefined}>
             {LABEL[t]} ({counts[t] ?? 0})
           </Link>
         ))}

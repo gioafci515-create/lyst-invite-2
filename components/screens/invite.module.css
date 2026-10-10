@@ -127,15 +127,6 @@
   font-size: 14px;
   letter-spacing: 1px;
   text-transform: uppercase;
-  transition: transform 0.15s, background 0.15s;
-}
-.cta:hover {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--cream);
-}
-.cta:hover img {
-  filter: invert(1);
 }
 .ctaFull {
   width: 100%;
@@ -402,10 +393,6 @@
 .formError {
   color: var(--red-text);
   font-size: 14px;
-}
-.cta:disabled {
-  opacity: 0.6;
-  cursor: wait;
 }
 
 /* Footer */

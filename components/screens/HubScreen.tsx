@@ -1,18 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { readIds, useLive } from "@/lib/useLive";
 import s from "./hub.module.css";
 
 const NAV = [
-  ["Today", "/hub"],
+  ["Today", "#hub"],
   ["Schedule", "#schedule"],
-  ["Participate", "/participate"],
-  ["Gallery", "/gallery"],
-  ["Capsule", "/capsule"],
-  ["Updates", "/notifications"],
+  ["Participate", "#camera"],
+  ["Gallery", "#gallery"],
+  ["Capsule", "#capsule"],
+  ["Updates", "#updates"],
 ] as const;
 
 const RAIL = [
@@ -23,7 +22,7 @@ const RAIL = [
   ["Remember · 14 November 2027", false],
 ] as const;
 
-export default function HubClient() {
+export default function HubScreen() {
   const { live } = useLive();
   const [read, setRead] = useState<string[]>([]);
   useEffect(() => setRead(readIds()), []);
@@ -38,15 +37,15 @@ export default function HubClient() {
         <span className={s.mark}>LYST / 10</span>
         <div className={s.links}>
           {NAV.map(([label, href]) => (
-            <Link key={label} href={href}>
+            <a key={label} href={href}>
               {label}
-            </Link>
+            </a>
           ))}
         </div>
-        <Link href="/notifications" className={s.live}>
+        <a href="#updates" className={s.live}>
           <Image src="/images/hub/live-dot.svg" alt="" width={8} height={8} />
           LIVE · {alerts} ALERT{alerts === 1 ? "" : "S"} · GUEST PASS
-        </Link>
+        </a>
       </nav>
 
       <section className={s.hero}>
@@ -59,9 +58,9 @@ export default function HubClient() {
             <br />
             Former Print Works 4B · Rotterdam, NL
           </p>
-          <Link href="/participate" className={s.cta}>
+          <a href="#camera" className={s.cta} data-btn>
             Claim a position <Image src="/images/hub/arrow-right.svg" alt="" width={14} height={14} />
-          </Link>
+          </a>
         </div>
         <div className={s.media}>
           <Image src="/images/hub/live-media.png" alt="" fill sizes="(max-width:1100px) 100vw, 700px" />
@@ -100,6 +99,7 @@ export default function HubClient() {
             <Image src="/images/hub/map-pin.svg" alt="" width={20} height={20} />
             <a
               className={s.choice}
+              data-btn
               href="https://maps.google.com/?q=Rotterdam"
               target="_blank"
               rel="noreferrer"

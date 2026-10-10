@@ -22,13 +22,13 @@ async function Dashboard() {
           <h1 className={styles.h1}>Responses</h1>
         </div>
         <div className={styles.actions}>
-          <a className={styles.btnGhost} href="/admin/live">
+          <a className={styles.btnGhost} data-btn href="/admin/live">
             Live room
           </a>
-          <a className={styles.btnGhost} href="/admin/contributions">
+          <a className={styles.btnGhost} data-btn href="/admin/contributions">
             Contributions
           </a>
-          <a className={styles.btnGhost} href="/admin/export">
+          <a className={styles.btnGhost} data-btn href="/admin/export">
             Export CSV
           </a>
           <form action={logout}>

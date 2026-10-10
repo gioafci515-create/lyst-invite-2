@@ -7,7 +7,7 @@ import styles from "@/components/app.module.css";
 import { clock, useRecorder } from "@/components/useRecorder";
 import { submitContribution } from "@/lib/submit";
 
-export default function GuestbookPage() {
+export default function GuestbookScreen() {
   const r = useRecorder("audio", 180);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);

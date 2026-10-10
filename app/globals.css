@@ -51,6 +51,65 @@ button {
   outline-offset: 2px;
 }
 
+:root {
+  --header-h: 64px;
+}
+@media (max-width: 900px) {
+  :root {
+    --header-h: 108px;
+  }
+}
+
 [id] {
-  scroll-margin-top: 84px;
+  scroll-margin-top: calc(var(--header-h) + 8px);
+}
+
+/* ------------------------------------------------------------------
+   One interaction for every button (buttons and links marked data-btn).
+   Same motion, same shadow, same timing — whatever the button colour.
+   Colours are never changed on hover; only lift + shadow.
+   ------------------------------------------------------------------ */
+:root {
+  --btn-lift: -2px;
+  --btn-shadow: drop-shadow(3px 3px 0 rgba(10, 10, 10, 0.4));
+  --btn-time: 120ms;
+  --btn-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+button,
+a[data-btn] {
+  transition:
+    transform var(--btn-time) var(--btn-ease),
+    filter var(--btn-time) var(--btn-ease);
+}
+
+@media (hover: hover) {
+  button:not(:disabled):hover,
+  a[data-btn]:hover {
+    transform: translate(var(--btn-lift), var(--btn-lift));
+    filter: var(--btn-shadow);
+  }
+}
+
+/* pressed: sinks into the page — also gives touch screens (no hover) their feedback */
+button:not(:disabled):active,
+a[data-btn]:active {
+  transform: translate(1px, 1px);
+  filter: drop-shadow(0 0 0 rgba(10, 10, 10, 0));
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a[data-btn] {
+    transition: none;
+  }
+  button:not(:disabled):hover,
+  a[data-btn]:hover {
+    transform: none;
+  }
 }

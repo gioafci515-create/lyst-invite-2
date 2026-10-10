@@ -9,7 +9,7 @@ import { submitContribution } from "@/lib/submit";
 type Item = { key: string; src: string; kind: "photo" | "video"; pending?: boolean };
 type Filter = "all" | "photo" | "video" | "hidden";
 
-export default function GalleryPage() {
+export default function GalleryScreen() {
   const file = useRef<HTMLInputElement>(null);
   const touch = useRef(0);
   const [remote, setRemote] = useState<Item[]>([]);
@@ -169,7 +169,7 @@ export default function GalleryPage() {
           }}
           style={{ position: "fixed", inset: 0, background: "rgba(10,10,10,.96)", zIndex: 50, display: "flex", flexDirection: "column", padding: 10 }}
         >
-          <button autoFocus aria-label="Close viewer" onClick={() => setViewer(null)} style={{ background: "none", border: 0, width: 44, height: 44, display: "grid", placeItems: "center" }}>
+          <button autoFocus aria-label="Close viewer" onClick={() => setViewer(null)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", width: 44, height: 44, display: "grid", placeItems: "center" }}>
             <Image src="/images/app/x.svg" alt="" width={14} height={14} />
           </button>
           <div style={{ position: "relative", flex: 1 }}>
@@ -180,9 +180,9 @@ export default function GalleryPage() {
             )}
           </div>
           <p style={{ color: "#bbb", fontSize: 12, padding: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <button onClick={() => step(-1)} style={{ color: "inherit", background: "none", border: 0, minHeight: 44, padding: "0 12px" }}>← Prev</button>
+            <button onClick={() => step(-1)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", minHeight: 44, padding: "0 12px" }}>← Prev</button>
             {viewer! + 1}/{shown.length} · Swipe to continue
-            <button onClick={() => step(1)} style={{ color: "inherit", background: "none", border: 0, minHeight: 44, padding: "0 12px" }}>Next →</button>
+            <button onClick={() => step(1)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", minHeight: 44, padding: "0 12px" }}>Next →</button>
           </p>
         </div>
       )}

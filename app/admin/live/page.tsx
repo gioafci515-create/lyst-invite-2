@@ -24,10 +24,10 @@ async function Editor() {
           <h1 className={styles.h1}>Live room</h1>
         </div>
         <div className={styles.actions}>
-          <Link className={styles.btnGhost} href="/admin">
+          <Link className={styles.btnGhost} data-btn href="/admin">
             RSVPs
           </Link>
-          <Link className={styles.btnGhost} href="/admin/contributions">
+          <Link className={styles.btnGhost} data-btn href="/admin/contributions">
             Contributions
           </Link>
         </div>

@@ -1,16 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { SECTION, useEmbedded } from "./Embed";
 import styles from "./app.module.css";
 
 export const STEPS = [
-  { label: "Invite", href: "/" },
-  { label: "Respond", href: "/respond" },
-  { label: "Prepare", href: "/prepare" },
-  { label: "Participate", href: "/participate" },
-  { label: "Remember", href: "/remember" },
+  { label: "Invite", href: `#${SECTION.invite}` },
+  { label: "Respond", href: `#${SECTION.details}` },
+  { label: "Prepare", href: `#${SECTION.hub}` },
+  { label: "Participate", href: `#${SECTION.camera}` },
+  { label: "Remember", href: `#${SECTION.live}` },
 ] as const;
 
 type Props = {
@@ -26,6 +26,7 @@ type Props = {
 };
 
 export default function AppShell({ header, title, step, action, bg, children }: Props) {
+  const embedded = useEmbedded();
   const actionInner = (
     <>
       {action?.icon !== false && (
@@ -36,9 +37,9 @@ export default function AppShell({ header, title, step, action, bg, children }: 
   );
 
   return (
-    <div className={styles.phone} style={bg ? { background: bg } : undefined}>
+    <div className={`${styles.phone} ${embedded ? styles.embedded : ""}`} style={bg ? { background: bg } : undefined}>
       <header className={styles.bar}>
-        <div className={styles.heading}>{title && <h1>{title}</h1>}</div>
+        <div className={styles.heading}>{title && <h3>{title}</h3>}</div>
         {header && (
           <Image src={header.src} alt="" width={header.width} height={header.height ?? 44} aria-hidden />
         )}
@@ -49,7 +50,7 @@ export default function AppShell({ header, title, step, action, bg, children }: 
       <footer className={styles.dock}>
         <nav className={styles.journey} aria-label="Journey">
           {STEPS.map((s, i) => (
-            <Link
+            <a
               key={s.label}
               href={s.href}
               className={styles.step}
@@ -57,14 +58,14 @@ export default function AppShell({ header, title, step, action, bg, children }: 
             >
               <span className={styles.stepBar} data-current={i === step} />
               <span className={styles.stepLabel}>{s.label}</span>
-            </Link>
+            </a>
           ))}
         </nav>
         {action &&
           (action.href ? (
-            <Link href={action.href} className={styles.primary}>
+            <a href={action.href} className={styles.primary} data-btn>
               {actionInner}
-            </Link>
+            </a>
           ) : (
             <button className={styles.primary} onClick={action.onClick} disabled={action.disabled}>
               {actionInner}

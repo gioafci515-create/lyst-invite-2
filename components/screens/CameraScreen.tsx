@@ -9,10 +9,11 @@ import cam from "./camera.module.css";
 
 const ROLL = 24;
 
-export default function CameraPage() {
+export default function CameraScreen() {
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const [enabled, setEnabled] = useState(false);
   const [live, setLive] = useState(false);
   const [denied, setDenied] = useState(false);
   const [facing, setFacing] = useState<"environment" | "user">("environment");
@@ -24,7 +25,9 @@ export default function CameraPage() {
   const [failure, setFailure] = useState("");
   const [msg, setMsg] = useState("");
 
+  // the camera only starts after the guest asks for it (no permission prompt on page load)
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     (async () => {
       try {
@@ -43,7 +46,12 @@ export default function CameraPage() {
     return () => {
       cancelled = true;
     };
-  }, [facing]);
+  }, [facing, enabled]);
+
+  // the <video> only mounts once live, so attach the stream after it renders
+  useEffect(() => {
+    if (live && video.current && stream.current) video.current.srcObject = stream.current;
+  }, [live]);
 
   useEffect(() => () => stream.current?.getTracks().forEach((t) => t.stop()), []);
 
@@ -74,9 +82,14 @@ export default function CameraPage() {
 
   async function capture() {
     if (taken >= ROLL) return setMsg("Your disposable roll is full.");
+    if (!enabled) {
+      setEnabled(true);
+      setMsg("Starting camera… tap capture again once it is live.");
+      return;
+    }
     const v = video.current;
     if (!live || !v || !v.videoWidth) {
-      setMsg("Camera is off — use Upload existing instead.");
+      setMsg(denied ? "Camera is blocked — use Upload existing instead." : "Camera is still starting — try again in a moment.");
       return;
     }
     const c = document.createElement("canvas");
@@ -131,7 +144,7 @@ export default function CameraPage() {
         ) : (
           <Image src="/images/app/camera-preview.png" alt="" fill sizes="480px" className={cam.preview} />
         )}
-        <span className={styles.tag}>{live ? "LIVE VIEW · FLASH AUTO" : "PREVIEW · CAMERA OFF"}</span>
+        <span className={styles.tag}>{live ? "LIVE VIEW · FLASH AUTO" : "TAP CAPTURE TO START CAMERA"}</span>
         <div className={cam.controls}>
           <button aria-label="Choose from library" onClick={() => file.current?.click()}>
             <Image src="/images/app/image-up.svg" alt="" width={24} height={24} />
