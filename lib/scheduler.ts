@@ -1,4 +1,4 @@
-import { getTaskState, INTERVAL_MIN, schedule, TASKS, updateTaskState } from "./tasks";
+import { claimTask, getTaskState, schedule, TASKS } from "./tasks";
 import { sendToAll } from "./push";
 import { newNoticeId, updateLive } from "./live";
 
@@ -23,39 +23,41 @@ export async function announceTask(index: number) {
   return sendToAll({ title, body: task.text, url: "/#tasks", tag: `task-${task.id}` });
 }
 
-let running = false;
+export type TickResult = {
+  due: number[];
+  announced: number | null;
+  skippedStale: number[];
+  push?: Awaited<ReturnType<typeof sendToAll>>;
+};
 
-/** one scheduler pass: announce the newest due task that hasn't gone out yet */
-export async function tick(now = Date.now()) {
-  if (running) return;
-  running = true;
-  try {
-    const state = await getTaskState();
-    const times = schedule(state.start);
-    const due = times
-      .map((t, i) => ({ t, i }))
-      .filter((x) => x.t !== null && x.t <= now && !state.sent.includes(x.i));
-    if (!due.length) return;
+/**
+ * One scheduler pass: announce the newest task that has come due and not yet gone out.
+ * Called every minute by /api/cron/tick. Safe to call from several places at once: each task is claimed atomically.
+ */
+export async function tick(now = Date.now()): Promise<TickResult> {
+  const state = await getTaskState();
+  const times = schedule(state.start);
+  const dueIdx = times
+    .map((t, i) => ({ t, i }))
+    .filter((x) => x.t !== null && x.t <= now && !state.sent.includes(x.i));
 
-    const latest = due[due.length - 1];
-    // mark everything due as handled first so a slow send can never double-fire
-    await updateTaskState((s) => {
-      for (const d of due) if (!s.sent.includes(d.i)) s.sent.push(d.i);
-    });
-    // only announce the newest one, and only if it's fresh (don't blast after a long outage)
-    if (now - (latest.t as number) <= STALE_MS) await announceTask(latest.i);
-  } catch (e) {
-    console.error("[scheduler] tick failed", e);
-  } finally {
-    running = false;
+  const result: TickResult = { due: dueIdx.map((d) => d.i), announced: null, skippedStale: [] };
+  if (!dueIdx.length) return result;
+
+  // claim every due task first; whoever wins the claim is the only one allowed to announce it
+  const claimed: { t: number; i: number }[] = [];
+  for (const d of dueIdx) if (await claimTask(d.i)) claimed.push({ t: d.t as number, i: d.i });
+  if (!claimed.length) return result;
+
+  // only announce the newest, and only if it's fresh (don't blast guests after a long outage)
+  const latest = claimed[claimed.length - 1];
+  result.skippedStale = claimed.filter((c) => c !== latest).map((c) => c.i);
+  if (now - latest.t <= STALE_MS) {
+    result.push = await announceTask(latest.i);
+    result.announced = latest.i;
+  } else {
+    result.skippedStale.push(latest.i);
   }
+  return result;
 }
 
-const g = globalThis as unknown as { __lystScheduler?: ReturnType<typeof setInterval> };
-
-export function startScheduler() {
-  if (g.__lystScheduler) return;
-  g.__lystScheduler = setInterval(() => void tick(), 15000);
-  void tick();
-  console.log(`[scheduler] task reminders running (every ${INTERVAL_MIN} min from the configured start)`);
-}

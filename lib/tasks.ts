@@ -1,5 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { getKV } from "./kv";
 
 export const INTERVAL_MIN = 20;
 export const TIMEZONE = "Europe/Amsterdam";
@@ -66,38 +65,28 @@ export const TASKS: TaskDef[] = [
 
 export type TaskState = { start: string | null; sent: number[] };
 
-const FILE = path.join(process.cwd(), "data", "tasks.json");
+const START = "tasks:start"; // ISO string; "" = stopped; missing = use DEFAULT_START
+const SENT = "tasks:sent"; // set of task indices already announced
 
-let queue: Promise<unknown> = Promise.resolve();
-function locked<T>(fn: () => Promise<T>): Promise<T> {
-  const run = queue.then(fn, fn);
-  queue = run.catch(() => {});
-  return run;
+export async function getTaskState(): Promise<TaskState> {
+  const kv = getKV();
+  const [start, sent] = await Promise.all([kv.get<string>(START), kv.smembers(SENT)]);
+  return {
+    start: start === null ? DEFAULT_START : start === "" ? null : start,
+    sent: sent.map(Number).filter((n) => Number.isInteger(n)).sort((x, y) => x - y),
+  };
 }
 
-async function read(): Promise<TaskState> {
-  try {
-    const s = JSON.parse(await fs.readFile(FILE, "utf8"));
-    return { start: s.start ?? null, sent: Array.isArray(s.sent) ? s.sent : [] };
-  } catch {
-    return { start: DEFAULT_START, sent: [] };
-  }
+/** change the start time (or stop with null); clears which tasks were already sent */
+export async function setTaskStart(iso: string | null): Promise<void> {
+  const kv = getKV();
+  await kv.set(START, iso ?? "");
+  await kv.del(SENT);
 }
 
-async function write(s: TaskState) {
-  await fs.mkdir(path.dirname(FILE), { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(s, null, 2));
-}
-
-export const getTaskState = read;
-
-export function updateTaskState(fn: (s: TaskState) => void): Promise<TaskState> {
-  return locked(async () => {
-    const s = await read();
-    fn(s);
-    await write(s);
-    return s;
-  });
+/** Atomically claim a task for sending. Only one caller ever gets true, so a task is never announced twice. */
+export async function claimTask(index: number): Promise<boolean> {
+  return getKV().sadd(SENT, String(index));
 }
 
 /** unlock time of each task as epoch ms (null when no start is set) */

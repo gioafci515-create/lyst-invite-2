@@ -1,8 +1,10 @@
+import { connection } from "next/server";
 import { countByType } from "@/lib/contrib";
 import { listRsvps } from "@/lib/store";
 
 // public aggregate counts only — no content or names
 export async function GET() {
+  await connection(); // always run per request, never prerendered at build time
   const [counts, rsvps] = await Promise.all([countByType(), listRsvps()]);
   const accepted = rsvps.filter((r) => r.attending === "accept");
   return Response.json(

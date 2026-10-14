@@ -135,45 +135,34 @@ export async function saveChallenge(formData: FormData) {
 
 export async function saveTaskStart(formData: FormData) {
   await requireAdmin();
-  const { updateTaskState, zonedToUtc } = await import("@/lib/tasks");
+  const { setTaskStart, zonedToUtc } = await import("@/lib/tasks");
   const when = zonedToUtc(String(formData.get("start") ?? ""));
   if (!when) return;
-  await updateTaskState((s) => {
-    s.start = when.toISOString();
-    s.sent = [];
-  });
+  await setTaskStart(when.toISOString());
   revalidatePath("/admin/tasks");
 }
 
 export async function startTasksNow() {
   await requireAdmin();
-  const { updateTaskState } = await import("@/lib/tasks");
-  await updateTaskState((s) => {
-    s.start = new Date().toISOString();
-    s.sent = [];
-  });
+  const { setTaskStart } = await import("@/lib/tasks");
+  await setTaskStart(new Date().toISOString());
   revalidatePath("/admin/tasks");
 }
 
 export async function stopTasks() {
   await requireAdmin();
-  const { updateTaskState } = await import("@/lib/tasks");
-  await updateTaskState((s) => {
-    s.start = null;
-    s.sent = [];
-  });
+  const { setTaskStart } = await import("@/lib/tasks");
+  await setTaskStart(null);
   revalidatePath("/admin/tasks");
 }
 
 export async function sendTaskNow(formData: FormData) {
   await requireAdmin();
   const index = Number(formData.get("index"));
-  const { TASKS, updateTaskState } = await import("@/lib/tasks");
+  const { TASKS, claimTask } = await import("@/lib/tasks");
   if (!Number.isInteger(index) || index < 0 || index >= TASKS.length) return;
   const { announceTask } = await import("@/lib/scheduler");
-  await updateTaskState((s) => {
-    if (!s.sent.includes(index)) s.sent.push(index);
-  });
+  await claimTask(index); // mark as sent so the timer doesn't repeat it
   await announceTask(index);
   revalidatePath("/admin/tasks");
 }

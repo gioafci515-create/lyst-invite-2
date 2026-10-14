@@ -100,7 +100,7 @@ async function Panel() {
             </button>
           </form>
           <p className={styles.note}>
-            “Start now” sends Task 1 within ~15 seconds, then Tasks 2–5 at 20-minute intervals. Phones need the page opened once
+            “Start now” sends Task 1 on the next minute-ping, then Tasks 2–5 at 20-minute intervals. (Reminders are triggered by the 1-minute pinger on /api/cron/tick — see DEPLOY.md.) Phones need the page opened once
             and reminders turned on (iPhones: added to the Home Screen first).
           </p>
         </div>

@@ -1,6 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
+import { getKV } from "./kv";
 
 export type Rsvp = {
   id: string;
@@ -15,52 +14,25 @@ export type Rsvp = {
   requests?: string;
 };
 
-const FILE = path.join(process.cwd(), "data", "responses.json");
-
-async function readAll(): Promise<Rsvp[]> {
-  try {
-    return JSON.parse(await fs.readFile(FILE, "utf8"));
-  } catch {
-    return [];
-  }
-}
-
-async function writeAll(rows: Rsvp[]) {
-  await fs.mkdir(path.dirname(FILE), { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(rows, null, 2));
-}
-
-// serialize writes so concurrent submissions don't clobber each other
-let queue: Promise<unknown> = Promise.resolve();
-function locked<T>(fn: () => Promise<T>): Promise<T> {
-  const run = queue.then(fn, fn);
-  queue = run.catch(() => {});
-  return run;
-}
+const KEY = "rsvps";
 
 export async function listRsvps(): Promise<Rsvp[]> {
-  return (await readAll()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const all = await getKV().hgetall<Rsvp>(KEY);
+  return Object.values(all).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 /** One response per email: resubmitting updates the earlier one. */
-export function saveRsvp(input: Omit<Rsvp, "id" | "createdAt">): Promise<Rsvp> {
-  return locked(async () => {
-    const rows = await readAll();
-    const i = rows.findIndex((r) => r.email.toLowerCase() === input.email.toLowerCase());
-    const row: Rsvp = {
-      id: i >= 0 ? rows[i].id : randomUUID(),
-      createdAt: new Date().toISOString(),
-      ...input,
-    };
-    if (i >= 0) rows[i] = row;
-    else rows.push(row);
-    await writeAll(rows);
-    return row;
-  });
+export async function saveRsvp(input: Omit<Rsvp, "id" | "createdAt">): Promise<Rsvp> {
+  const kv = getKV();
+  const field = input.email.toLowerCase();
+  const prev = await kv.hget<Rsvp>(KEY, field);
+  const row: Rsvp = { id: prev?.id ?? randomUUID(), createdAt: new Date().toISOString(), ...input };
+  await kv.hset(KEY, field, row);
+  return row;
 }
 
-export function deleteRsvp(id: string): Promise<void> {
-  return locked(async () => {
-    await writeAll((await readAll()).filter((r) => r.id !== id));
-  });
+export async function deleteRsvp(id: string): Promise<void> {
+  const kv = getKV();
+  const all = await kv.hgetall<Rsvp>(KEY);
+  for (const [field, r] of Object.entries(all)) if (r.id === id) await kv.hdel(KEY, field);
 }

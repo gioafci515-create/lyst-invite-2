@@ -24,15 +24,20 @@ export async function POST(req: Request) {
   if (!EMAIL.test(email)) return Response.json({ error: "Please enter a valid email." }, { status: 400 });
   if (!attending) return Response.json({ error: "Choose accept or decline." }, { status: 400 });
 
-  await saveRsvp({
-    name,
-    email,
-    attending,
-    companion: clean(body.companion, 100),
-    dietary: clean(body.dietary, 500),
-    guests: Math.min(10, Math.max(1, Math.floor(Number(body.guests)) || 1)),
-    meal: clean(body.meal, 50),
-    requests: clean(body.requests, 500),
-  });
+  try {
+    await saveRsvp({
+      name,
+      email,
+      attending,
+      companion: clean(body.companion, 100),
+      dietary: clean(body.dietary, 500),
+      guests: Math.min(10, Math.max(1, Math.floor(Number(body.guests)) || 1)),
+      meal: clean(body.meal, 50),
+      requests: clean(body.requests, 500),
+    });
+  } catch (e) {
+    console.error("[rsvp]", e);
+    return Response.json({ error: "We couldn't save your response right now. Please try again." }, { status: 500 });
+  }
   return Response.json({ ok: true });
 }

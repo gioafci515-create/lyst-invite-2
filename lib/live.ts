@@ -1,6 +1,5 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
+import { getKV } from "./kv";
 
 export const ICONS = ["map-pin-18", "megaphone", "calendar-clock", "sparkles", "clock-3", "archive-dark"] as const;
 export type Icon = (typeof ICONS)[number];
@@ -22,7 +21,7 @@ export type Live = {
   challenge: { title: string; prompt: string; goal: number; open: boolean };
 };
 
-const FILE = path.join(process.cwd(), "data", "live.json");
+const KEY = "live";
 
 function defaults(): Live {
   const ago = (m: number) => new Date(Date.now() - m * 60000).toISOString();
@@ -57,35 +56,21 @@ function defaults(): Live {
   };
 }
 
-let queue: Promise<unknown> = Promise.resolve();
-function locked<T>(fn: () => Promise<T>): Promise<T> {
-  const run = queue.then(fn, fn);
-  queue = run.catch(() => {});
-  return run;
-}
-
-async function write(live: Live) {
-  await fs.mkdir(path.dirname(FILE), { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(live, null, 2));
-}
-
+/** First read stores the defaults so notice ids stay stable between requests. */
 export async function getLive(): Promise<Live> {
-  try {
-    return { ...defaults(), ...JSON.parse(await fs.readFile(FILE, "utf8")) };
-  } catch {
-    const d = defaults();
-    await locked(() => write(d)).catch(() => {});
-    return d;
-  }
+  const kv = getKV();
+  const stored = await kv.get<Live>(KEY);
+  if (stored) return { ...defaults(), ...stored };
+  const d = defaults();
+  await kv.setnx(KEY, d);
+  return { ...d, ...((await kv.get<Live>(KEY)) ?? d) };
 }
 
-export function updateLive(fn: (live: Live) => void): Promise<Live> {
-  return locked(async () => {
-    const live = await getLive();
-    fn(live);
-    await write(live);
-    return live;
-  });
+export async function updateLive(fn: (live: Live) => void): Promise<Live> {
+  const live = await getLive();
+  fn(live);
+  await getKV().set(KEY, live);
+  return live;
 }
 
 export const newNoticeId = () => randomUUID();
