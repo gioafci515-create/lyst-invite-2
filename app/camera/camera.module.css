@@ -1,0 +1,333 @@
+.root {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: var(--f-mono);
+}
+
+/* the live picture fills the whole screen */
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+.mirror {
+  transform: scaleX(-1);
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, transparent 33.2%, rgba(255, 255, 255, 0.4) 33.3%, transparent 33.5%, transparent 66.5%, rgba(255, 255, 255, 0.4) 66.6%, transparent 66.8%),
+    linear-gradient(to bottom, transparent 33.2%, rgba(255, 255, 255, 0.4) 33.3%, transparent 33.5%, transparent 66.5%, rgba(255, 255, 255, 0.4) 66.6%, transparent 66.8%);
+}
+
+.blink {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.blinkOn {
+  animation: blink 160ms ease-out;
+}
+@keyframes blink {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* white screen used as flash when the camera has no torch */
+.screenFlash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: 9;
+}
+
+.count {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 30vmin;
+  font-weight: 700;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* ----- top bar ----- */
+.top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(env(safe-area-inset-right, 0px) + 12px) 10px
+    calc(env(safe-area-inset-left, 0px) + 12px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
+  z-index: 5;
+}
+.spacer {
+  flex: 1;
+}
+
+/* round translucent controls */
+.btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 10, 10, 0.55);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(6px);
+}
+.btn[aria-pressed="true"] {
+  background: var(--red);
+  border-color: var(--red);
+  color: #0a0a0a;
+}
+.btn svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+/* ----- task banner ----- */
+.task {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  left: 12px;
+  right: 12px;
+  background: var(--red);
+  color: #0a0a0a;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  z-index: 5;
+}
+.task b {
+  font-family: var(--f-display);
+  font-size: 16px;
+}
+.taskDone {
+  background: var(--acid);
+}
+
+/* ----- bottom controls ----- */
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px calc(env(safe-area-inset-right, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 18px)
+    calc(env(safe-area-inset-left, 0px) + 16px);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 5;
+}
+
+.zoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.zoomChips {
+  display: flex;
+  gap: 8px;
+}
+.chip {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 10, 10, 0.55);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.chip[aria-pressed="true"] {
+  background: #fff;
+  color: #0a0a0a;
+}
+.slider {
+  width: min(420px, 100%);
+  accent-color: var(--red);
+  height: 28px;
+}
+
+.shutterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 2px solid #fff;
+  background: rgba(255, 255, 255, 0.12) center/cover no-repeat;
+  overflow: hidden;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #fff;
+}
+.shutter {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  background: transparent;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.shutter::after {
+  content: "";
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 100ms;
+}
+.shutter:active::after {
+  transform: scale(0.88);
+}
+.shutter[data-busy="true"]::after {
+  background: var(--red);
+}
+.shutter[data-timer="true"]::after {
+  background: var(--red);
+  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+}
+.side {
+  width: 56px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.status {
+  text-align: center;
+  font-size: 12px;
+  min-height: 16px;
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+.statusErr {
+  color: #ffb3a8;
+}
+
+/* ----- permission / error screen ----- */
+.blocked {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  text-align: center;
+  background: #0a0a0a;
+}
+.blocked h1 {
+  font-family: var(--f-display);
+  font-size: 28px;
+}
+.blocked p {
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 340px;
+  color: #ccc;
+}
+.blocked .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.primary {
+  min-height: 44px;
+  padding: 0 18px;
+  background: var(--red);
+  border: 1px solid var(--red);
+  color: #0a0a0a;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  display: inline-flex;
+  align-items: center;
+}
+.secondary {
+  min-height: 44px;
+  padding: 0 18px;
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  color: #0a0a0a;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .bottom {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .zoom {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blinkOn {
+    animation: none;
+  }
+}

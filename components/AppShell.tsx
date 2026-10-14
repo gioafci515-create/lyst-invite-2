@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { SECTION, useEmbedded } from "./Embed";
+import { useEmbedded } from "./Embed";
+import { SECTION } from "@/lib/sections";
 import styles from "./app.module.css";
 
 export const STEPS = [

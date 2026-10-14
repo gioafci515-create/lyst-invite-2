@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Arimo, Roboto_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
@@ -9,6 +9,14 @@ const spaceGrotesk = Space_Grotesk({ variable: "--font-grotesk", subsets: ["lati
 export const metadata: Metadata = {
   title: "UN/FOLD 2026 — LYST invitation",
   description: "A live publishing experiment: type, sound, performance and an audience that edits the ending.",
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "UN/FOLD", statusBarStyle: "black-translucent" },
+};
+
+// viewport-fit=cover lets the full-screen camera reach under phone notches
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#ff3b21",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

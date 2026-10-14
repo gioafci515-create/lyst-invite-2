@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SECTION } from "./Embed";
+import { SECTION } from "@/lib/sections";
 import styles from "./site.module.css";
 
 const LINKS: [label: string, id: string][] = [
@@ -11,6 +11,7 @@ const LINKS: [label: string, id: string][] = [
   ["RSVP", SECTION.rsvp],
   ["Hub", SECTION.hub],
   ["Details", SECTION.details],
+  ["Tasks", SECTION.tasks],
   ["Camera", SECTION.camera],
   ["Voice", SECTION.voice],
   ["Video", SECTION.video],

@@ -27,6 +27,9 @@ async function Editor() {
           <Link className={styles.btnGhost} data-btn href="/admin">
             RSVPs
           </Link>
+          <Link className={styles.btnGhost} data-btn href="/admin/tasks">
+            Tasks
+          </Link>
           <Link className={styles.btnGhost} data-btn href="/admin/contributions">
             Contributions
           </Link>

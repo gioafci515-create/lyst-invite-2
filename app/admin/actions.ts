@@ -130,3 +130,62 @@ export async function saveChallenge(formData: FormData) {
   });
   revalidatePath("/admin/live");
 }
+
+/* ---------- tasks & push reminders ---------- */
+
+export async function saveTaskStart(formData: FormData) {
+  await requireAdmin();
+  const { updateTaskState, zonedToUtc } = await import("@/lib/tasks");
+  const when = zonedToUtc(String(formData.get("start") ?? ""));
+  if (!when) return;
+  await updateTaskState((s) => {
+    s.start = when.toISOString();
+    s.sent = [];
+  });
+  revalidatePath("/admin/tasks");
+}
+
+export async function startTasksNow() {
+  await requireAdmin();
+  const { updateTaskState } = await import("@/lib/tasks");
+  await updateTaskState((s) => {
+    s.start = new Date().toISOString();
+    s.sent = [];
+  });
+  revalidatePath("/admin/tasks");
+}
+
+export async function stopTasks() {
+  await requireAdmin();
+  const { updateTaskState } = await import("@/lib/tasks");
+  await updateTaskState((s) => {
+    s.start = null;
+    s.sent = [];
+  });
+  revalidatePath("/admin/tasks");
+}
+
+export async function sendTaskNow(formData: FormData) {
+  await requireAdmin();
+  const index = Number(formData.get("index"));
+  const { TASKS, updateTaskState } = await import("@/lib/tasks");
+  if (!Number.isInteger(index) || index < 0 || index >= TASKS.length) return;
+  const { announceTask } = await import("@/lib/scheduler");
+  await updateTaskState((s) => {
+    if (!s.sent.includes(index)) s.sent.push(index);
+  });
+  await announceTask(index);
+  revalidatePath("/admin/tasks");
+}
+
+export async function sendTestToAll() {
+  await requireAdmin();
+  const { sendToAll } = await import("@/lib/push");
+  await sendToAll({
+    title: "Test from the hosts",
+    body: "If you can read this, task reminders will reach your phone.",
+    url: "/#tasks",
+    tag: "admin-test",
+  });
+  revalidatePath("/admin/tasks");
+}
