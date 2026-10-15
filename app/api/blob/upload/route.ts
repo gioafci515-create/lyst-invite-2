@@ -30,7 +30,9 @@ export async function POST(request: Request) {
       },
     });
     return Response.json(json);
-  } catch {
-    return Response.json({ error: "Upload not allowed." }, { status: 400 });
+  } catch (e) {
+    const detail = e instanceof Error ? e.message.slice(0, 300) : "unknown";
+    console.error("[blob/upload]", detail);
+    return Response.json({ error: "Upload not allowed.", detail }, { status: 400 });
   }
 }
