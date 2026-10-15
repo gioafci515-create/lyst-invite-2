@@ -41,7 +41,8 @@ export function useRecorder(kind: "audio" | "video", maxSeconds: number) {
       stream.current = s;
       setLiveStream(s);
       chunks.current = [];
-      const r = new MediaRecorder(s);
+      // modest bitrates keep a full-length recording under ~4 MB (the server upload limit)
+      const r = new MediaRecorder(s, kind === "video" ? { videoBitsPerSecond: 600_000, audioBitsPerSecond: 48_000 } : { audioBitsPerSecond: 32_000 });
       rec.current = r;
       r.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
       r.onstop = () => {

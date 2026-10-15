@@ -33,6 +33,6 @@ export async function POST(request: Request) {
   } catch (e) {
     const detail = e instanceof Error ? e.message.slice(0, 300) : "unknown";
     console.error("[blob/upload]", detail);
-    return Response.json({ error: "Upload not allowed.", detail }, { status: 400 });
+    return Response.json({ error: "Upload not allowed." }, { status: 400 });
   }
 }

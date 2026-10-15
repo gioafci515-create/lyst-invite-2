@@ -7,7 +7,7 @@ import styles from "@/components/app.module.css";
 import { clock, useRecorder } from "@/components/useRecorder";
 import { submitContribution } from "@/lib/submit";
 
-const MAX = 60;
+const MAX = 45; // seconds — at the recorder's bitrate this stays under the 4.5 MB upload limit
 
 export default function VideoScreen() {
   const r = useRecorder("video", MAX);
