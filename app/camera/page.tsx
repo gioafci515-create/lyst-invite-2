@@ -8,6 +8,9 @@ import css from "./camera.module.css";
 
 const ROLL = 24;
 const DIGITAL_MAX = 5;
+const HOLD_MS = 1500; // BeReal-style "hold still" beat before the picture is taken
+
+type Preview = { blob: Blob; url: string; name: string; meta: Record<string, string> };
 
 type FlashMode = "off" | "auto" | "on";
 type Caps = { zoom?: { min: number; max: number; step: number }; torch: boolean };
@@ -68,6 +71,8 @@ function CameraApp() {
   const cancelTimer = useRef(false);
   const takenRef = useRef(0);
   const thumbUrl = useRef<string | null>(null);
+  const previewRef = useRef<Preview | null>(null);
+  const pendingRef = useRef(0);
 
   const [facing, setFacing] = useState<"environment" | "user">("environment");
   const [attempt, setAttempt] = useState(0);
@@ -81,6 +86,8 @@ function CameraApp() {
   const [timer, setTimer] = useState<0 | 3 | 10>(0);
   const [count, setCount] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [hold, setHold] = useState(0);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [blink, setBlink] = useState(0);
   const [taken, setTaken] = useState(0);
   const [uploading, setUploading] = useState(0);
@@ -165,6 +172,7 @@ function CameraApp() {
     () => () => {
       stream.current?.getTracks().forEach((t) => t.stop());
       if (thumbUrl.current) URL.revokeObjectURL(thumbUrl.current);
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current.url);
     },
     [],
   );
@@ -251,6 +259,7 @@ function CameraApp() {
   const upload = useCallback(
     async (blob: Blob, name: string, meta: Record<string, string>) => {
       setUploading((u) => u + 1);
+      pendingRef.current += 1;
       const res = await submitContribution({
         type: "photo",
         file: blob,
@@ -259,6 +268,7 @@ function CameraApp() {
         task: taskId ?? undefined,
       });
       setUploading((u) => u - 1);
+      pendingRef.current -= 1;
       if (res.ok) {
         say("Saved to your locked roll ✓");
         return true;
@@ -276,13 +286,62 @@ function CameraApp() {
     for (const b of queue) await upload(b, `camera-${Date.now()}.jpg`, { retry: "1" });
   };
 
+  /* ----- limits: a task that asks for N photos accepts exactly N ----- */
+  const taskLimit = activeTask ? activeTask.count : 0;
+  const taskUsed = activeTask ? activeTask.progress + uploading + failed.length : 0;
+  const limitReached = activeTask ? taskUsed >= taskLimit : taken >= ROLL;
+  const limitMsg = activeTask
+    ? `Task complete — ${taskLimit} of ${taskLimit} photo${taskLimit > 1 ? "s" : ""} taken.`
+    : "Your roll is full (24 / 24).";
+  const isFull = () =>
+    activeTask
+      ? activeTask.progress + pendingRef.current + failed.length >= activeTask.count
+      : takenRef.current >= ROLL;
+
+  const showPreview = useCallback((blob: Blob, name: string, meta: Record<string, string>) => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current.url);
+    const p = { blob, name, meta, url: URL.createObjectURL(blob) };
+    previewRef.current = p;
+    setPreview(p);
+    setStatus("");
+  }, []);
+
+  const retake = () => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current.url);
+    previewRef.current = null;
+    setPreview(null);
+    say("");
+  };
+
+  const confirm = () => {
+    const p = previewRef.current;
+    if (!p) return;
+    if (isFull()) return say(limitMsg, true);
+    // the preview image becomes the roll thumbnail
+    if (thumbUrl.current) URL.revokeObjectURL(thumbUrl.current);
+    thumbUrl.current = p.url;
+    setThumb(p.url);
+    previewRef.current = null;
+    setPreview(null);
+    takenRef.current += 1;
+    setTaken(takenRef.current);
+    try {
+      localStorage.setItem("lyst_roll", String(takenRef.current));
+    } catch {}
+    void upload(p.blob, p.name, p.meta);
+  };
+
   /* ----- capture ----- */
   const capture = useCallback(async () => {
     const v = video.current;
-    if (busy || !ready || !v || !v.videoWidth) return;
-    if (takenRef.current >= ROLL) return say("Your roll is full (24 / 24).", true);
+    if (busy || preview || !ready || !v || !v.videoWidth) return;
+    if (isFull()) return say(limitMsg, true);
     setBusy(true);
     try {
+      // short "hold still" beat, like BeReal's capture delay
+      setHold((h) => h + 1);
+      await sleep(HOLD_MS);
+      setHold(0);
       const needFlash = flash === "on" || (flash === "auto" && luma() < 55);
       let usedTorch = false;
       let usedScreen = false;
@@ -327,28 +386,21 @@ function CameraApp() {
 
       const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/jpeg", 0.9));
       if (!blob) throw new Error("blob");
-      if (thumbUrl.current) URL.revokeObjectURL(thumbUrl.current);
-      thumbUrl.current = URL.createObjectURL(blob);
-      setThumb(thumbUrl.current);
-
-      takenRef.current += 1;
-      setTaken(takenRef.current);
-      try {
-        localStorage.setItem("lyst_roll", String(takenRef.current));
-      } catch {}
-      void upload(blob, `camera-${Date.now()}.jpg`, {
+      showPreview(blob, `camera-${Date.now()}.jpg`, {
         facing,
         zoom: zoom.toFixed(1),
         flash: needFlash ? (usedTorch ? "torch" : "screen") : "off",
       });
     } catch {
+      setHold(0);
       say("Couldn't take the photo. Try again.", true);
       setScreenFlash(false);
       await setTorch(false);
     } finally {
       setBusy(false);
     }
-  }, [busy, ready, flash, caps.torch, hw, zoom, facing, say, setTorch, upload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, preview, ready, flash, caps.torch, hw, zoom, facing, say, setTorch, showPreview, limitMsg, activeTask, failed.length]);
 
   /* ----- shutter + self-timer ----- */
   const shutter = useCallback(async () => {
@@ -357,6 +409,8 @@ function CameraApp() {
       setCount(0);
       return;
     }
+    if (preview) return;
+    if (isFull()) return say(limitMsg, true);
     if (timer === 0) return capture();
     cancelTimer.current = false;
     for (let n = timer; n > 0; n--) {
@@ -368,7 +422,8 @@ function CameraApp() {
     if (cancelTimer.current) return;
     setCount(0);
     await capture();
-  }, [capture, count, timer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capture, count, timer, preview, limitMsg, activeTask, failed.length, say]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -385,22 +440,12 @@ function CameraApp() {
   }, [shutter, applyZoom, zoom]);
 
   /* ----- library upload ----- */
-  async function onLibrary(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+  function onLibrary(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
     e.target.value = "";
-    for (const f of files) {
-      if (takenRef.current >= ROLL) return say("Your roll is full (24 / 24).", true);
-      if (thumbUrl.current) URL.revokeObjectURL(thumbUrl.current);
-      thumbUrl.current = URL.createObjectURL(f);
-      setThumb(thumbUrl.current);
-      if (await upload(f, f.name, { source: "library" })) {
-        takenRef.current += 1;
-        setTaken(takenRef.current);
-        try {
-          localStorage.setItem("lyst_roll", String(takenRef.current));
-        } catch {}
-      }
-    }
+    if (!f || preview) return;
+    if (isFull()) return say(limitMsg, true);
+    showPreview(f, f.name, { source: "library" });
   }
 
   /* ----- chrome ----- */
@@ -441,6 +486,15 @@ function CameraApp() {
         {grid && <div className={css.grid} />}
         <div key={blink} className={`${css.blink} ${blink ? css.blinkOn : ""}`} />
         {count > 0 && <div className={css.count} aria-live="assertive">{count}</div>}
+        {hold > 0 && (
+          <div key={hold} className={css.hold} role="status" aria-live="assertive">
+            <svg viewBox="0 0 100 100" aria-hidden>
+              <circle className={css.holdTrack} cx="50" cy="50" r="44" />
+              <circle className={css.holdRing} cx="50" cy="50" r="44" style={{ animationDuration: `${HOLD_MS}ms` }} />
+            </svg>
+            <span>Hold still…</span>
+          </div>
+        )}
       </div>
 
       {screenFlash && <div className={css.screenFlash} />}
@@ -553,7 +607,7 @@ function CameraApp() {
             data-busy={busy}
             data-timer={count > 0}
             onClick={() => void shutter()}
-            disabled={!ready}
+            disabled={!ready || busy || limitReached}
             aria-label={count > 0 ? "Cancel timer" : "Take photo"}
           />
           <div className={css.side}>
@@ -568,7 +622,22 @@ function CameraApp() {
         </div>
       </div>
 
-      <input ref={library} type="file" accept="image/*" multiple hidden onChange={onLibrary} />
+      <input ref={library} type="file" accept="image/*" hidden onChange={onLibrary} />
+
+      {preview && (
+        <div className={css.preview} role="dialog" aria-label="Review photo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview.url} alt="Your photo" className={css.previewImg} />
+          <div className={css.previewBar}>
+            <button className={css.secondary} onClick={retake}>
+              Retake
+            </button>
+            <button className={css.primary} onClick={confirm}>
+              Use photo
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className={css.blocked} role="alert">
