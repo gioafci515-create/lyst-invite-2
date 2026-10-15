@@ -26,7 +26,8 @@ export function blobToken(): string | undefined {
   return key ? process.env[key] : undefined;
 }
 
-export const blobConfigured = () => !!blobToken();
+/** Token auth (BLOB_READ_WRITE_TOKEN) or Vercel's keyless auth (BLOB_STORE_ID + the platform's OIDC token). */
+export const blobConfigured = () => !!blobToken() || !!process.env.BLOB_STORE_ID;
 
 /**
  * Blob URLs we accept from the browser: https on Vercel's blob hosts. The store is PRIVATE, so files are only
