@@ -16,7 +16,17 @@ export const MAX_FILE = 25 * 1024 * 1024;
 export const MEDIA_MIME = /^(audio|video|image)\//;
 const UPLOADS = path.join(process.cwd(), "data", "uploads");
 
-export const blobConfigured = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+/**
+ * The Blob read-write token. Vercel names it BLOB_READ_WRITE_TOKEN by default, but when a store is created
+ * with a custom prefix it becomes e.g. MYSTORE_READ_WRITE_TOKEN — accept any of those.
+ */
+export function blobToken(): string | undefined {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  const key = Object.keys(process.env).find((k) => /READ_WRITE_TOKEN$/.test(k) && process.env[k]);
+  return key ? process.env[key] : undefined;
+}
+
+export const blobConfigured = () => !!blobToken();
 
 /**
  * Blob URLs we accept from the browser: https on Vercel's blob hosts. The store is PRIVATE, so files are only
@@ -38,7 +48,7 @@ const accessOf = (url: string): "private" | "public" => (new URL(url).hostname.i
 export async function storeBuffer(data: Buffer, name: string, mime: string): Promise<MediaFile> {
   const safe = name.replace(/[^\w.\-]/g, "_").slice(0, 80) || "upload";
   if (blobConfigured()) {
-    const blob = await put(`uploads/${safe}`, data, { access: "private", contentType: mime, addRandomSuffix: true });
+    const blob = await put(`uploads/${safe}`, data, { access: "private", contentType: mime, addRandomSuffix: true, token: blobToken() });
     return { name, mime, size: data.length, url: blob.url };
   }
   if (process.env.VERCEL) throw new Error("File storage not configured: connect a Vercel Blob store.");
@@ -58,7 +68,7 @@ export async function serveMedia(file: MediaFile, extra: Record<string, string> 
   };
   if (file.url) {
     try {
-      const blob = await get(file.url, { access: accessOf(file.url) });
+      const blob = await get(file.url, { access: accessOf(file.url), token: blobToken() });
       if (!blob || blob.statusCode !== 200 || !blob.stream) return new Response("Not found", { status: 404 });
       return new Response(blob.stream, { headers });
     } catch {
@@ -78,7 +88,7 @@ export async function serveMedia(file: MediaFile, extra: Record<string, string> 
 export async function deleteMedia(file?: MediaFile) {
   if (!file) return;
   try {
-    if (file.url && blobConfigured()) await del(file.url);
+    if (file.url && blobConfigured()) await del(file.url, { token: blobToken() });
     else if (file.local && /^[0-9a-f-]{36}$/.test(file.local)) await fs.rm(path.join(UPLOADS, file.local), { force: true });
   } catch {
     /* best effort */

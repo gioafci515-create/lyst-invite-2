@@ -1,5 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { blobConfigured, MAX_FILE } from "@/lib/media";
+import { blobConfigured, blobToken, MAX_FILE } from "@/lib/media";
 
 /**
  * Issues short-lived tokens so phones can upload photos/audio/video straight to Vercel Blob.
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const json = await handleUpload({
       body,
       request,
+      token: blobToken(),
       onBeforeGenerateToken: async () => ({
         allowedContentTypes: ["image/*", "video/*", "audio/*"],
         maximumSizeInBytes: MAX_FILE,
