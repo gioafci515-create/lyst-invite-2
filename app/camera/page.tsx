@@ -377,6 +377,11 @@ function CameraApp() {
       canvas.height = Math.round(sh * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("canvas");
+      // front camera: the live view is mirrored, so the saved photo is mirrored too and matches what was on screen
+      if (facing === "user") {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
       ctx.drawImage(v, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
       setBlink((b) => b + 1);
@@ -481,7 +486,10 @@ function CameraApp() {
           autoPlay
           playsInline
           muted
-          style={{ transform: hw ? undefined : `scale(${zoom})` }}
+          style={{
+            transform:
+              [facing === "user" ? "scaleX(-1)" : "", hw ? "" : `scale(${zoom})`].filter(Boolean).join(" ") || undefined,
+          }}
         />
         {grid && <div className={css.grid} />}
         <div key={blink} className={`${css.blink} ${blink ? css.blinkOn : ""}`} />
