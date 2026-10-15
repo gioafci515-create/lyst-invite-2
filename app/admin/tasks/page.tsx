@@ -5,10 +5,19 @@ import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { getTaskState, INTERVAL_MIN, schedule, TASKS, TIMEZONE, utcToZonedLocal } from "@/lib/tasks";
 import { listSubs, pushConfigured } from "@/lib/push";
-import { saveTaskStart, sendTaskNow, sendTestToAll, startTasksNow, stopTasks } from "../actions";
+import { removeSubscription, saveTaskStart, sendTaskNow, sendTestToAll, startTasksNow, stopTasks } from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Tasks — LYST admin", robots: { index: false } };
+
+/** which push service a subscription belongs to, in plain words */
+function service(endpoint: string) {
+  const h = new URL(endpoint).hostname;
+  if (h.endsWith("apple.com")) return "iPhone / Safari (Apple)";
+  if (h.includes("mozilla")) return "Firefox";
+  if (h.endsWith("windows.com")) return "Edge (Windows)";
+  return "Chrome / Android (Google)";
+}
 
 const fmt = (ms: number) =>
   new Date(ms).toLocaleString("en-GB", { timeZone: TIMEZONE, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -105,6 +114,35 @@ async function Panel() {
           </p>
         </div>
       </div>
+
+      <section className={styles.panel} style={{ marginTop: 24 }}>
+        <h2>Subscribed phones</h2>
+        {subs.length === 0 ? (
+          <p className={styles.note}>
+            None yet. A guest subscribes by opening the site, going to Tasks and tapping “Turn on phone reminders”.
+          </p>
+        ) : (
+          <ul className={styles.list}>
+            {[...subs]
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .map((s) => (
+                <li key={s.endpoint}>
+                  <span>
+                    <b>{service(s.endpoint)}</b>
+                    <br />
+                    <small>
+                      subscribed {new Date(s.createdAt).toLocaleString("en-GB", { timeZone: TIMEZONE, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </small>
+                  </span>
+                  <form action={removeSubscription}>
+                    <input type="hidden" name="endpoint" value={s.endpoint} />
+                    <button className={styles.del}>Remove</button>
+                  </form>
+                </li>
+              ))}
+          </ul>
+        )}
+      </section>
 
       <section className={styles.panel} style={{ marginTop: 24 }}>
         <h2>Schedule</h2>

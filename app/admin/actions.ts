@@ -178,3 +178,11 @@ export async function sendTestToAll() {
   });
   revalidatePath("/admin/tasks");
 }
+
+export async function removeSubscription(formData: FormData) {
+  await requireAdmin();
+  const { allowedEndpoint, removeSub } = await import("@/lib/push");
+  const endpoint = String(formData.get("endpoint") ?? "");
+  if (allowedEndpoint(endpoint)) await removeSub(endpoint);
+  revalidatePath("/admin/tasks");
+}
