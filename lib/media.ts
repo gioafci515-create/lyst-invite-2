@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
-import { del, put } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 
 /** A stored upload. `url` = Vercel Blob (production); `local` = file name under ./data/uploads (development). */
 export type MediaFile = {
@@ -18,22 +18,27 @@ const UPLOADS = path.join(process.cwd(), "data", "uploads");
 
 export const blobConfigured = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 
-/** Blob URLs we accept from the browser: https, on Vercel's public blob host */
+/**
+ * Blob URLs we accept from the browser: https on Vercel's blob hosts. The store is PRIVATE, so files are only
+ * readable through this server (unapproved photos can't be opened by anyone who finds a link).
+ */
 export function isBlobUrl(raw: unknown): raw is string {
-  if (typeof raw !== "string" || raw.length > 600) return false;
+  if (typeof raw !== "string" || raw.length > 700) return false;
   try {
     const u = new URL(raw);
-    return u.protocol === "https:" && u.hostname.endsWith(".public.blob.vercel-storage.com");
+    return u.protocol === "https:" && /\.(private|public)\.blob\.vercel-storage\.com$/.test(u.hostname);
   } catch {
     return false;
   }
 }
 
+const accessOf = (url: string): "private" | "public" => (new URL(url).hostname.includes(".private.") ? "private" : "public");
+
 /** Save an uploaded buffer (server-side path: used when the file came through our own API). */
 export async function storeBuffer(data: Buffer, name: string, mime: string): Promise<MediaFile> {
   const safe = name.replace(/[^\w.\-]/g, "_").slice(0, 80) || "upload";
   if (blobConfigured()) {
-    const blob = await put(`uploads/${safe}`, data, { access: "public", contentType: mime, addRandomSuffix: true });
+    const blob = await put(`uploads/${safe}`, data, { access: "private", contentType: mime, addRandomSuffix: true });
     return { name, mime, size: data.length, url: blob.url };
   }
   if (process.env.VERCEL) throw new Error("File storage not configured: connect a Vercel Blob store.");
@@ -52,9 +57,13 @@ export async function serveMedia(file: MediaFile, extra: Record<string, string> 
     ...extra,
   };
   if (file.url) {
-    const upstream = await fetch(file.url);
-    if (!upstream.ok || !upstream.body) return new Response("Not found", { status: 404 });
-    return new Response(upstream.body, { headers });
+    try {
+      const blob = await get(file.url, { access: accessOf(file.url) });
+      if (!blob || blob.statusCode !== 200 || !blob.stream) return new Response("Not found", { status: 404 });
+      return new Response(blob.stream, { headers });
+    } catch {
+      return new Response("Not found", { status: 404 });
+    }
   }
   if (file.local && /^[0-9a-f-]{36}$/.test(file.local)) {
     try {

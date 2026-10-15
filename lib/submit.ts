@@ -23,7 +23,7 @@ async function uploadToBlob(file: Blob, filename: string): Promise<Uploaded | nu
     const mime = (file.type || "application/octet-stream").split(";")[0];
     const safe = filename.replace(/[^\w.\-]/g, "_").slice(0, 80) || "upload";
     const blob = await upload(`uploads/${safe}`, file, {
-      access: "public",
+      access: "private",
       handleUploadUrl: "/api/blob/upload",
       contentType: mime,
     });
