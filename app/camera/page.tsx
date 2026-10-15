@@ -481,7 +481,7 @@ function CameraApp() {
           autoPlay
           playsInline
           muted
-          style={{ transform: `${facing === "user" ? "scaleX(-1) " : ""}${hw ? "" : `scale(${zoom})`}`.trim() || undefined }}
+          style={{ transform: hw ? undefined : `scale(${zoom})` }}
         />
         {grid && <div className={css.grid} />}
         <div key={blink} className={`${css.blink} ${blink ? css.blinkOn : ""}`} />
