@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { getTaskState, INTERVAL_MIN, schedule, TASKS } from "@/lib/tasks";
+import { getTaskState, INTERVAL_MIN, schedule, TASKS, WINDOW_MIN } from "@/lib/tasks";
 
 // public: the 5 tasks, when each unlocks, and the server clock so phones can count down accurately
 export async function GET() {
@@ -11,11 +11,13 @@ export async function GET() {
     {
       now,
       intervalMin: INTERVAL_MIN,
+      windowMin: WINDOW_MIN,
       started: state.start !== null,
       tasks: TASKS.map((t, i) => ({
         ...t,
         index: i,
         at: times[i],
+        windowEnd: times[i] === null ? null : times[i]! + WINDOW_MIN * 60000,
         unlocked: times[i] !== null && times[i]! <= now,
       })),
     },

@@ -1,4 +1,17 @@
-import { claimTask, getTaskState, schedule, TASKS } from "./tasks";
+import {
+  claimReminder,
+  claimTask,
+  doneSet,
+  endpointHash,
+  getTaskState,
+  NOTIFY_TITLE,
+  notifyBody,
+  remindBody,
+  REMIND_TITLE,
+  schedule,
+  TASKS,
+  WINDOW_MIN,
+} from "./tasks";
 import { sendToAll } from "./push";
 import { newNoticeId, updateLive } from "./live";
 
@@ -20,12 +33,33 @@ export async function announceTask(index: number) {
     });
     l.notices = l.notices.slice(0, 50);
   });
-  return sendToAll({ title, body: task.text, url: "/#tasks", tag: `task-${task.id}` });
+  // the phone alert: short, urgent, same moment for everyone
+  return sendToAll({
+    title: NOTIFY_TITLE,
+    body: notifyBody(task.title),
+    url: "/#tasks",
+    tag: `task-${task.id}`,
+    requireInteraction: true,
+    timestamp: Date.now(),
+    task: task.id,
+  });
+}
+
+/** "1 min left" — only to phones that haven't finished this task */
+export async function remindTask(index: number) {
+  const task = TASKS[index];
+  if (!task) return null;
+  const done = await doneSet(task.id);
+  return sendToAll(
+    { title: REMIND_TITLE, body: remindBody(task.title), url: "/#tasks", tag: `task-${task.id}`, requireInteraction: true, timestamp: Date.now(), task: task.id },
+    (s) => done.has(endpointHash(s.endpoint)),
+  );
 }
 
 export type TickResult = {
   due: number[];
   announced: number | null;
+  reminded?: number | null;
   skippedStale: number[];
   push?: Awaited<ReturnType<typeof sendToAll>>;
 };
@@ -41,7 +75,18 @@ export async function tick(now = Date.now()): Promise<TickResult> {
     .map((t, i) => ({ t, i }))
     .filter((x) => x.t !== null && x.t <= now && !state.sent.includes(x.i));
 
-  const result: TickResult = { due: dueIdx.map((d) => d.i), announced: null, skippedStale: [] };
+  const result: TickResult = { due: dueIdx.map((d) => d.i), announced: null, skippedStale: [], reminded: null };
+
+  // one minute into a task's window: nudge phones that haven't done it (announced earlier, still inside the window)
+  for (let i = 0; i < times.length; i++) {
+    const t = times[i];
+    if (t === null || !state.sent.includes(i)) continue;
+    if (now >= t + 60000 && now < t + WINDOW_MIN * 60000 + 30000 && (await claimReminder(i))) {
+      await remindTask(i);
+      result.reminded = i;
+    }
+  }
+
   if (!dueIdx.length) return result;
 
   // claim every due task first; whoever wins the claim is the only one allowed to announce it

@@ -45,7 +45,17 @@ export function pushConfigured() {
   return configured;
 }
 
-export type PushPayload = { title: string; body: string; url?: string; tag?: string };
+export type PushPayload = {
+  title: string;
+  body: string;
+  url?: string;
+  tag?: string;
+  /** keep the alert on screen until the user acts on it (desktop/Android) */
+  requireInteraction?: boolean;
+  /** when the moment started — shows the right time on the alert */
+  timestamp?: number;
+  task?: string;
+};
 
 async function sendOne(sub: Sub, payload: PushPayload): Promise<"ok" | "gone" | "error"> {
   try {
@@ -62,9 +72,9 @@ async function sendOne(sub: Sub, payload: PushPayload): Promise<"ok" | "gone" | 
 }
 
 /** sends to every subscriber, pruning dead subscriptions. Returns counts. */
-export async function sendToAll(payload: PushPayload) {
+export async function sendToAll(payload: PushPayload, skip?: (s: Sub) => boolean) {
   if (!pushConfigured()) return { sent: 0, failed: 0, removed: 0, configured: false };
-  const subs = await listSubs();
+  const subs = (await listSubs()).filter((s) => !skip?.(s));
   let sent = 0;
   let failed = 0;
   const gone: string[] = [];

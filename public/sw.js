@@ -1,4 +1,4 @@
-/* LYST service worker: shows task reminders pushed by the server and opens the site when tapped. */
+/* LYST service worker: shows the task alerts pushed by the server and opens the site when tapped. */
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -8,18 +8,22 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "LYST", body: event.data ? event.data.text() : "" };
+    data = { title: "UN/FOLD", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "UN/FOLD 2026";
   event.waitUntil(
-    self.registration.showNotification(title, {
+    self.registration.showNotification(data.title || "UN/FOLD 2026", {
       body: data.body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
+      // one alert per task: the "1 min left" nudge replaces the first instead of stacking
       tag: data.tag || "lyst",
       renotify: true,
-      vibrate: [120, 60, 120],
-      data: { url: data.url || "/" },
+      // stay on screen until the guest reacts (desktop/Android; iOS ignores this)
+      requireInteraction: data.requireInteraction === true,
+      timestamp: data.timestamp || Date.now(),
+      // strong, attention-grabbing buzz pattern
+      vibrate: [250, 100, 250, 100, 400],
+      data: { url: data.url || "/", task: data.task || null },
     }),
   );
 });

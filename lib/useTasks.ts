@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { cacheTasks, readCachedTasks, readProgress, serverNow, TASKS_EVENT, type ClientTask } from "./taskProgress";
 
-export type TaskView = ClientTask & { progress: number; done: boolean; open: boolean };
+export type TaskView = ClientTask & {
+  progress: number;
+  done: boolean;
+  open: boolean;
+  /** inside the short capture window right after it unlocked */
+  inWindow: boolean;
+  /** window is over but the task still isn't done */
+  late: boolean;
+};
 
 /** Live task list: unlock countdowns (server-corrected clock) plus this device's progress. */
 export function useTasks() {
@@ -66,7 +74,9 @@ export function useTasks() {
   const views: TaskView[] = tasks.map((t) => {
     const p = progress[t.id] ?? 0;
     const unlocked = t.at !== null && t.at <= now;
-    return { ...t, unlocked, progress: p, done: p >= t.count, open: unlocked && p < t.count };
+    const open = unlocked && p < t.count;
+    const inWindow = open && t.windowEnd !== null && now < t.windowEnd;
+    return { ...t, unlocked, progress: p, done: p >= t.count, open, inWindow, late: open && !inWindow };
   });
 
   return { tasks: views, now, loaded, started, failed };

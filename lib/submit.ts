@@ -1,5 +1,5 @@
 import { upload } from "@vercel/blob/client";
-import { activeTaskFor, creditTask, findTask } from "./taskProgress";
+import { activeTaskFor, creditTask, findTask, lateMinutes } from "./taskProgress";
 
 export type Guest = { name: string; email: string };
 
@@ -65,7 +65,8 @@ export async function submitContribution(input: {
   task?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const task = (input.task ? findTask(input.task) : null) ?? activeTaskFor(input.type);
-  const meta = { ...input.meta, ...(task ? { task: task.id } : {}) };
+  const late = task ? lateMinutes(task) : 0;
+  const meta = { ...input.meta, ...(task ? { task: task.id } : {}), ...(late ? { late: `${late} min late` } : {}) };
   const name = input.name || getGuest().name || "Anonymous";
   const originalName = input.filename ?? (input.file instanceof File ? input.file.name : "recording");
   const shrunk = input.file ? await shrinkImage(input.file, originalName) : null;

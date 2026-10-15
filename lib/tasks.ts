@@ -1,6 +1,17 @@
+import { createHash } from "crypto";
 import { getKV } from "./kv";
 
 export const INTERVAL_MIN = 20;
+/** like BeReal: everyone gets a short window to capture the moment right when the alert lands */
+export const WINDOW_MIN = 2;
+
+/** The alert copy — edit these two functions to change what phones show. */
+export const NOTIFY_TITLE = "⚠️ Time to UN/FOLD. ⚠️";
+export const notifyBody = (taskTitle: string) =>
+  `${taskTitle} — ${WINDOW_MIN} min left to capture it and see what everyone else is up to!`;
+/** nudge sent one minute into the window, only to phones that haven't done the task yet */
+export const REMIND_TITLE = "⏰ 1 min left to UN/FOLD";
+export const remindBody = (taskTitle: string) => `${taskTitle} — everyone else is already in. Don't miss it.`;
 export const TIMEZONE = "Europe/Amsterdam";
 /** first task unlocks 20 minutes after doors: Sat 14 Nov 2026, 19:33 Rotterdam time */
 export const DEFAULT_START = "2026-11-14T18:33:00.000Z";
@@ -82,7 +93,28 @@ export async function setTaskStart(iso: string | null): Promise<void> {
   const kv = getKV();
   await kv.set(START, iso ?? "");
   await kv.del(SENT);
+  await kv.del("tasks:reminded");
+  for (const t of TASKS) await kv.del("tasks:done:" + t.id);
 }
+
+const REMINDED = "tasks:reminded";
+const hash = (s: string) => createHash("sha1").update(s).digest("hex").slice(0, 16);
+
+/** one-time claim for the "1 min left" nudge */
+export async function claimReminder(index: number): Promise<boolean> {
+  return getKV().sadd(REMINDED, String(index));
+}
+
+/** remember that this phone finished the task (so it skips the nudge) */
+export async function markDone(taskId: string, endpoint: string): Promise<void> {
+  await getKV().sadd("tasks:done:" + taskId, hash(endpoint));
+}
+
+export async function doneSet(taskId: string): Promise<Set<string>> {
+  return new Set(await getKV().smembers("tasks:done:" + taskId));
+}
+
+export const endpointHash = hash;
 
 /** Atomically claim a task for sending. Only one caller ever gets true, so a task is never announced twice. */
 export async function claimTask(index: number): Promise<boolean> {

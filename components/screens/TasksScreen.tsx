@@ -28,6 +28,7 @@ export default function TasksScreen() {
   const push = usePush();
 
   const done = tasks.filter((x) => x.done).length;
+  const live = tasks.find((x) => x.inWindow);
   const next = tasks.find((x) => !x.unlocked && x.at !== null);
   const sameDay = next && now ? new Date(next.at!).toDateString() === new Date(now).toDateString() : false;
 
@@ -47,6 +48,18 @@ export default function TasksScreen() {
       step={3}
       action={action}
     >
+      {live && now > 0 && (
+        <div className={t.alarm} role="alert">
+          <b>⚠️ Time to UN/FOLD. ⚠️</b>
+          <span>
+            {live.title} · <span className={t.count}>{clock(live.windowEnd! - now)}</span> left to capture it
+          </span>
+          <a href={live.action.href} className={styles.primary} data-btn>
+            {live.action.label}
+          </a>
+        </div>
+      )}
+
       <div className={t.summary}>
         <span className={t.big}>
           {done} of {tasks.length || 5} done
@@ -123,7 +136,11 @@ export default function TasksScreen() {
                   {task.done
                     ? "✓ Done"
                     : task.unlocked
-                      ? "Open now"
+                      ? task.inWindow && task.windowEnd
+                        ? `⚠️ ${clock(task.windowEnd - now)} left`
+                        : task.windowEnd
+                          ? `Late · ${Math.max(1, Math.ceil((now - task.windowEnd) / 60000))} min`
+                          : "Open now"
                       : task.at
                         ? `🔒 ${sameDay || !now ? hhmm(task.at) : dayTime(task.at)}`
                         : "🔒 Locked"}

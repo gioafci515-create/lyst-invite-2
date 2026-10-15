@@ -55,7 +55,7 @@ function CameraApp() {
   const router = useRouter();
   const params = useSearchParams();
   const taskId = params.get("task");
-  const { tasks } = useTasks();
+  const { tasks, now } = useTasks();
   const activeTask = tasks.find((t) => t.id === taskId) ?? tasks.find((t) => t.type === "photo" && t.open) ?? null;
 
   const root = useRef<HTMLDivElement>(null);
@@ -488,7 +488,13 @@ function CameraApp() {
               Task {activeTask.index + 1}: {activeTask.title}
             </b>
             <br />
-            {taskDone ? "Complete ✓" : activeTask.text}
+            {taskDone
+              ? "Complete ✓"
+              : activeTask.inWindow && activeTask.windowEnd
+                ? `⚠️ Time to UN/FOLD · ${Math.max(0, Math.ceil((activeTask.windowEnd - now) / 1000))}s left`
+                : activeTask.late
+                  ? "Still open — you're late, but it counts"
+                  : activeTask.text}
           </span>
           <span>
             {activeTask.progress}/{activeTask.count}

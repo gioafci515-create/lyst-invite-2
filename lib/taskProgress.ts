@@ -9,6 +9,8 @@ export type ClientTask = {
   text: string;
   action: { label: string; href: string };
   at: number | null;
+  /** end of the short "capture it now" window; finishing later counts as late */
+  windowEnd: number | null;
   unlocked: boolean;
 };
 
@@ -88,4 +90,28 @@ export function creditTask(task: ClientTask) {
   progress[task.id] = Math.min(task.count, (progress[task.id] ?? 0) + 1);
   set(PROGRESS_KEY, JSON.stringify(progress));
   window.dispatchEvent(new Event(TASKS_EVENT));
+  if (progress[task.id] >= task.count) void reportDone(task.id);
+}
+
+/** tell the server this phone finished the task, so it skips the "1 min left" nudge */
+async function reportDone(taskId: string) {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration("/sw.js");
+    const sub = await reg?.pushManager.getSubscription();
+    if (!sub) return;
+    await fetch("/api/push/done", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint, task: taskId }),
+    });
+  } catch {
+    /* best effort */
+  }
+}
+
+/** minutes past the end of the task's window (0 if still inside it) */
+export function lateMinutes(task: ClientTask): number {
+  if (task.windowEnd === null) return 0;
+  const over = serverNow() - task.windowEnd;
+  return over > 0 ? Math.ceil(over / 60000) : 0;
 }
