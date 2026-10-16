@@ -14,7 +14,7 @@ export default function NotificationsScreen() {
   const [read, setRead] = useState<string[]>([]);
   const [now, setNow] = useState(0);
   const [settings, setSettings] = useState(false);
-  const [prefs, setPrefs] = useState({ priority: true, schedule: true, activity: false });
+  const [prefs, setPrefs] = useState({ priority: true, schedule: true, activity: true });
 
   useEffect(() => {
     setRead(readIds());

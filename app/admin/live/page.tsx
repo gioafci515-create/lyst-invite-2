@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { getLive, ICONS } from "@/lib/live";
 import { pollTally } from "@/lib/contrib";
-import { addNotice, removeNotice, saveAnnouncement, saveChallenge, savePoll, saveSchedule } from "../actions";
+import { addNotice, editNotice, removeNotice, saveAnnouncement, saveChallenge, savePoll, saveSchedule } from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Live room — LYST admin", robots: { index: false } };
@@ -47,6 +47,9 @@ async function Editor() {
             Message
             <input name="text" defaultValue={live.announcement.text} className={styles.input} maxLength={200} />
           </label>
+          <label className={styles.check}>
+            <input type="checkbox" name="notify" /> Also push to guests’ phones
+          </label>
           <button className={styles.btn}>Publish</button>
         </form>
 
@@ -55,6 +58,9 @@ async function Editor() {
           <label className={styles.label}>
             One item per line
             <textarea name="schedule" defaultValue={live.schedule.join("\n")} rows={7} className={styles.input} />
+          </label>
+          <label className={styles.check}>
+            <input type="checkbox" name="notify" /> Notify guests’ phones that it changed
           </label>
           <button className={styles.btn}>Save schedule</button>
         </form>
@@ -118,11 +124,15 @@ async function Editor() {
           <label className={styles.check}>
             <input type="checkbox" name="priority" /> Priority
           </label>
+          <label className={styles.check}>
+            <input type="checkbox" name="notify" defaultChecked /> Push to phones
+          </label>
           <button className={styles.btn}>Send to guests</button>
         </form>
         <ul className={styles.list}>
           {live.notices.map((n) => (
-            <li key={n.id}>
+            <li key={n.id} style={{ flexDirection: "column", alignItems: "stretch" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
               <span>
                 <b>{n.title}</b> {n.priority && <em>priority</em>}
                 <br />
@@ -134,6 +144,29 @@ async function Editor() {
                 <input type="hidden" name="id" value={n.id} />
                 <button className={styles.del}>Delete</button>
               </form>
+              </div>
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ cursor: "pointer", fontSize: 13 }}>Edit</summary>
+                <form action={editNotice} className={styles.inline} style={{ marginTop: 8 }}>
+                  <input type="hidden" name="id" value={n.id} />
+                  <input name="title" defaultValue={n.title} required maxLength={80} className={styles.input} />
+                  <input name="text" defaultValue={n.text} required maxLength={240} className={styles.input} style={{ flex: 2 }} />
+                  <select name="icon" className={styles.input} defaultValue={n.icon}>
+                    {ICONS.map((i) => (
+                      <option key={i} value={i}>
+                        {i.replace("-18", "").replace("-dark", "")}
+                      </option>
+                    ))}
+                  </select>
+                  <label className={styles.check}>
+                    <input type="checkbox" name="priority" defaultChecked={n.priority} /> Priority
+                  </label>
+                  <label className={styles.check}>
+                    <input type="checkbox" name="notify" /> Push again
+                  </label>
+                  <button className={styles.btn}>Save</button>
+                </form>
+              </details>
             </li>
           ))}
         </ul>

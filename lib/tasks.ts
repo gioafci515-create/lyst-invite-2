@@ -25,84 +25,126 @@ export type TaskDef = {
   count: number;
   title: string;
   text: string;
-  /** where the guest does it */
-  action: { label: string; href: string };
+  /** auto: unlocks on the 20-minute timeline. manual: only goes out when the hosts press send. */
+  mode: "auto" | "manual";
 };
 
-export const TASKS: TaskDef[] = [
+export type TaskAction = { label: string; href: string };
+
+/** where the guest does it, from the task type */
+export function actionFor(t: Pick<TaskDef, "id" | "type">): TaskAction {
+  switch (t.type) {
+    case "photo":
+      return { label: "Open camera", href: "/camera?task=" + encodeURIComponent(t.id) };
+    case "voice":
+      return { label: "Record voice", href: "/#voice" };
+    case "video":
+      return { label: "Record video", href: "/#video" };
+    default:
+      return { label: "Write note", href: "/#later" };
+  }
+}
+
+/** The starting set; the hosts can change, remove and add tasks from /admin/tasks. */
+export const DEFAULT_TASKS: TaskDef[] = [
   {
     id: "frames",
     type: "photo",
     count: 3,
+    mode: "auto",
     title: "Three frames",
     text: "Take 3 pictures of the typography around you: signs, projections, posters, anything with letters.",
-    action: { label: "Open camera", href: "/camera?task=frames" },
   },
   {
     id: "voice",
     type: "voice",
     count: 1,
+    mode: "auto",
     title: "Say it out loud",
     text: "Record a short voice memory: describe what this night sounds like.",
-    action: { label: "Record voice", href: "/#voice" },
   },
   {
     id: "hands",
     type: "photo",
     count: 1,
+    mode: "auto",
     title: "Hidden hands",
     text: "Find the oldest friendship in the room and capture their hands.",
-    action: { label: "Open camera", href: "/camera?task=hands" },
   },
   {
     id: "note",
     type: "text",
     count: 1,
+    mode: "auto",
     title: "One line for later",
     text: "Write a note to the future: a line that will be sealed and revealed a year from now.",
-    action: { label: "Write note", href: "/#later" },
   },
   {
     id: "hello",
     type: "video",
     count: 1,
+    mode: "auto",
     title: "Say hello on film",
     text: "Record a 10-second video greeting for someone you haven't met yet tonight.",
-    action: { label: "Record video", href: "/#video" },
   },
 ];
 
+/* ---------- task list (editable by the hosts) ---------- */
+
+const DEFS = "tasks:defs";
+
+export async function getTaskDefs(): Promise<TaskDef[]> {
+  const kv = getKV();
+  const stored = await kv.get<TaskDef[]>(DEFS);
+  if (stored) return stored;
+  await kv.setnx(DEFS, DEFAULT_TASKS);
+  return (await kv.get<TaskDef[]>(DEFS)) ?? DEFAULT_TASKS;
+}
+
+export async function saveTaskDefs(defs: TaskDef[]): Promise<void> {
+  await getKV().set(DEFS, defs);
+}
+
+export async function clearTaskData(id: string): Promise<void> {
+  const kv = getKV();
+  await kv.hdel(SENT_AT, id);
+  await kv.del("tasks:done:" + id);
+}
+
 /* ---------- schedule state (server) ---------- */
 
-export type TaskState = { start: string | null; sent: number[] };
+export type TaskState = { start: string | null; defs: TaskDef[]; sentAt: Record<string, number> };
 
 const START = "tasks:start"; // ISO string; "" = stopped; missing = use DEFAULT_START
-const SENT = "tasks:sent"; // set of task indices already announced
+const SENT_AT = "tasks:sentat"; // hash: task id -> the moment it went out (epoch ms)
+const REMINDED = "tasks:reminded"; // set of task ids already nudged
 
 export async function getTaskState(): Promise<TaskState> {
   const kv = getKV();
-  const [start, sent] = await Promise.all([kv.get<string>(START), kv.smembers(SENT)]);
-  return {
-    start: start === null ? DEFAULT_START : start === "" ? null : start,
-    sent: sent.map(Number).filter((n) => Number.isInteger(n)).sort((x, y) => x - y),
-  };
+  const [start, defs, sent] = await Promise.all([
+    kv.get<string>(START),
+    getTaskDefs(),
+    kv.hgetall<number | string>(SENT_AT),
+  ]);
+  const sentAt: Record<string, number> = {};
+  for (const [k, v] of Object.entries(sent)) if (Number.isFinite(Number(v))) sentAt[k] = Number(v);
+  return { start: start === null ? DEFAULT_START : start === "" ? null : start, defs, sentAt };
 }
 
 /** change the start time (or stop with null); clears which tasks were already sent */
 export async function setTaskStart(iso: string | null): Promise<void> {
   const kv = getKV();
   await kv.set(START, iso ?? "");
-  await kv.del(SENT);
-  await kv.del("tasks:reminded");
-  for (const t of TASKS) await kv.del("tasks:done:" + t.id);
+  await kv.del(SENT_AT);
+  await kv.del(REMINDED);
+  for (const t of await getTaskDefs()) await kv.del("tasks:done:" + t.id);
 }
 
-const REMINDED = "tasks:reminded";
 const hash = (s: string) => createHash("sha1").update(s).digest("hex").slice(0, 16);
 
 /** one-time claim for the "1 min left" nudge */
-export async function claimReminder(index: number): Promise<boolean> {
-  return getKV().sadd(REMINDED, String(index));
+export async function claimReminder(id: string): Promise<boolean> {
+  return getKV().sadd(REMINDED, id);
 }
 
 /** remember that this phone finished the task (so it skips the nudge) */
@@ -116,16 +158,36 @@ export async function doneSet(taskId: string): Promise<Set<string>> {
 
 export const endpointHash = hash;
 
-/** Atomically claim a task for sending. Only one caller ever gets true, so a task is never announced twice. */
-export async function claimTask(index: number): Promise<boolean> {
-  return getKV().sadd(SENT, String(index));
+/** Atomically claim a task for sending, stamping the moment it unlocks. Only one caller ever gets true. */
+export async function claimTask(id: string, at: number): Promise<boolean> {
+  return getKV().hsetnx(SENT_AT, id, at);
 }
 
-/** unlock time of each task as epoch ms (null when no start is set) */
-export function schedule(start: string | null): (number | null)[] {
-  const t = start ? new Date(start).getTime() : NaN;
-  return TASKS.map((_, i) => (Number.isFinite(t) ? t + i * INTERVAL_MIN * 60000 : null));
+export type TaskRow = TaskDef & {
+  action: TaskAction;
+  /** position in the full host list */
+  pos: number;
+  /** where it sits on the automatic timeline (auto tasks only) */
+  sched: number | null;
+  /** when it actually went out */
+  sentAt: number | null;
+  /** unlock time: the moment it was sent, else its timeline slot */
+  at: number | null;
+};
+
+export function buildRows(state: TaskState): TaskRow[] {
+  const t0 = state.start ? new Date(state.start).getTime() : NaN;
+  let slot = 0;
+  return state.defs.map((d, pos) => {
+    const sched = d.mode === "auto" ? (Number.isFinite(t0) ? t0 + slot * INTERVAL_MIN * 60000 : null) : null;
+    if (d.mode === "auto") slot++;
+    const sentAt = state.sentAt[d.id] ?? null;
+    return { ...d, action: actionFor(d), pos, sched, sentAt, at: sentAt ?? sched };
+  });
 }
+
+/** what guests see: the timeline, plus any hand-sent task once it has gone out */
+export const visibleRows = (rows: TaskRow[]) => rows.filter((r) => r.mode === "auto" || r.sentAt !== null);
 
 /* ---------- time zone helpers (admin enters Rotterdam local time) ---------- */
 

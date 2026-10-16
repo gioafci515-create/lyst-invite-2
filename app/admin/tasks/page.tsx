@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
-import { getTaskState, INTERVAL_MIN, schedule, TASKS, TIMEZONE, utcToZonedLocal } from "@/lib/tasks";
+import { buildRows, getTaskState, INTERVAL_MIN, TIMEZONE, utcToZonedLocal, type TaskRow } from "@/lib/tasks";
 import { listSubs, pushConfigured } from "@/lib/push";
-import { removeSubscription, saveTaskStart, sendTaskNow, sendTestToAll, startTasksNow, stopTasks } from "../actions";
+import { createTask, deleteTask, removeSubscription, saveTaskStart, sendTaskNow, sendTestToAll, startTasksNow, stopTasks, updateTask } from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Tasks — LYST admin", robots: { index: false } };
@@ -22,10 +22,74 @@ function service(endpoint: string) {
 const fmt = (ms: number) =>
   new Date(ms).toLocaleString("en-GB", { timeZone: TIMEZONE, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
+function TaskFields({ t }: { t?: TaskRow }) {
+  return (
+    <>
+      <select name="type" className={styles.input} defaultValue={t?.type ?? "photo"} aria-label="Type">
+        <option value="photo">Photo</option>
+        <option value="video">Video</option>
+        <option value="voice">Voice</option>
+        <option value="text">Note</option>
+      </select>
+      <input name="count" type="number" min={1} max={10} defaultValue={t?.count ?? 1} className={styles.input} style={{ maxWidth: 80 }} aria-label="How many" />
+      <select name="mode" className={styles.input} defaultValue={t?.mode ?? "manual"} aria-label="When">
+        <option value="manual">Hand-sent</option>
+        <option value="auto">On the timeline</option>
+      </select>
+    </>
+  );
+}
+
+function TaskItem({ t, now }: { t: TaskRow; now: number }) {
+  const status =
+    t.sentAt !== null
+      ? `sent ${fmt(t.sentAt)} ✓`
+      : t.mode === "manual"
+        ? "waiting for you to send it"
+        : t.at === null
+          ? "not scheduled"
+          : `${fmt(t.at)} · ${t.at <= now ? "due — sending" : "waiting"}`;
+  return (
+    <li style={{ flexDirection: "column", alignItems: "stretch" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <span>
+          <b>{t.title}</b>{" "}
+          <em>
+            {t.type}
+            {t.count > 1 ? ` ×${t.count}` : ""} · {t.mode === "auto" ? "timeline" : "hand-sent"}
+          </em>
+          <br />
+          {t.text}
+          <br />
+          <small>{status}</small>
+        </span>
+        <form action={sendTaskNow}>
+          <input type="hidden" name="id" value={t.id} />
+          <button className={styles.del}>{t.sentAt !== null ? "Send again" : "Send now"}</button>
+        </form>
+      </div>
+      <details style={{ marginTop: 8 }}>
+        <summary style={{ cursor: "pointer", fontSize: 13 }}>Edit or delete</summary>
+        <form action={updateTask} className={styles.inline} style={{ marginTop: 8 }}>
+          <input type="hidden" name="id" value={t.id} />
+          <input name="title" defaultValue={t.title} required maxLength={60} className={styles.input} />
+          <input name="text" defaultValue={t.text} required maxLength={240} className={styles.input} style={{ flex: 2 }} />
+          <TaskFields t={t} />
+          <button className={styles.btn}>Save changes</button>
+        </form>
+        <form action={deleteTask} style={{ marginTop: 8 }}>
+          <input type="hidden" name="id" value={t.id} />
+          <button className={styles.del}>Delete task</button>
+        </form>
+      </details>
+    </li>
+  );
+}
+
 async function Panel() {
   if (!(await isAdmin())) redirect("/admin/login");
   const [state, subs] = await Promise.all([getTaskState(), listSubs()]);
-  const times = schedule(state.start);
+  const rows = buildRows(state);
   const now = new Date().getTime();
   const configured = pushConfigured();
 
@@ -52,7 +116,7 @@ async function Panel() {
           <span>Phones subscribed</span>
         </div>
         <div>
-          <b>{state.sent.length}/{TASKS.length}</b>
+          <b>{rows.filter((r) => r.sentAt !== null).length}/{rows.length}</b>
           <span>Tasks sent</span>
         </div>
         <div>
@@ -145,32 +209,30 @@ async function Panel() {
       </section>
 
       <section className={styles.panel} style={{ marginTop: 24 }}>
-        <h2>Schedule</h2>
+        <h2>New task</h2>
+        <p className={styles.note}>
+          Add a task any time, even mid-event. “Hand-sent” tasks stay hidden from guests until you press send; “on the timeline” tasks join
+          the {INTERVAL_MIN}-minute schedule after the others.
+        </p>
+        <form action={createTask} className={styles.inline}>
+          <input name="title" placeholder="Title" required maxLength={60} className={styles.input} />
+          <input name="text" placeholder="What should guests do?" required maxLength={240} className={styles.input} style={{ flex: 2 }} />
+          <TaskFields />
+          <button className={styles.btn} name="intent" value="send">
+            Create &amp; send now
+          </button>
+          <button className={styles.btnGhost} name="intent" value="save">
+            Save for later
+          </button>
+        </form>
+      </section>
+
+      <section className={styles.panel} style={{ marginTop: 24 }}>
+        <h2>Tasks</h2>
         <ul className={styles.list}>
-          {TASKS.map((t, i) => {
-            const at = times[i];
-            const sent = state.sent.includes(i);
-            return (
-              <li key={t.id}>
-                <span>
-                  <b>
-                    {i + 1}. {t.title}
-                  </b>{" "}
-                  <em>{t.type}{t.count > 1 ? ` ×${t.count}` : ""}</em>
-                  <br />
-                  {t.text}
-                  <br />
-                  <small>
-                    {at === null ? "Not scheduled" : `${fmt(at)} · ${sent ? "sent ✓" : at <= now ? "due — sending" : "waiting"}`}
-                  </small>
-                </span>
-                <form action={sendTaskNow}>
-                  <input type="hidden" name="index" value={i} />
-                  <button className={styles.del}>Send now</button>
-                </form>
-              </li>
-            );
-          })}
+          {rows.map((t) => (
+            <TaskItem key={t.id} t={t} now={now} />
+          ))}
         </ul>
       </section>
     </main>

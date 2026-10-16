@@ -50,6 +50,10 @@ export async function saveAnnouncement(formData: FormData) {
   await updateLive((l) => {
     l.announcement = { label: line(formData.get("label"), 80) || "Host announcement", text: line(formData.get("text"), 200) };
   });
+  if (formData.get("notify") === "on") {
+    const text = line(formData.get("text"), 200);
+    if (text) await (await import("@/lib/scheduler")).notifyGuests({ title: line(formData.get("label"), 80) || "Host announcement", body: text });
+  }
   revalidatePath("/admin/live");
 }
 
@@ -63,6 +67,9 @@ export async function saveSchedule(formData: FormData) {
       .filter(Boolean)
       .slice(0, 20);
   });
+  if (formData.get("notify") === "on") {
+    await (await import("@/lib/scheduler")).notifyGuests({ title: "Schedule updated", body: "The running order changed. Tap to see the new times." });
+  }
   revalidatePath("/admin/live");
 }
 
@@ -84,6 +91,26 @@ export async function addNotice(formData: FormData) {
     });
     l.notices = l.notices.slice(0, 50);
   });
+  if (formData.get("notify") === "on") await (await import("@/lib/scheduler")).notifyGuests({ title, body: text });
+  revalidatePath("/admin/live");
+}
+
+export async function editNotice(formData: FormData) {
+  await requireAdmin();
+  const { updateLive, ICONS } = await import("@/lib/live");
+  const id = String(formData.get("id"));
+  const title = line(formData.get("title"), 80);
+  const text = line(formData.get("text"), 240);
+  if (!title || !text) return;
+  await updateLive((l) => {
+    const n = l.notices.find((x) => x.id === id);
+    if (!n) return;
+    n.title = title;
+    n.text = text;
+    n.icon = ICONS.find((i) => i === formData.get("icon")) ?? n.icon;
+    n.priority = formData.get("priority") === "on";
+  });
+  if (formData.get("notify") === "on") await (await import("@/lib/scheduler")).notifyGuests({ title: "Updated: " + title, body: text });
   revalidatePath("/admin/live");
 }
 
@@ -158,12 +185,60 @@ export async function stopTasks() {
 
 export async function sendTaskNow(formData: FormData) {
   await requireAdmin();
-  const index = Number(formData.get("index"));
-  const { TASKS, claimTask } = await import("@/lib/tasks");
-  if (!Number.isInteger(index) || index < 0 || index >= TASKS.length) return;
+  const id = String(formData.get("id") ?? "");
+  const { getTaskDefs, claimTask } = await import("@/lib/tasks");
+  if (!(await getTaskDefs()).some((t) => t.id === id)) return;
   const { announceTask } = await import("@/lib/scheduler");
-  await claimTask(index); // mark as sent so the timer doesn't repeat it
-  await announceTask(index);
+  await claimTask(id, Date.now()); // unlocks it now; a no-op if it already went out
+  await announceTask(id);
+  revalidatePath("/admin/tasks");
+}
+
+const TYPES = ["photo", "voice", "text", "video"] as const;
+
+function readTask(formData: FormData) {
+  const title = line(formData.get("title"), 60);
+  const text = line(formData.get("text"), 240);
+  const type = TYPES.find((t) => t === formData.get("type")) ?? "photo";
+  const count = Math.min(10, Math.max(1, Math.floor(Number(formData.get("count"))) || 1));
+  const mode = formData.get("mode") === "auto" ? ("auto" as const) : ("manual" as const);
+  return title && text ? { title, text, type, count, mode } : null;
+}
+
+export async function createTask(formData: FormData) {
+  await requireAdmin();
+  const fields = readTask(formData);
+  if (!fields) return;
+  const { getTaskDefs, saveTaskDefs, claimTask } = await import("@/lib/tasks");
+  const id = "t" + crypto.randomUUID().slice(0, 8);
+  const defs = await getTaskDefs();
+  if (defs.length >= 30) return;
+  await saveTaskDefs([...defs, { id, ...fields }]);
+  if (formData.get("intent") === "send") {
+    const { announceTask } = await import("@/lib/scheduler");
+    await claimTask(id, Date.now());
+    await announceTask(id);
+  }
+  revalidatePath("/admin/tasks");
+}
+
+export async function updateTask(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const fields = readTask(formData);
+  if (!fields) return;
+  const { getTaskDefs, saveTaskDefs } = await import("@/lib/tasks");
+  const defs = await getTaskDefs();
+  await saveTaskDefs(defs.map((d) => (d.id === id ? { id, ...fields } : d)));
+  revalidatePath("/admin/tasks");
+}
+
+export async function deleteTask(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const { getTaskDefs, saveTaskDefs, clearTaskData } = await import("@/lib/tasks");
+  await saveTaskDefs((await getTaskDefs()).filter((d) => d.id !== id));
+  await clearTaskData(id);
   revalidatePath("/admin/tasks");
 }
 
