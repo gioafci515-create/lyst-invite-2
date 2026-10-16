@@ -57,6 +57,8 @@ export type PushPayload = {
   task?: string;
 };
 
+let lastError = "";
+
 async function sendOne(sub: Sub, payload: PushPayload): Promise<"ok" | "gone" | "error"> {
   try {
     await webpush.sendNotification(
@@ -67,6 +69,7 @@ async function sendOne(sub: Sub, payload: PushPayload): Promise<"ok" | "gone" | 
     return "ok";
   } catch (e) {
     const code = (e as { statusCode?: number }).statusCode;
+    lastError = `${code ?? ""} ${String((e as { body?: string }).body || (e as Error).message || "").slice(0, 160)}`.trim();
     return code === 404 || code === 410 ? "gone" : "error";
   }
 }
@@ -75,6 +78,7 @@ async function sendOne(sub: Sub, payload: PushPayload): Promise<"ok" | "gone" | 
 export async function sendToAll(payload: PushPayload, skip?: (s: Sub) => boolean) {
   if (!pushConfigured()) return { sent: 0, failed: 0, removed: 0, configured: false };
   const subs = (await listSubs()).filter((s) => !skip?.(s));
+  lastError = "";
   let sent = 0;
   let failed = 0;
   const gone: string[] = [];
@@ -88,7 +92,10 @@ export async function sendToAll(payload: PushPayload, skip?: (s: Sub) => boolean
     });
   }
   for (const endpoint of gone) await removeSub(endpoint);
-  return { sent, failed, removed: gone.length, configured: true };
+  const result = { sent, failed, removed: gone.length, configured: true };
+  // remembered so /admin/tasks can show whether the last alert actually reached phones
+  await getKV().set("push:last", { at: new Date().toISOString(), title: payload.title, ...result, targets: subs.length, error: lastError }).catch(() => {});
+  return result;
 }
 
 export async function sendToEndpoint(endpoint: string, payload: PushPayload) {

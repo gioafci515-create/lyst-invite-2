@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { buildRows, getTaskState, INTERVAL_MIN, TIMEZONE, utcToZonedLocal, type TaskRow } from "@/lib/tasks";
 import { listSubs, pushConfigured } from "@/lib/push";
+import { getKV } from "@/lib/kv";
 import { createTask, deleteTask, removeSubscription, saveTaskStart, sendTaskNow, sendTestToAll, startTasksNow, stopTasks, updateTask } from "../actions";
 import styles from "../admin.module.css";
 
@@ -88,7 +89,11 @@ function TaskItem({ t, now }: { t: TaskRow; now: number }) {
 
 async function Panel() {
   if (!(await isAdmin())) redirect("/admin/login");
-  const [state, subs] = await Promise.all([getTaskState(), listSubs()]);
+  const [state, subs, last] = await Promise.all([
+    getTaskState(),
+    listSubs(),
+    getKV().get<{ at: string; title: string; sent: number; failed: number; removed: number; targets: number; error?: string }>("push:last"),
+  ]);
   const rows = buildRows(state);
   const now = new Date().getTime();
   const configured = pushConfigured();
@@ -128,6 +133,13 @@ async function Panel() {
           <span>Between tasks</span>
         </div>
       </section>
+
+      {last && (
+        <p className={styles.note} role="status">
+          Last alert: “{last.title}” at {new Date(last.at).toLocaleTimeString("en-GB", { timeZone: TIMEZONE })} — accepted by {last.sent} of{" "}
+          {last.targets} phones{last.failed ? `, ${last.failed} failed` : ""}{last.removed ? `, ${last.removed} dead subscriptions removed` : ""}.{last.error ? ` Push service said: ${last.error}` : ""}
+        </p>
+      )}
 
       {!configured && (
         <p className={styles.error} role="alert">
