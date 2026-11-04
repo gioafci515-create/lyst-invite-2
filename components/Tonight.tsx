@@ -23,6 +23,10 @@ export default function Tonight() {
   const photoTask = tasks.find((t) => t.type === "photo" && t.open);
   const cameraHref = photoTask ? `/camera?task=${encodeURIComponent(photoTask.id)}` : "/camera";
 
+  // Lifecycle: before the first task unlocks = prepare; well after the last slot = remember; otherwise tonight
+  const lastAt = Math.max(0, ...tasks.map((x) => x.at ?? 0));
+  const phase: "before" | "during" | "after" = loaded && !started ? "before" : loaded && now > 0 && lastAt > 0 && now > lastAt + 6 * 3600_000 ? "after" : "during";
+
   let status = "";
   if (live && now > 0) status = `⚠️ ${live.title} · ${clock(live.windowEnd! - now)} left`;
   else if (open.length) status = `${open.length} task${open.length > 1 ? "s" : ""} open`;
@@ -52,18 +56,42 @@ export default function Tonight() {
     <section className={styles.tonight} aria-label="Tonight shortcuts">
       <div className={styles.tonightInner}>
         <div className={styles.tonightHead}>
-          <b>Tonight</b>
+          <b>{phase === "before" ? "Get ready" : phase === "after" ? "Remember" : "Tonight"}</b>
           <a href={`#${SECTION.tasks}`} className={styles.status} data-live={!!live} aria-live="polite">
             {status || " "}
           </a>
         </div>
         <div className={styles.tiles}>
-          {tile(cameraHref, "Camera", "camera", true)}
-          {tile(`#${SECTION.tasks}`, "Tasks", "tasks")}
-          {tile(`#${SECTION.voice}`, "Voice", "mic")}
-          {tile(`#${SECTION.video}`, "Video", "video")}
-          {tile(`#${SECTION.later}`, "Letter", "note")}
-          {tile(`#${SECTION.gallery}`, "Gallery", "image")}
+          {phase === "before" && (
+            <>
+              {tile(`#${SECTION.rsvp}`, "RSVP", "note")}
+              {tile(`#${SECTION.programme}`, "Programme", "tasks")}
+              {tile(`#${SECTION.hub}`, "Hub", "home")}
+              {tile(`#${SECTION.later}`, "Letter", "note")}
+              {tile(`#${SECTION.details}`, "Details", "menu")}
+              {tile(`#${SECTION.updates}`, "Updates", "live")}
+            </>
+          )}
+          {phase === "during" && (
+            <>
+              {tile(cameraHref, "Camera", "camera", true)}
+              {tile(`#${SECTION.tasks}`, "Tasks", "tasks")}
+              {tile(`#${SECTION.live}`, "Live", "live")}
+              {tile(`#${SECTION.voice}`, "Voice", "mic")}
+              {tile(`#${SECTION.video}`, "Video", "video")}
+              {tile(`#${SECTION.gallery}`, "Gallery", "image")}
+            </>
+          )}
+          {phase === "after" && (
+            <>
+              {tile(`#${SECTION.gallery}`, "Gallery", "image")}
+              {tile(`#${SECTION.voice}`, "Voice", "mic")}
+              {tile(`#${SECTION.video}`, "Video", "video")}
+              {tile(`#${SECTION.capsule}`, "Capsule", "note")}
+              {tile(`#${SECTION.later}`, "Letter", "note")}
+              {tile(cameraHref, "Camera", "camera", true)}
+            </>
+          )}
         </div>
       </div>
     </section>

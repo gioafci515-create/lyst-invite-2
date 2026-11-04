@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import LiveWave from "@/components/LiveWave";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { clock, useRecorder } from "@/components/useRecorder";
@@ -55,7 +56,7 @@ export default function GuestbookScreen() {
 
       <div className={styles.card} style={{ padding: 18 }}>
         <p style={{ fontFamily: "var(--f-display)", fontSize: 20 }}>“For the next twenty-five years…”</p>
-        <Image src="/images/app/waveform.svg" alt="" width={94} height={28} style={{ opacity: recording ? 1 : 0.5 }} />
+        <LiveWave stream={r.liveStream} active={r.state === "recording"} />
         <div className={styles.row} style={{ minHeight: 44 }}>
           <button className={styles.choice} onClick={r.pause} disabled={!recording}>
             {r.state === "paused" ? "Resume" : "Pause"}
