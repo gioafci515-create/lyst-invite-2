@@ -93,7 +93,7 @@ export default function LaterScreen() {
         <span>Reveal date</span>
         <div className={styles.valueRow}>
           {editDate ? (
-            <input type="date" value={reveal} min="2026-11-15" onChange={(e) => setReveal(e.target.value)} />
+            <input type="date" value={reveal} min="2026-11-15" onChange={(e) => e.target.value && setReveal(e.target.value)} />
           ) : (
             <span>{pretty}</span>
           )}

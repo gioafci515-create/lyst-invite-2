@@ -35,11 +35,25 @@ async function shrinkImage(file: Blob, filename: string): Promise<{ blob: Blob; 
 
 type Uploaded = { url: string; name: string; mime: string; size: number };
 
+/** direct-to-Blob upload isn't available on every deployment; once it fails, stop trying for this page view */
+let directUnavailable = false;
+/** ~4.5 MB is the serverless body limit once the direct route is unavailable */
+const SERVER_LIMIT = 4.3 * 1024 * 1024;
+
+const EXT: Record<string, string> = { "audio/webm": "webm", "audio/mp4": "m4a", "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/wav": "wav", "video/webm": "webm", "video/mp4": "mp4", "video/quicktime": "mov" };
+
+/** a recording keeps the extension of what it really is (Safari records mp4, Chrome webm) */
+function nameFor(filename: string, mime: string) {
+  const ext = EXT[mime.split(";")[0]];
+  return ext ? filename.replace(/\.\w+$/, "") + "." + ext : filename;
+}
+
 /**
  * Sends the file straight from the phone to Vercel Blob (no 4.5 MB serverless limit).
  * Returns null when file storage isn't available, so the caller can fall back to the server path.
  */
 async function uploadToBlob(file: Blob, filename: string): Promise<Uploaded | null> {
+  if (directUnavailable) return null;
   try {
     const mime = (file.type || "application/octet-stream").split(";")[0];
     const safe = filename.replace(/[^\w.\-]/g, "_").slice(0, 80) || "upload";
@@ -50,6 +64,7 @@ async function uploadToBlob(file: Blob, filename: string): Promise<Uploaded | nu
     });
     return { url: blob.url, name: filename, mime, size: file.size };
   } catch {
+    directUnavailable = true;
     return null;
   }
 }
@@ -71,7 +86,7 @@ export async function submitContribution(input: {
   const originalName = input.filename ?? (input.file instanceof File ? input.file.name : "recording");
   const shrunk = input.file ? await shrinkImage(input.file, originalName) : null;
   const file = shrunk?.blob ?? null;
-  const filename = shrunk?.name ?? originalName;
+  const filename = file ? nameFor(shrunk?.name ?? originalName, file.type) : originalName;
 
   try {
     let res: Response;
@@ -84,6 +99,9 @@ export async function submitContribution(input: {
         body: JSON.stringify({ type: input.type, name, text: input.text, meta, file: uploaded }),
       });
     } else {
+      if (file && file.size > SERVER_LIMIT) {
+        return { ok: false, error: "That file is too large to upload. Try a shorter clip or a smaller file (about 4 MB max)." };
+      }
       // no Blob store (local development) or the direct upload failed: send through our own API
       const fd = new FormData();
       fd.set("type", input.type);

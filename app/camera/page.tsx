@@ -96,6 +96,9 @@ function CameraApp() {
   const [status, setStatus] = useState("");
   const [statusErr, setStatusErr] = useState(false);
   const [fs, setFs] = useState(false);
+  // only known in the browser: deciding this during render would not match the server HTML
+  const [canFullscreen, setCanFullscreen] = useState(false);
+  useEffect(() => setCanFullscreen(!!document.fullscreenEnabled), []);
 
   const hw = !!caps.zoom;
   const zmin = hw ? Math.max(0.5, caps.zoom!.min) : 1;
@@ -466,7 +469,6 @@ function CameraApp() {
 
   const flashLabel = flash === "off" ? "Off" : flash === "auto" ? "Auto" : "On";
   const flashNote = flash !== "off" && !caps.torch ? " (screen)" : "";
-  const canFullscreen = typeof document !== "undefined" && document.fullscreenEnabled;
   const taskDone = !!activeTask?.done;
 
   return (
@@ -492,10 +494,10 @@ function CameraApp() {
           }}
         />
         {grid && <div className={css.grid} />}
-        <div key={blink} className={`${css.blink} ${blink ? css.blinkOn : ""}`} />
+        <div key={`blink-${blink}`} className={`${css.blink} ${blink ? css.blinkOn : ""}`} />
         {count > 0 && <div className={css.count} aria-live="assertive">{count}</div>}
         {hold > 0 && (
-          <div key={hold} className={css.hold} role="status" aria-live="assertive">
+          <div key={`hold-${hold}`} className={css.hold} role="status" aria-live="assertive">
             <svg viewBox="0 0 100 100" aria-hidden>
               <circle className={css.holdTrack} cx="50" cy="50" r="44" />
               <circle className={css.holdRing} cx="50" cy="50" r="44" style={{ animationDuration: `${HOLD_MS}ms` }} />

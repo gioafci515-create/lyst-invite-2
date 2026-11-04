@@ -56,7 +56,11 @@ button {
 }
 @media (max-width: 900px) {
   :root {
-    --header-h: 108px;
+    --header-h: 56px;
+  }
+  /* room for the fixed bottom tab bar */
+  body {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
   }
 }
 

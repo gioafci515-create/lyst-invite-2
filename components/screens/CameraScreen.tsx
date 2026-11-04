@@ -70,7 +70,7 @@ export default function CameraScreen() {
         </span>
       </div>
 
-      <a href="/camera" className={cam.viewfinder} aria-label="Open the full-screen camera" style={{ display: "block" }}>
+      <a href={photoTask ? photoTask.action.href : "/camera"} className={cam.viewfinder} aria-label="Open the full-screen camera" style={{ display: "block" }}>
         <Image src="/images/app/camera-preview.png" alt="" fill sizes="480px" className={cam.preview} />
         <span className={styles.tag} style={{ position: "relative" }}>
           FULL-SCREEN · ZOOM · FLASH · TIMER
@@ -87,7 +87,7 @@ export default function CameraScreen() {
           <Image src="/images/app/upload.svg" alt="" width={44} height={44} />
           Upload existing
         </button>
-        <a href="/camera" className={styles.primary} data-btn style={{ flex: 1, gap: 4, paddingLeft: 0 }}>
+        <a href={photoTask ? photoTask.action.href : "/camera"} className={styles.primary} data-btn style={{ flex: 1, gap: 4, paddingLeft: 0 }}>
           <Image src="/images/app/camera.svg" alt="" width={44} height={44} />
           Take photo
         </a>

@@ -32,8 +32,16 @@ export function useRecorder(kind: "audio" | "video", maxSeconds: number) {
     if (rec.current && rec.current.state !== "inactive") rec.current.stop();
   }, []);
 
+  const starting = useRef(false);
+
   const start = useCallback(async () => {
+    if (starting.current || (rec.current && rec.current.state !== "inactive")) return;
     setError("");
+    if (typeof MediaRecorder === "undefined") {
+      setError("Recording isn't supported in this browser. Use Upload instead, or open the site in Safari or Chrome.");
+      return;
+    }
+    starting.current = true;
     try {
       const s = await navigator.mediaDevices.getUserMedia(
         kind === "audio" ? { audio: true } : { audio: true, video: { facingMode: "user" } },
@@ -65,8 +73,22 @@ export function useRecorder(kind: "audio" | "video", maxSeconds: number) {
           return n + 1;
         });
       }, 1000);
-    } catch {
-      setError(kind === "audio" ? "Microphone access was blocked." : "Camera access was blocked.");
+    } catch (e) {
+      release(); // a granted stream must never be left running (the mic/camera light would stay on)
+      const name = (e as DOMException)?.name;
+      setError(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? kind === "audio"
+            ? "Microphone access was blocked. Allow it in your browser's site settings."
+            : "Camera access was blocked. Allow it in your browser's site settings."
+          : name === "NotFoundError"
+            ? kind === "audio"
+              ? "No microphone was found."
+              : "No camera was found."
+            : "Recording couldn't start. Close other apps that use the microphone or camera and try again.",
+      );
+    } finally {
+      starting.current = false;
     }
   }, [kind, maxSeconds, stop]);
 

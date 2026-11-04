@@ -268,6 +268,18 @@
 .embedded .dock {
   position: static;
 }
+/* inside the single page the section heading and the bottom bar already do these jobs */
+.embedded .bar,
+.embedded .journey {
+  display: none;
+}
 .embedded .content {
   flex: none;
+}
+
+/* chips that were 32px tall are too small for a thumb: grow them on touch screens */
+@media (pointer: coarse) {
+  .small {
+    min-height: 44px;
+  }
 }

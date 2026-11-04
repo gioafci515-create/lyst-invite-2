@@ -67,16 +67,11 @@ export default function InteractScreen() {
 
   async function vote(choice: string) {
     if (!live || votedFor || !live.poll.open) return;
-    const ok = await post(
-      { type: "poll", meta: { question: live.poll.question, choice, voter: voterId() } },
-      "Vote counted.",
-      () => {
-        setVotedFor(choice);
-        lsSet(pollKey, choice);
-        refresh();
-      },
-    );
-    if (!ok) setNotice((n) => (n === "You have already voted." ? n : n));
+    await post({ type: "poll", meta: { question: live.poll.question, choice, voter: voterId() } }, "Vote counted.", () => {
+      setVotedFor(choice);
+      lsSet(pollKey, choice);
+      refresh();
+    });
   }
 
   async function sendPhoto(f?: File) {
@@ -102,7 +97,12 @@ export default function InteractScreen() {
       step={3}
       action={{
         label: busy ? "Sending…" : "Submit to live room",
-        onClick: () => (question.trim() ? sendQuestion() : sendLetter()),
+        onClick: async () => {
+          // send whatever is filled in: the letter, the question, or both
+          if (letter.trim()) await sendLetter();
+          if (question.trim()) await sendQuestion();
+          if (!letter.trim() && !question.trim()) setNotice("Write a letter or a question first.");
+        },
         disabled: busy,
       }}
     >

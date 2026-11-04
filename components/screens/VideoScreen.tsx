@@ -94,7 +94,7 @@ export default function VideoScreen() {
           <Image src="/images/app/video-preview.png" alt="" fill sizes="480px" style={{ objectFit: "cover" }} />
         )}
         <span className={styles.tag} style={{ background: "var(--red)", color: "#191817", fontWeight: 700, position: "relative" }}>
-          {recording ? `REC · ${clock(r.seconds)} / ${clock(MAX)}` : clipUrl ? "PREVIEW · READY TO SEND" : `PREVIEW · 00:38 / ${clock(MAX)}`}
+          {recording ? `REC · ${clock(r.seconds)} / ${clock(MAX)}` : clipUrl ? "PREVIEW · READY TO SEND" : `READY · MAX ${clock(MAX)}`}
         </span>
         {!clipUrl && (
           <button

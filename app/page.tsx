@@ -1,4 +1,6 @@
 import SiteHeader from "@/components/SiteHeader";
+import QuickBar from "@/components/QuickBar";
+import Tonight from "@/components/Tonight";
 import Stage from "@/components/Stage";
 import InviteScreen from "@/components/screens/InviteScreen";
 import HubScreen from "@/components/screens/HubScreen";
@@ -21,37 +23,18 @@ export default function Home() {
     <>
       <SiteHeader />
       <main>
+        <Tonight />
         {/* Invite: hero, story carousel, programme and the quick RSVP */}
         <EmbedProvider>
           <InviteScreen />
         </EmbedProvider>
 
         <Stage
-          id={SECTION.hub}
-          eyebrow="Prepare"
-          title="Event hub"
-          lead="Everything for the night in one place: the live announcement, schedule, map, dress code and guest information."
-          tone="cream"
-          wide
-        >
-          <HubScreen />
-        </Stage>
-
-        <Stage
-          id={SECTION.details}
-          eyebrow="Respond"
-          title="Your details"
-          lead="Add your plus-one, meal choice, dietary needs and access requests. You can update them any time before the deadline."
-        >
-          <RespondScreen />
-        </Stage>
-
-        <Stage
           id={SECTION.tasks}
+          tone="cream"
           eyebrow="Participate"
           title="Tonight's tasks"
           lead="Five tasks, one every 20 minutes. Turn on reminders and your phone will buzz when the next one unlocks."
-          tone="cream"
         >
           <TasksScreen />
         </Stage>
@@ -67,10 +50,10 @@ export default function Home() {
 
         <Stage
           id={SECTION.voice}
+          tone="cream"
           eyebrow="Participate"
           title="Voice guestbook"
           lead="Record a short voice memory for the hosts. Pause, re-record and send when you're happy with it."
-          tone="cream"
         >
           <GuestbookScreen />
         </Stage>
@@ -85,17 +68,8 @@ export default function Home() {
         </Stage>
 
         <Stage
-          id={SECTION.later}
-          eyebrow="Remember"
-          title="Message for later"
-          lead="Write a note to be sealed and revealed on a future date, with a photo if you like."
-          tone="cream"
-        >
-          <LaterScreen />
-        </Stage>
-
-        <Stage
           id={SECTION.live}
+          tone="cream"
           eyebrow="Participate"
           title="Live room"
           lead="Letters, the photo challenge, the live poll and questions for the hosts, all updated as the night unfolds."
@@ -104,11 +78,41 @@ export default function Home() {
         </Stage>
 
         <Stage
+          id={SECTION.later}
+          tone="cream"
+          eyebrow="Remember"
+          title="Message for later"
+          lead="Write a note to be sealed and revealed on a future date, with a photo if you like."
+        >
+          <LaterScreen />
+        </Stage>
+
+        <Stage
+          id={SECTION.hub}
+          tone="cream"
+          eyebrow="Prepare"
+          title="Event hub"
+          lead="Everything for the night in one place: the live announcement, schedule, map, dress code and guest information."
+          wide
+        >
+          <HubScreen />
+        </Stage>
+
+        <Stage
+          id={SECTION.updates}
+          eyebrow="Prepare"
+          title="Notifications"
+          lead="Priority updates and changes from the hosts, newest and most important first."
+        >
+          <NotificationsScreen />
+        </Stage>
+
+        <Stage
           id={SECTION.gallery}
+          tone="cream"
           eyebrow="Remember"
           title="Guest gallery"
           lead="Browse approved photos and videos from the night, or add your own for the hosts to approve."
-          tone="cream"
         >
           <GalleryScreen />
         </Stage>
@@ -123,15 +127,16 @@ export default function Home() {
         </Stage>
 
         <Stage
-          id={SECTION.updates}
-          eyebrow="Prepare"
-          title="Notifications"
-          lead="Priority updates and changes from the hosts, newest and most important first."
+          id={SECTION.details}
           tone="cream"
+          eyebrow="Respond"
+          title="Your details"
+          lead="Add your plus-one, meal choice, dietary needs and access requests. You can update them any time before the deadline."
         >
-          <NotificationsScreen />
+          <RespondScreen />
         </Stage>
       </main>
+      <QuickBar />
 
       <footer className={styles.footer}>
         <p className={styles.footerMark}>LYST / invitations</p>

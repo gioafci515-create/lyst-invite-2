@@ -292,3 +292,7 @@
     padding: 16px;
   }
 }
+
+.live {
+  min-height: 44px;
+}

@@ -119,7 +119,7 @@ export default function InviteScreen() {
               <p className={styles.locName}>Former Print Works 4B</p>
               <a
                 className={styles.mapLink}
-                href="https://maps.google.com/?q=Rotterdam"
+                href="https://maps.google.com/?q=Former+Print+Works+4B+Rotterdam"
                 target="_blank"
                 rel="noreferrer"
               >

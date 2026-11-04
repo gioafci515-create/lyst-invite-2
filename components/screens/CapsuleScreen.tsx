@@ -21,9 +21,13 @@ export default function CapsuleScreen() {
   const [error, setError] = useState("");
   const [now, setNow] = useState(0);
   const [reveal, setReveal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setNow(Date.now());
+    try {
+      if (localStorage.getItem("lyst_capsule_sealed")) setSealed(true);
+    } catch {}
     fetch("/api/stats").then((r) => r.json()).then(setCounts).catch(() => {});
   }, []);
 
@@ -36,8 +40,12 @@ export default function CapsuleScreen() {
     setError("");
     const res = await submitContribution({ type: "capsule", text: name, meta: { unlock: date } });
     setBusy(false);
-    if (res.ok) setSealed(true);
-    else setError(res.error);
+    if (res.ok) {
+      setSealed(true);
+      try {
+        localStorage.setItem("lyst_capsule_sealed", "1");
+      } catch {}
+    } else setError(res.error);
   }
 
   const stats: [number, string][] = [
@@ -76,7 +84,7 @@ export default function CapsuleScreen() {
         <span>Unlock date</span>
         <div className={styles.valueRow}>
           {editDate ? (
-            <input type="date" value={date} min="2026-11-15" onChange={(e) => setDate(e.target.value)} />
+            <input type="date" value={date} min="2026-11-15" onChange={(e) => e.target.value && setDate(e.target.value)} />
           ) : (
             <span>{unlock.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
           )}
@@ -104,7 +112,7 @@ export default function CapsuleScreen() {
           <span style={{ fontSize: 12, textTransform: "uppercase" }}>Reveal preview</span>
         </div>
         <p style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
-          {ready ? "The archive is ready to open." : reveal ? "Still sealed — it opens on the unlock date." : "The archive is ready to open."}
+          {ready ? "The archive is ready to open." : reveal ? "Still sealed. It opens on the unlock date." : "Sealed until the unlock date."}
         </p>
         <button className={styles.secondary} onClick={() => setReveal(true)}>
           <Image src="/images/app/unlock.svg" alt="" width={16} height={16} />
@@ -139,9 +147,18 @@ export default function CapsuleScreen() {
         <p className={styles.body}>Share the capsule link or download the archive after reveal.</p>
         <button
           className={styles.secondary}
-          onClick={() => navigator.clipboard?.writeText(location.href).then(() => setError(""), () => {})}
+          onClick={() =>
+            navigator.clipboard?.writeText(location.href).then(
+              () => {
+                setError("");
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              },
+              () => setError("Couldn't copy. Copy the address from your browser instead."),
+            )
+          }
         >
-          Copy capsule link
+          {copied ? "Link copied ✓" : "Copy capsule link"}
         </button>
       </div>
 

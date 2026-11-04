@@ -14,18 +14,26 @@ const NAV = [
   ["Updates", "#updates"],
 ] as const;
 
-const RAIL = [
-  ["Invite · opened", true],
-  ["Respond · confirmed", true],
-  ["Prepare · saved", true],
-  ["Participate · live", true],
-  ["Remember · 14 November 2027", false],
-] as const;
+/** the journey rail reflects what this guest has actually done on this device */
+const rail = (responded: boolean) =>
+  [
+    ["Invite · opened", true],
+    [responded ? "Respond · confirmed" : "Respond · not yet", responded],
+    ["Prepare · saved", responded],
+    ["Participate · live", true],
+    ["Remember · 14 November 2027", false],
+  ] as const;
 
 export default function HubScreen() {
   const { live } = useLive();
   const [read, setRead] = useState<string[]>([]);
-  useEffect(() => setRead(readIds()), []);
+  const [responded, setResponded] = useState(false);
+  useEffect(() => {
+    setRead(readIds());
+    try {
+      setResponded(!!localStorage.getItem("lyst_rsvp") || !!localStorage.getItem("lyst_guest"));
+    } catch {}
+  }, []);
 
   const alerts = live ? live.notices.filter((n) => n.priority && !read.includes(n.id)).length : 0;
   const announce = live?.announcement.text ?? "";
@@ -52,7 +60,7 @@ export default function HubScreen() {
         <div className={s.acid} aria-hidden />
         <div className={s.copy}>
           <p className={s.kicker}>● Live experience · Edition Zero / Audience</p>
-          <h1 className={s.h1}>UN/FOLD 2026</h1>
+          <h3 className={s.h1}>UN/FOLD 2026</h3>
           <p className={s.meta}>
             Saturday, 14 November 2026 · 19:13—late
             <br />
@@ -70,7 +78,7 @@ export default function HubScreen() {
       </section>
 
       <div className={s.rail} role="list" aria-label="Your journey">
-        {RAIL.map(([label, done]) => (
+        {rail(responded).map(([label, done]) => (
           <div key={label} className={s.railStep} role="listitem">
             <Image
               src={done ? "/images/hub/live-dot.svg" : "/images/hub/step-state.svg"}
@@ -100,7 +108,7 @@ export default function HubScreen() {
             <a
               className={s.choice}
               data-btn
-              href="https://maps.google.com/?q=Rotterdam"
+              href="https://maps.google.com/?q=Former+Print+Works+4B+Rotterdam"
               target="_blank"
               rel="noreferrer"
             >

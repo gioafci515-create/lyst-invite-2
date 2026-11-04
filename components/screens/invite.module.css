@@ -605,3 +605,8 @@
     text-align: left;
   }
 }
+
+/* comfortable touch targets */
+.mapLink {
+  min-height: 44px;
+}

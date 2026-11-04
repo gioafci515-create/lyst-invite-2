@@ -61,8 +61,10 @@ export default function RespondScreen() {
       else {
         setDone(true);
         setPrevious({ guests, attending });
-        localStorage.setItem("lyst_guest", JSON.stringify({ name, email }));
-        localStorage.setItem("lyst_rsvp", JSON.stringify({ attending, guests, companion, meal, dietary, requests }));
+        try {
+          localStorage.setItem("lyst_guest", JSON.stringify({ name, email }));
+          localStorage.setItem("lyst_rsvp", JSON.stringify({ attending, guests, companion, meal, dietary, requests }));
+        } catch {}
       }
     } catch {
       setError("Network error. Try again.");

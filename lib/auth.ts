@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 const COOKIE = "admin_session";
 const MAX_AGE = 60 * 60 * 8;
@@ -41,6 +42,7 @@ export async function destroySession() {
 }
 
 export async function isAdmin() {
+  await connection(); // the expiry check reads the clock, so this must run per request, never at build time
   const v = (await cookies()).get(COOKIE)?.value;
   if (!v) return false;
   const [exp, sig] = v.split(".");
