@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import Carousel from "@/components/Carousel";
+import TechText from "@/components/TechText";
 import styles from "./invite.module.css";
 
 const SCHEDULE = [
@@ -91,6 +92,23 @@ export default function InviteScreen() {
           <h2 className={styles.h2}>A visual language made for this moment.</h2>
         </div>
         <Carousel slides={SCENES} label="The invitation, in scenes" />
+      </section>
+
+      <section className={styles.wordmark} aria-label="UN/FOLD wordmark. Hover or drag the letters.">
+        <TechText
+          text="UN/FOLD"
+          style={{ fontFamily: "var(--f-display), sans-serif" }}
+          fontWeight={700}
+          fontSize={200}
+          letterSpacing={-0.04}
+          reveal="letter"
+          reach={180}
+          accentColor="#ff3b21"
+          intro="assemble"
+          introDuration={2}
+          specks={15}
+        />
+        <p className={styles.wordmarkHint}>Hover or drag a letter · tap to kick</p>
       </section>
 
       <section id="programme" className={styles.programme}>
