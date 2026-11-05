@@ -118,6 +118,10 @@ export default function VideoScreen() {
         </button>
       </div>
 
+      <p className={styles.body} style={{ lineHeight: 1.4, opacity: 0.75 }}>
+        Nothing is sent until you press Submit. Clips go to the hosts first and only appear in the gallery once approved.
+      </p>
+
       {(r.error || error) && (
         <p role="alert" className={styles.error}>
           {r.error || error}

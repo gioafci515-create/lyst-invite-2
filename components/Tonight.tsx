@@ -61,6 +61,9 @@ export default function Tonight() {
             {status || " "}
           </a>
         </div>
+        <p className={styles.tagline}>
+          {phase === "before" ? "Everything you need before the night." : phase === "after" ? "Revisit what the room made." : "Capture what others might miss."}
+        </p>
         <div className={styles.tiles}>
           {phase === "before" && (
             <>

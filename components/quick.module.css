@@ -252,3 +252,9 @@
   min-height: 44px;
   margin: -14px 0;
 }
+
+.tagline {
+  margin: 0 0 10px;
+  font-size: 13px;
+  opacity: 0.7;
+}

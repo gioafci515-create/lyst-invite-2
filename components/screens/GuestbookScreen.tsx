@@ -8,8 +8,18 @@ import styles from "@/components/app.module.css";
 import { clock, useRecorder } from "@/components/useRecorder";
 import { submitContribution } from "@/lib/submit";
 
+/** Optional prompts, written for UN/FOLD (type, sound, performance) rather than a generic ceremony. */
+const PROMPTS = [
+  "What did you notice tonight that most people might miss?",
+  "Describe the sound of this evening in your own words.",
+  "What would you tell this room in a year's time?",
+  "Say something about tonight that deserves to be remembered.",
+];
+const MAX_SECONDS = 180;
+
 export default function GuestbookScreen() {
-  const r = useRecorder("audio", 180);
+  const [prompt, setPrompt] = useState(0);
+  const r = useRecorder("audio", MAX_SECONDS);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -55,7 +65,17 @@ export default function GuestbookScreen() {
       </div>
 
       <div className={styles.card} style={{ padding: 18 }}>
-        <p style={{ fontFamily: "var(--f-display)", fontSize: 20 }}>“For the next twenty-five years…”</p>
+        <p className={styles.eyebrow} style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", opacity: 0.6 }}>
+          Optional prompt · up to {clock(MAX_SECONDS)}
+        </p>
+        <p style={{ fontFamily: "var(--f-display)", fontSize: 20 }} aria-live="polite">
+          “{PROMPTS[prompt]}”
+        </p>
+        {r.state === "idle" && (
+          <button className={styles.choice} onClick={() => setPrompt((p) => (p + 1) % PROMPTS.length)}>
+            Different prompt
+          </button>
+        )}
         <LiveWave stream={r.liveStream} active={r.state === "recording"} />
         <div className={styles.row} style={{ minHeight: 44 }}>
           <button className={styles.choice} onClick={r.pause} disabled={!recording}>
@@ -71,22 +91,19 @@ export default function GuestbookScreen() {
         </div>
       </div>
 
-      <div className={styles.card}>
-        <div className={styles.row} style={{ minHeight: 51 }}>
-          <Image src="/images/app/play.svg" alt="" width={44} height={44} aria-hidden />
-          {r.url ? (
-            <audio controls src={r.url} style={{ flex: 1, minWidth: 0 }} />
-          ) : (
-            <>
-              <div style={{ flex: 1, height: 5, background: "var(--ink)", opacity: 0.2 }} />
-              <span style={{ fontSize: 14 }}>{clock(0)}</span>
-            </>
-          )}
+      {r.url ? (
+        <div className={styles.card}>
+          <p className={styles.body}>Listen back before you send it.</p>
+          <audio controls src={r.url} style={{ width: "100%" }} />
         </div>
+      ) : (
         <p className={styles.body} style={{ lineHeight: 1.4 }}>
-          “Keep making a home in every city, and always leave room for one more at the table.”
+          Your browser will ask to use the microphone when you start. Nothing is recorded or sent until you press Send.
         </p>
-      </div>
+      )}
+      <p className={styles.body} style={{ lineHeight: 1.4, opacity: 0.75 }}>
+        Voice memories are heard by the hosts only. They are never shown in the public gallery.
+      </p>
 
       <div className={styles.row}>
         <button className={styles.secondary} style={{ flex: 1 }} onClick={r.reset} disabled={r.state === "idle"}>
