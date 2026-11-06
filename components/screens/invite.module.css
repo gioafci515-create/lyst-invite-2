@@ -455,7 +455,7 @@
     padding: 9px 12px;
   }
   .hero {
-    min-height: 740px;
+    min-height: 470px;
     padding: 18px;
   }
   .shard {
@@ -464,24 +464,31 @@
   .shardMobile {
     display: block;
     position: absolute;
-    left: 24%;
-    top: 120px;
-    width: 300px;
-    height: 430px;
+    left: 34%;
+    top: 14px;
+    width: 250px;
+    height: 360px;
     transform: rotate(4deg);
   }
   .acid {
     left: -50px;
     right: auto;
-    top: 560px;
-    width: 300px;
+    top: 330px;
+    width: 260px;
   }
   .hint {
-    font-size: 14px;
+    display: none;
+  }
+  .lede {
+    background: var(--sand);
+    padding: 4px 8px 4px 0;
+    max-width: 100%;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
   .title {
-    font-size: 78px;
-    letter-spacing: -4px;
+    font-size: 68px;
+    letter-spacing: -3.5px;
   }
   .year {
     font-size: 36px;

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/phase.test.ts",
+    "test:e2e": "node tests/e2e/phases.e2e.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.39.0",

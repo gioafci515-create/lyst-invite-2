@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { NAV, SECTION } from "@/lib/sections";
 import { useActiveSection } from "@/lib/useActiveSection";
-import { useTasks } from "@/lib/useTasks";
+import { usePhase } from "@/lib/usePhase";
 import { Icon } from "./icons";
 import styles from "./quick.module.css";
 
@@ -13,7 +13,7 @@ const GROUPS = ["Start", "Tonight", "Prepare", "Remember"] as const;
 /** Phone navigation: always-visible bottom tabs, a big camera button, and a menu sheet with every section. */
 export default function QuickBar() {
   const active = useActiveSection(NAV.map((n) => n.id), SECTION.invite);
-  const { tasks } = useTasks();
+  const { tasks, phase } = usePhase();
   const [open, setOpen] = useState(false);
 
   const live = tasks.some((t) => t.inWindow);
@@ -60,11 +60,15 @@ export default function QuickBar() {
           </span>
           Home
         </a>
-        {tab(SECTION.tasks, "Tasks", "tasks", openCount > 0 ? openCount : false)}
+        {phase === "before" && tab(SECTION.rsvp, "RSVP", "check")}
+        {phase === "during" && tab(SECTION.tasks, "Tasks", "tasks", openCount > 0 ? openCount : false)}
+        {phase === "after" && tab(SECTION.gallery, "Gallery", "image")}
         <Link href={cameraHref} className={styles.cam} aria-label="Open camera" data-btn>
           <Icon name="camera" />
         </Link>
-        {tab(SECTION.live, "Live", "live")}
+        {phase === "before" && tab(SECTION.hub, "Hub", "pin")}
+        {phase === "during" && tab(SECTION.live, "Live", "live")}
+        {phase === "after" && tab(SECTION.capsule, "Capsule", "clock")}
         <button className={styles.tab} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
           <span className={styles.ico}>
             <Icon name="menu" />

@@ -25,6 +25,20 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   note: <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6" />,
+  check: <path d="M4 12l5 5L20 6" />,
+  pin: (
+    <>
+      <path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  arrow: <path d="M4 12h15M13 6l6 6-6 6" />,
   image: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="2" />

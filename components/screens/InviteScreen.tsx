@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import Carousel from "@/components/Carousel";
+import NightIndex from "@/components/NightIndex";
 import TechText from "@/components/TechText";
 import styles from "./invite.module.css";
 
@@ -85,6 +86,8 @@ export default function InviteScreen() {
           </a>
         </div>
       </section>
+
+      <NightIndex />
 
       <section id="story" className={styles.story}>
         <div>

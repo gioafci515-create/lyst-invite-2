@@ -64,6 +64,7 @@ export default function RespondScreen() {
         try {
           localStorage.setItem("lyst_guest", JSON.stringify({ name, email }));
           localStorage.setItem("lyst_rsvp", JSON.stringify({ attending, guests, companion, meal, dietary, requests }));
+          window.dispatchEvent(new Event("lyst:rsvp"));
         } catch {}
       }
     } catch {
