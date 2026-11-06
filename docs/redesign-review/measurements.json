@@ -1,0 +1,590 @@
+[
+  {
+    "design": "old",
+    "vp": "mobile",
+    "phase": "before",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 54
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Letter": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Capsule": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 948
+      },
+      "Hub": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 15180
+    }
+  },
+  {
+    "design": "old",
+    "vp": "mobile",
+    "phase": "during",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 54
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Letter": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Capsule": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 948
+      },
+      "Hub": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 15406
+    }
+  },
+  {
+    "design": "old",
+    "vp": "mobile",
+    "phase": "after",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 54
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 786
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 132
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 202
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 948
+      },
+      "Hub": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 15496
+    }
+  },
+  {
+    "design": "old",
+    "vp": "desktop",
+    "phase": "before",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 64
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": null
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 9539
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 952
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 9539
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 14136
+    }
+  },
+  {
+    "design": "old",
+    "vp": "desktop",
+    "phase": "during",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 64
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": null
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 9765
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 952
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 9765
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 14362
+    }
+  },
+  {
+    "design": "old",
+    "vp": "desktop",
+    "phase": "after",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 64
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": null
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 142
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 952
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 9855
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 14452
+    }
+  },
+  {
+    "design": "new",
+    "vp": "mobile",
+    "phase": "before",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 774
+      },
+      "Tasks": {
+        "firstScreen": false,
+        "depth": 1081
+      },
+      "Live room": {
+        "firstScreen": false,
+        "depth": 1081
+      },
+      "Voice": {
+        "firstScreen": false,
+        "depth": 1037
+      },
+      "Video": {
+        "firstScreen": false,
+        "depth": 1037
+      },
+      "Letter": {
+        "firstScreen": false,
+        "depth": 876
+      },
+      "Gallery": {
+        "firstScreen": false,
+        "depth": 1125
+      },
+      "Capsule": {
+        "firstScreen": false,
+        "depth": 1125
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 377
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 763
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 15547
+    }
+  },
+  {
+    "design": "new",
+    "vp": "mobile",
+    "phase": "during",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 58
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 786
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 786
+      },
+      "Voice": {
+        "firstScreen": false,
+        "depth": 810
+      },
+      "Video": {
+        "firstScreen": false,
+        "depth": 1104
+      },
+      "Letter": {
+        "firstScreen": false,
+        "depth": 1104
+      },
+      "Gallery": {
+        "firstScreen": false,
+        "depth": 1104
+      },
+      "Capsule": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 377
+      },
+      "Hub": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 15796
+    }
+  },
+  {
+    "design": "new",
+    "vp": "mobile",
+    "phase": "after",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 774
+      },
+      "Tasks": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "Live room": {
+        "firstScreen": false,
+        "depth": 1016
+      },
+      "Voice": {
+        "firstScreen": false,
+        "depth": 856
+      },
+      "Video": {
+        "firstScreen": false,
+        "depth": 1016
+      },
+      "Letter": {
+        "firstScreen": false,
+        "depth": 1016
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 58
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 763
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 377
+      },
+      "Hub": {
+        "firstScreen": false,
+        "depth": null
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 15799
+    }
+  },
+  {
+    "design": "new",
+    "vp": "desktop",
+    "phase": "before",
+    "meas": {
+      "Camera": {
+        "firstScreen": false,
+        "depth": 1275
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 1275
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 1275
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 1275
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 1275
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": 1031
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 1275
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 1275
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 846
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 1031
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 14638
+    }
+  },
+  {
+    "design": "new",
+    "vp": "desktop",
+    "phase": "during",
+    "meas": {
+      "Camera": {
+        "firstScreen": true,
+        "depth": 66
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": 1308
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 1031
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 1031
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 1308
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": 1308
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 1308
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 10135
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 846
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 10135
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 14897
+    }
+  },
+  {
+    "design": "new",
+    "vp": "desktop",
+    "phase": "after",
+    "meas": {
+      "Camera": {
+        "firstScreen": false,
+        "depth": 1254
+      },
+      "Tasks": {
+        "firstScreen": true,
+        "depth": null
+      },
+      "Live room": {
+        "firstScreen": true,
+        "depth": 1254
+      },
+      "Voice": {
+        "firstScreen": true,
+        "depth": 1031
+      },
+      "Video": {
+        "firstScreen": true,
+        "depth": 1254
+      },
+      "Letter": {
+        "firstScreen": true,
+        "depth": 1254
+      },
+      "Gallery": {
+        "firstScreen": true,
+        "depth": 66
+      },
+      "Capsule": {
+        "firstScreen": true,
+        "depth": 1031
+      },
+      "RSVP": {
+        "firstScreen": true,
+        "depth": 846
+      },
+      "Hub": {
+        "firstScreen": true,
+        "depth": 10172
+      },
+      "_h1FullyVisible": true,
+      "_pageHeight": 14933
+    }
+  }
+]
