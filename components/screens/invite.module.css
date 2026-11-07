@@ -455,8 +455,9 @@
     padding: 9px 12px;
   }
   .hero {
-    min-height: 470px;
+    min-height: 540px;
     padding: 18px;
+    justify-content: flex-end;
   }
   .shard {
     display: none;
@@ -464,27 +465,24 @@
   .shardMobile {
     display: block;
     position: absolute;
-    left: 34%;
-    top: 14px;
-    width: 250px;
-    height: 360px;
+    left: 46%;
+    top: 10px;
+    width: 205px;
+    height: 292px;
     transform: rotate(4deg);
   }
   .acid {
-    left: -50px;
-    right: auto;
-    top: 330px;
-    width: 260px;
+    left: auto;
+    right: -34px;
+    top: auto;
+    bottom: -22px;
+    width: 150px;
   }
   .hint {
     display: none;
   }
   .lede {
-    background: var(--sand);
-    padding: 4px 8px 4px 0;
     max-width: 100%;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
   }
   .title {
     font-size: 68px;
@@ -639,5 +637,58 @@
 @media (max-width: 700px) {
   .wordmark {
     height: 200px;
+  }
+}
+
+/* Title legibility over photography: a sand halo behind the ink letters, not a box behind the text. */
+.title {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 8px var(--sand);
+}
+
+/* During and after the event the invitation steps back so the actions come first. */
+.heroCompact {
+  position: relative;
+  height: 92px;
+  overflow: hidden;
+  background: var(--sand);
+  border-bottom: 1px solid var(--ink);
+  display: flex;
+  align-items: flex-end;
+  padding: 0 16px 10px;
+}
+.titleCompact {
+  position: relative;
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 0.9;
+  letter-spacing: -2px;
+  color: var(--ink);
+  paint-order: stroke fill;
+  -webkit-text-stroke: 6px var(--sand);
+}
+.titleCompact span {
+  font-family: var(--font-mono), monospace;
+  font-size: 18px;
+  letter-spacing: 0;
+  color: var(--red-text);
+  margin-left: 8px;
+  -webkit-text-stroke: 5px var(--sand);
+}
+@media (min-width: 901px) {
+  .heroCompact {
+    height: 190px;
+    padding: 0 36px 18px;
+  }
+  .titleCompact {
+    font-size: 96px;
+    letter-spacing: -4.5px;
+    -webkit-text-stroke: 12px var(--sand);
+  }
+  .titleCompact span {
+    font-size: 30px;
+    -webkit-text-stroke: 8px var(--sand);
   }
 }

@@ -7,8 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test lib/phase.test.ts",
-    "test:e2e": "node tests/e2e/phases.e2e.mjs"
+    "test": "node --test lib/eventState.test.ts",
+    "test:e2e": "node tests/e2e/lifecycle.e2e.mjs",
+    "test:server": "node tests/e2e/server.e2e.mjs",
+    "test:admin": "node tests/e2e/admin-event.e2e.mjs",
+    "capture": "node tests/e2e/capture.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.39.0",

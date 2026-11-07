@@ -1,0 +1,149 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+import { computeEventState, countdownLabel, DEFAULT_CONFIG, MODULE_IDS, type EventConfig, type EventState, type ModuleId, type Phase } from "./eventState";
+
+/** What the browser knows about the event. The server stays authoritative: this is re-fetched every 20 s and on focus. */
+export type EventView = {
+  /** true once the server has answered at least once (or a cached answer exists) */
+  loaded: boolean;
+  phase: Phase;
+  /** null until we know; never "true" without a server answer */
+  rsvpOpen: boolean | null;
+  rsvpClosesAt: string;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  programme: EventState["programme"];
+  modules: EventState["modules"];
+  next: EventState["next"];
+  countdown: string;
+  /** server-corrected clock, epoch ms (0 until known) */
+  now: number;
+};
+
+type Wire = EventState & { now: number };
+const CACHE = "lyst_event_v1";
+
+const SERVER_VIEW: EventView = {
+  loaded: false,
+  phase: "before",
+  rsvpOpen: null,
+  rsvpClosesAt: DEFAULT_CONFIG.rsvpClosesAt,
+  startsAt: DEFAULT_CONFIG.startsAt,
+  endsAt: DEFAULT_CONFIG.endsAt,
+  timezone: DEFAULT_CONFIG.timezone,
+  programme: DEFAULT_CONFIG.programme,
+  modules: DEFAULT_CONFIG.modules,
+  next: null,
+  countdown: "",
+  now: 0,
+};
+
+let wire: Wire | null = null;
+let offset = 0; // server clock minus device clock
+let view: EventView = SERVER_VIEW;
+let sig = "";
+const subs = new Set<() => void>();
+let timers: ReturnType<typeof setInterval>[] = [];
+
+function toConfig(w: Wire): EventConfig {
+  return { timezone: w.timezone, startsAt: w.startsAt, endsAt: w.endsAt, rsvpClosesAt: w.rsvp.closesAt, override: w.override, programme: w.programme, modules: w.modules };
+}
+
+function recompute() {
+  if (!wire) return;
+  const now = Date.now() + offset;
+  const s = computeEventState(toConfig(wire), now);
+  const next: EventView = {
+    loaded: true,
+    phase: s.phase,
+    rsvpOpen: s.rsvp.open,
+    rsvpClosesAt: s.rsvp.closesAt,
+    startsAt: s.startsAt,
+    endsAt: s.endsAt,
+    timezone: s.timezone,
+    programme: s.programme,
+    modules: s.modules,
+    next: s.next,
+    countdown: countdownLabel(now, s.startsAt, s.timezone),
+    now,
+  };
+  // only publish a new snapshot when something a component renders actually changed
+  const key = JSON.stringify([next.phase, next.rsvpOpen, next.startsAt, next.endsAt, next.rsvpClosesAt, next.modules, next.programme, next.countdown, next.timezone]);
+  if (key !== sig) {
+    sig = key;
+    view = next;
+    subs.forEach((f) => f());
+  } else {
+    view = { ...view, now };
+  }
+}
+
+function accept(w: Wire) {
+  wire = w;
+  offset = w.now - Date.now();
+  try {
+    localStorage.setItem(CACHE, JSON.stringify(w));
+  } catch {}
+  recompute();
+}
+
+async function load() {
+  try {
+    const res = await fetch("/api/event", { cache: "no-store" });
+    if (!res.ok) return;
+    const w = (await res.json()) as Wire;
+    if (w && typeof w.now === "number" && w.modules && w.rsvp) accept(w);
+  } catch {
+    /* offline: keep what we have; recompute keeps ticking on the last known schedule */
+  }
+}
+
+function start() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE) ?? "null") as Wire | null;
+    // a cached answer only seeds the first paint; the clock offset is NOT reused (it would be stale)
+    if (cached && cached.modules && cached.rsvp && cached.startsAt) {
+      wire = cached;
+      offset = 0;
+      // without a fresh server clock, do not trust the device clock to claim RSVPs are open or the event is live
+      const s = computeEventState(toConfig(cached), 0);
+      view = { ...SERVER_VIEW, loaded: true, phase: s.phase, modules: s.modules, programme: s.programme, startsAt: s.startsAt, endsAt: s.endsAt, timezone: s.timezone, rsvpClosesAt: s.rsvp.closesAt };
+      sig = "";
+    }
+  } catch {}
+  load();
+  timers = [
+    setInterval(load, 20000),
+    setInterval(() => {
+      if (view.loaded && offset !== 0) recompute();
+    }, 5000),
+  ];
+  document.addEventListener("visibilitychange", onVisible);
+}
+function onVisible() {
+  if (document.visibilityState === "visible") load();
+}
+function stop() {
+  timers.forEach(clearInterval);
+  timers = [];
+  document.removeEventListener("visibilitychange", onVisible);
+}
+
+function subscribe(cb: () => void) {
+  subs.add(cb);
+  if (subs.size === 1) start();
+  return () => {
+    subs.delete(cb);
+    if (subs.size === 0) stop();
+  };
+}
+
+export function useEvent() {
+  const v = useSyncExternalStore(subscribe, () => view, () => SERVER_VIEW);
+  const enabled = (id: ModuleId) => v.modules[id] !== false;
+  return { ...v, enabled };
+}
+
+export { MODULE_IDS };

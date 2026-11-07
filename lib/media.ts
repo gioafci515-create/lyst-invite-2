@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import { isGuardedPreview } from "./previewGuard";
 import path from "path";
 import { randomUUID } from "crypto";
 import { del, get, put } from "@vercel/blob";
@@ -27,7 +28,7 @@ export function blobToken(): string | undefined {
 }
 
 /** Token auth (BLOB_READ_WRITE_TOKEN) or Vercel's keyless auth (BLOB_STORE_ID + the platform's OIDC token). */
-export const blobConfigured = () => !!blobToken() || !!process.env.BLOB_STORE_ID;
+export const blobConfigured = () => !isGuardedPreview() && (!!blobToken() || !!process.env.BLOB_STORE_ID);
 
 /**
  * Blob URLs we accept from the browser: https on Vercel's blob hosts. The store is PRIVATE, so files are only
@@ -52,6 +53,7 @@ export async function storeBuffer(data: Buffer, name: string, mime: string): Pro
     const blob = await put(`uploads/${safe}`, data, { access: "private", contentType: mime, addRandomSuffix: true, token: blobToken() });
     return { name, mime, size: data.length, url: blob.url };
   }
+  if (isGuardedPreview()) throw new Error("Uploads are disabled on preview deployments, so production data is never touched.");
   if (process.env.VERCEL) throw new Error("File storage not configured: connect a Vercel Blob store.");
   await fs.mkdir(UPLOADS, { recursive: true });
   const local = randomUUID();

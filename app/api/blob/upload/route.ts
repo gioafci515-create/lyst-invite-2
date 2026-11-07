@@ -1,4 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { isGuardedPreview } from "@/lib/previewGuard";
 import { blobConfigured, blobToken, MAX_FILE } from "@/lib/media";
 
 /**
@@ -6,6 +7,9 @@ import { blobConfigured, blobToken, MAX_FILE } from "@/lib/media";
  * (Sending big files through a serverless function is capped at 4.5 MB, so they bypass it.)
  */
 export async function POST(request: Request) {
+  if (isGuardedPreview()) {
+    return Response.json({ error: "Uploads are disabled on preview deployments so production data is never touched." }, { status: 503 });
+  }
   if (!blobConfigured()) {
     return Response.json({ error: "File storage is not configured." }, { status: 501 });
   }

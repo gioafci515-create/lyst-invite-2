@@ -109,6 +109,9 @@ async function Panel() {
           <Link className={styles.btnGhost} data-btn href="/admin">
             RSVPs
           </Link>
+          <Link className={styles.btnGhost} data-btn href="/admin/event">
+            Event
+          </Link>
           <Link className={styles.btnGhost} data-btn href="/admin/live">
             Live room
           </Link>

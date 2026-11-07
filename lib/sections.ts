@@ -19,20 +19,23 @@ export const SECTION = {
 } as const;
 
 /** Navigation order = page order. Grouped for the mobile menu sheet. */
-export const NAV: { id: string; label: string; group: "Start" | "Tonight" | "Prepare" | "Remember" }[] = [
+import type { ModuleId } from "./eventState";
+
+export type NavItem = { id: string; label: string; group: "Start" | "Tonight" | "Prepare" | "Remember"; module?: ModuleId };
+export const NAV: NavItem[] = [
   { id: SECTION.invite, label: "Invite", group: "Start" },
   { id: SECTION.story, label: "Story", group: "Start" },
   { id: SECTION.programme, label: "Programme", group: "Start" },
   { id: SECTION.rsvp, label: "RSVP", group: "Start" },
-  { id: SECTION.tasks, label: "Tasks", group: "Tonight" },
-  { id: SECTION.camera, label: "Camera", group: "Tonight" },
-  { id: SECTION.voice, label: "Voice", group: "Tonight" },
-  { id: SECTION.video, label: "Video", group: "Tonight" },
-  { id: SECTION.live, label: "Live room", group: "Tonight" },
-  { id: SECTION.later, label: "Letter", group: "Tonight" },
+  { id: SECTION.tasks, label: "Tasks", group: "Tonight", module: "tasks" },
+  { id: SECTION.camera, label: "Camera", group: "Tonight", module: "camera" },
+  { id: SECTION.voice, label: "Voice", group: "Tonight", module: "voice" },
+  { id: SECTION.video, label: "Video", group: "Tonight", module: "video" },
+  { id: SECTION.live, label: "Live room", group: "Tonight", module: "live" },
+  { id: SECTION.later, label: "Letter", group: "Tonight", module: "later" },
   { id: SECTION.hub, label: "Hub", group: "Prepare" },
   { id: SECTION.updates, label: "Updates", group: "Prepare" },
   { id: SECTION.details, label: "Details", group: "Prepare" },
-  { id: SECTION.gallery, label: "Gallery", group: "Remember" },
-  { id: SECTION.capsule, label: "Capsule", group: "Remember" },
+  { id: SECTION.gallery, label: "Gallery", group: "Remember", module: "gallery" },
+  { id: SECTION.capsule, label: "Capsule", group: "Remember", module: "capsule" },
 ];

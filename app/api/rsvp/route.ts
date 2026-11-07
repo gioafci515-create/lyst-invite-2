@@ -1,5 +1,5 @@
 import { saveRsvp } from "@/lib/store";
-import { RSVP_DEADLINE } from "@/lib/event";
+import { getEventState } from "@/lib/eventConfig";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -12,8 +12,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  if (Date.now() > RSVP_DEADLINE.getTime()) {
-    return Response.json({ error: "The RSVP deadline has passed." }, { status: 403 });
+  const { state } = await getEventState();
+  if (!state.rsvp.open) {
+    return Response.json({ error: "RSVPs are closed.", closed: true }, { status: 403 });
   }
 
   const name = clean(body.name, 100);

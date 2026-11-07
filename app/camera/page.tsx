@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { submitContribution } from "@/lib/submit";
 import { useTasks } from "@/lib/useTasks";
+import { useEvent } from "@/lib/eventStore";
 import css from "./camera.module.css";
 
 const ROLL = 24;
@@ -671,6 +672,19 @@ function CameraApp() {
 }
 
 export default function CameraPage() {
+  const ev = useEvent();
+  // the hosts can switch the camera off for an event; say so instead of opening a camera that would be refused
+  if (ev.loaded && !ev.enabled("camera")) {
+    return (
+      <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24, background: "#0a0a0a", color: "#f5f0e3", textAlign: "center" }}>
+        <div>
+          <h1 style={{ fontSize: 28, margin: 0 }}>The camera is not part of this event</h1>
+          <p style={{ opacity: 0.8 }}>The hosts have not switched it on.</p>
+          <a href="/" style={{ color: "#f5f0e3", textDecoration: "underline", display: "inline-block", minHeight: 44, lineHeight: "44px" }}>Back to the invitation</a>
+        </div>
+      </main>
+    );
+  }
   return (
     <Suspense fallback={null}>
       <CameraApp />

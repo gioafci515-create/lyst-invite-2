@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { readIds, useLive } from "@/lib/useLive";
+import { dateLabel, timeLabel } from "@/lib/eventState";
+import { useEvent } from "@/lib/eventStore";
 import s from "./hub.module.css";
 
 const NAV = [
@@ -25,6 +27,15 @@ const rail = (responded: boolean) =>
   ] as const;
 
 export default function HubScreen() {
+  const ev = useEvent();
+  const hubCta =
+    ev.rsvpOpen === true
+      ? { label: "Claim a position", href: "#rsvp" }
+      : ev.phase === "during" && ev.enabled("camera")
+        ? { label: "Open the camera", href: "#camera" }
+        : ev.phase === "after" && ev.enabled("gallery")
+          ? { label: "Open the gallery", href: "#gallery" }
+          : null;
   const { live } = useLive();
   const [read, setRead] = useState<string[]>([]);
   const [responded, setResponded] = useState(false);
@@ -62,13 +73,15 @@ export default function HubScreen() {
           <p className={s.kicker}>● Live experience · Edition Zero / Audience</p>
           <h3 className={s.h1}>UN/FOLD 2026</h3>
           <p className={s.meta}>
-            Saturday, 14 November 2026 · 19:13—late
+            {dateLabel(ev.startsAt, ev.timezone)} · {timeLabel(ev.startsAt, ev.timezone)} – {timeLabel(ev.endsAt, ev.timezone)}
             <br />
             Former Print Works 4B · Rotterdam, NL
           </p>
-          <a href="#camera" className={s.cta} data-btn>
-            Claim a position <Image src="/images/hub/arrow-right.svg" alt="" width={14} height={14} />
-          </a>
+          {hubCta && (
+            <a href={hubCta.href} className={s.cta} data-btn>
+              {hubCta.label} <Image src="/images/hub/arrow-right.svg" alt="" width={14} height={14} />
+            </a>
+          )}
         </div>
         <div className={s.media}>
           <Image src="/images/hub/live-media.png" alt="" fill sizes="(max-width:1100px) 100vw, 700px" />

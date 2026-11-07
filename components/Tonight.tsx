@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { SECTION } from "@/lib/sections";
-import { usePhase } from "@/lib/usePhase";
+import { useEvent } from "@/lib/eventStore";
+import { useTasks } from "@/lib/useTasks";
 import { Icon } from "./icons";
 import styles from "./quick.module.css";
 
@@ -14,37 +15,40 @@ const clock = (ms: number) => {
   return h ? `${h}:${m}:${sec}` : `${m}:${sec}`;
 };
 
-/** One honest status line + the single most useful action for the current phase. Replaces the old six-tile strip. */
+/** One honest status line + the single most useful action for the current phase. */
 export default function Tonight() {
-  const { tasks, now, loaded, phase, countdown } = usePhase();
-  const live = tasks.find((t) => t.inWindow);
-  const open = tasks.filter((t) => t.open);
-  const next = tasks.find((t) => !t.unlocked && t.at !== null);
+  const ev = useEvent();
+  const { tasks, now, loaded } = useTasks();
+  const tasksOn = ev.enabled("tasks");
+  const live = tasksOn ? tasks.find((t) => t.inWindow) : undefined;
+  const open = tasksOn ? tasks.filter((t) => t.open) : [];
+  const next = tasksOn ? tasks.find((t) => !t.unlocked && t.at !== null) : undefined;
   const photoTask = open.find((t) => t.type === "photo");
   const cameraHref = photoTask ? `/camera?task=${encodeURIComponent(photoTask.id)}` : "/camera";
 
-  let label = "";
-  let detail = "";
+  let label = "Before the event";
+  let detail = ev.countdown;
   let urgent = false;
   let action: { text: string; href: string; route?: boolean } = { text: "Programme", href: `#${SECTION.programme}` };
 
-  if (phase === "before") {
-    label = "Before the event";
-    detail = countdown;
-    action = { text: "Programme", href: `#${SECTION.programme}` };
-  } else if (phase === "during") {
+  if (ev.phase === "during") {
     label = "Tonight";
+    detail = "";
     if (live && now > 0) {
       detail = `${live.title} · ${clock(live.windowEnd! - now)} left`;
       urgent = true;
     } else if (open.length) detail = `${open.length} task${open.length > 1 ? "s" : ""} open`;
     else if (next && now > 0) detail = `Next task in ${clock(next.at! - now)}`;
-    else if (loaded) detail = "All tasks done";
-    action = { text: "Camera", href: cameraHref, route: true };
-  } else {
+    else if (tasksOn && loaded && tasks.length) detail = "All tasks done";
+    if (ev.enabled("camera")) action = { text: "Camera", href: cameraHref, route: true };
+    else if (ev.enabled("voice")) action = { text: "Voice", href: `#${SECTION.voice}` };
+    else action = { text: "Hub", href: `#${SECTION.hub}` };
+  } else if (ev.phase === "after") {
     label = "After the event";
-    detail = "Revisit what was shared";
-    action = { text: "Gallery", href: `#${SECTION.gallery}` };
+    detail = "Memories open";
+    if (ev.enabled("gallery")) action = { text: "Gallery", href: `#${SECTION.gallery}` };
+    else if (ev.enabled("capsule")) action = { text: "Capsule", href: `#${SECTION.capsule}` };
+    else action = { text: "Hub", href: `#${SECTION.hub}` };
   }
 
   const cta = (

@@ -93,6 +93,8 @@ export type TickResult = {
  * Tasks the hosts send by hand never come through here.
  */
 export async function tick(now = Date.now()): Promise<TickResult> {
+  const { getEventConfig } = await import("./eventConfig");
+  if (!(await getEventConfig()).config.modules.tasks) return { due: [], announced: null, skippedStale: [], reminded: null };
   const state = await getTaskState();
   const rows = buildRows(state);
   const due = rows.filter((r) => r.mode === "auto" && r.sched !== null && r.sched <= now && r.sentAt === null);

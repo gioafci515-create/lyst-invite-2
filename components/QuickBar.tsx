@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { NAV, SECTION } from "@/lib/sections";
+import { SECTION } from "@/lib/sections";
+import { useEvent } from "@/lib/eventStore";
+import { useNav } from "@/lib/useNav";
 import { useActiveSection } from "@/lib/useActiveSection";
-import { usePhase } from "@/lib/usePhase";
-import { Icon } from "./icons";
+import { useTasks } from "@/lib/useTasks";
+import { Icon, type IconName } from "./icons";
 import styles from "./quick.module.css";
 
 const GROUPS = ["Start", "Tonight", "Prepare", "Remember"] as const;
 
-/** Phone navigation: always-visible bottom tabs, a big camera button, and a menu sheet with every section. */
+type Tab = { id: string; label: string; icon: IconName; badge?: number };
+
+/** Phone navigation: two phase-aware tabs either side of the camera, plus Home and the full menu. */
 export default function QuickBar() {
-  const active = useActiveSection(NAV.map((n) => n.id), SECTION.invite);
-  const { tasks, phase } = usePhase();
+  const ev = useEvent();
+  const nav = useNav();
+  const { tasks } = useTasks();
+  const active = useActiveSection(nav.map((n) => n.id), SECTION.invite);
   const [open, setOpen] = useState(false);
 
   const live = tasks.some((t) => t.inWindow);
@@ -32,15 +38,48 @@ export default function QuickBar() {
     };
   }, [open]);
 
-  const tab = (id: string, label: string, icon: Parameters<typeof Icon>[0]["name"], badge?: boolean | number) => (
-    <a href={`#${id}`} className={styles.tab} aria-current={active === id ? "location" : undefined}>
+  // first enabled candidate wins, so a switched-off module never leaves a dead tab or an empty slot
+  const pick = (...c: (Tab | null)[]): Tab | null => c.find((x) => x !== null) ?? null;
+  const T = {
+    rsvp: { id: SECTION.rsvp, label: "RSVP", icon: "check" } as Tab,
+    programme: { id: SECTION.programme, label: "Programme", icon: "clock" } as Tab,
+    hub: { id: SECTION.hub, label: "Hub", icon: "pin" } as Tab,
+    tasks: ev.enabled("tasks") ? ({ id: SECTION.tasks, label: "Tasks", icon: "tasks", badge: openCount || undefined } as Tab) : null,
+    live: ev.enabled("live") ? ({ id: SECTION.live, label: "Live", icon: "live" } as Tab) : null,
+    voice: ev.enabled("voice") ? ({ id: SECTION.voice, label: "Voice", icon: "mic" } as Tab) : null,
+    gallery: ev.enabled("gallery") ? ({ id: SECTION.gallery, label: "Gallery", icon: "image" } as Tab) : null,
+    capsule: ev.enabled("capsule") ? ({ id: SECTION.capsule, label: "Capsule", icon: "clock" } as Tab) : null,
+  };
+
+  let left: Tab | null;
+  let right: Tab | null;
+  if (ev.phase === "before") {
+    left = ev.rsvpOpen === true ? T.rsvp : T.programme;
+    right = T.hub;
+  } else if (ev.phase === "during") {
+    left = pick(T.tasks, T.voice, T.hub);
+    right = pick(T.live, T.gallery, T.hub);
+  } else {
+    left = pick(T.gallery, T.hub);
+    right = pick(T.capsule, T.hub);
+  }
+  if (left && right && left.id === right.id) right = null;
+
+  const tab = (t: Tab) => (
+    <a href={`#${t.id}`} className={styles.tab} aria-current={active === t.id ? "location" : undefined}>
       <span className={styles.ico}>
-        <Icon name={icon} />
-        {badge ? <i className={styles.badge} data-live={live}>{typeof badge === "number" ? badge : ""}</i> : null}
+        <Icon name={t.icon} />
+        {t.badge ? (
+          <i className={styles.badge} data-live={live}>
+            {t.badge}
+          </i>
+        ) : null}
       </span>
-      {label}
+      {t.label}
     </a>
   );
+
+  const cameraOn = ev.enabled("camera");
 
   return (
     <>
@@ -50,7 +89,7 @@ export default function QuickBar() {
           className={styles.tab}
           aria-current={active === SECTION.invite ? "location" : undefined}
           onClick={(e) => {
-            // Home means the very top (above the Tonight strip), not just the invitation section
+            // Home means the very top (above the status bar), not just the invitation section
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
@@ -60,15 +99,13 @@ export default function QuickBar() {
           </span>
           Home
         </a>
-        {phase === "before" && tab(SECTION.rsvp, "RSVP", "check")}
-        {phase === "during" && tab(SECTION.tasks, "Tasks", "tasks", openCount > 0 ? openCount : false)}
-        {phase === "after" && tab(SECTION.gallery, "Gallery", "image")}
-        <Link href={cameraHref} className={styles.cam} aria-label="Open camera" data-btn>
-          <Icon name="camera" />
-        </Link>
-        {phase === "before" && tab(SECTION.hub, "Hub", "pin")}
-        {phase === "during" && tab(SECTION.live, "Live", "live")}
-        {phase === "after" && tab(SECTION.capsule, "Capsule", "clock")}
+        {left && tab(left)}
+        {cameraOn && (
+          <Link href={cameraHref} className={styles.cam} aria-label="Open camera" data-btn>
+            <Icon name="camera" />
+          </Link>
+        )}
+        {right && tab(right)}
         <button className={styles.tab} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
           <span className={styles.ico}>
             <Icon name="menu" />
@@ -87,27 +124,33 @@ export default function QuickBar() {
                 <Icon name="close" />
               </button>
             </div>
-            {GROUPS.map((g) => (
-              <div key={g}>
-                <p className={styles.group}>{g}</p>
-                <div className={styles.grid}>
-                  {NAV.filter((n) => n.group === g).map((n) => (
-                    <a
-                      key={n.id}
-                      href={`#${n.id}`}
-                      className={styles.item}
-                      aria-current={active === n.id ? "location" : undefined}
-                      onClick={() => setOpen(false)}
-                    >
-                      {n.label}
-                    </a>
-                  ))}
+            {GROUPS.map((g) => {
+              const items = nav.filter((n) => n.group === g).filter((n) => n.id !== SECTION.rsvp || ev.rsvpOpen !== false);
+              if (!items.length) return null;
+              return (
+                <div key={g}>
+                  <p className={styles.group}>{g}</p>
+                  <div className={styles.grid}>
+                    {items.map((n) => (
+                      <a
+                        key={n.id}
+                        href={`#${n.id}`}
+                        className={styles.item}
+                        aria-current={active === n.id ? "location" : undefined}
+                        onClick={() => setOpen(false)}
+                      >
+                        {n.label}
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-            <Link href={cameraHref} className={styles.sheetCam} data-btn>
-              <Icon name="camera" /> Open full-screen camera
-            </Link>
+              );
+            })}
+            {cameraOn && (
+              <Link href={cameraHref} className={styles.sheetCam} data-btn>
+                <Icon name="camera" /> Open full-screen camera
+              </Link>
+            )}
           </div>
         </div>
       )}

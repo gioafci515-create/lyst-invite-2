@@ -68,6 +68,22 @@ export async function POST(req: Request) {
     }
 
     if (!TYPES.includes(type as ContribType)) return fail("Unknown submission type.", 400);
+    {
+      const { getEventConfig } = await import("@/lib/eventConfig");
+      const m = (await getEventConfig()).config.modules;
+      const needs: Record<string, boolean> = {
+        voice: m.voice,
+        video: m.video,
+        later: m.later,
+        capsule: m.capsule,
+        letter: m.live,
+        question: m.live,
+        poll: m.live,
+        challenge: m.live,
+        photo: m.camera || m.gallery,
+      };
+      if (needs[type] === false) return fail("This part of the event is switched off.", 403);
+    }
     if (!text && !file && !Object.keys(meta).length) return fail("Nothing to submit.", 400);
 
     // one poll vote per voter per question — claimed atomically

@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { Redis } from "@upstash/redis";
+import { isGuardedPreview } from "./previewGuard";
 
 /**
  * One tiny key-value interface for everything the site stores.
@@ -75,14 +76,14 @@ class FileKV implements KV {
     this.queue = run.catch(() => {});
     return run;
   }
-  private async read(): Promise<Record<string, unknown>> {
+  protected async read(): Promise<Record<string, unknown>> {
     try {
       return JSON.parse(await fs.readFile(FILE, "utf8"));
     } catch {
       return {};
     }
   }
-  private async write(db: Record<string, unknown>) {
+  protected async write(db: Record<string, unknown>) {
     await fs.mkdir(path.dirname(FILE), { recursive: true });
     await fs.writeFile(FILE, JSON.stringify(db, null, 2));
   }
@@ -153,9 +154,21 @@ class FileKV implements KV {
   }
 }
 
+/** Preview deployments: same behaviour as the file store, but only in this server instance's memory. */
+class MemoryKV extends FileKV {
+  private mem: Record<string, unknown> = {};
+  protected async read() {
+    return structuredClone(this.mem);
+  }
+  protected async write(db: Record<string, unknown>) {
+    this.mem = structuredClone(db);
+  }
+}
+
 /* ---------------- selection ---------------- */
 
 function redisFromEnv(): Redis | null {
+  if (isGuardedPreview()) return null;
   const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
   return url && token ? new Redis({ url, token }) : null;
@@ -166,6 +179,7 @@ let instance: KV | null = null;
 /** The storage backend. Throws a clear error if deployed without a database. */
 export function getKV(): KV {
   if (instance) return instance;
+  if (isGuardedPreview()) return (instance = new MemoryKV());
   const redis = redisFromEnv();
   if (redis) return (instance = new RedisKV(redis));
   if (process.env.VERCEL) {

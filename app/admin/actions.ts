@@ -261,3 +261,69 @@ export async function removeSubscription(formData: FormData) {
   if (allowedEndpoint(endpoint)) await removeSub(endpoint);
   revalidatePath("/admin/tasks");
 }
+
+/* ---------------------------- event lifecycle ---------------------------- */
+
+const eventBack = (kind: "ok" | "err", msg: string) => redirect(`/admin/event?${kind}=${encodeURIComponent(msg)}`);
+
+/** Save start, end, RSVP deadline, override and enabled modules. Anything the validator rejects is refused, never half-saved. */
+export async function saveEventSettings(formData: FormData) {
+  await requireAdmin();
+  const { zonedToUtc } = await import("@/lib/tasks");
+  const { getEventConfig, saveEventConfig } = await import("@/lib/eventConfig");
+  const { resolveConfig, MODULE_IDS } = await import("@/lib/eventState");
+  const { config } = await getEventConfig();
+
+  const parse = (name: string) => zonedToUtc(String(formData.get(name) ?? ""), config.timezone);
+  const startsAt = parse("startsAt");
+  const endsAt = parse("endsAt");
+  const rsvpClosesAt = parse("rsvpClosesAt");
+  if (!startsAt || !endsAt || !rsvpClosesAt) return eventBack("err", "Every date and time is required.");
+  if (endsAt.getTime() <= startsAt.getTime()) return eventBack("err", "The end must be after the start. Nothing was saved.");
+
+  const override = String(formData.get("override") ?? "");
+  const modules = Object.fromEntries(MODULE_IDS.map((id) => [id, formData.get(`m_${id}`) === "on"]));
+  const candidate = {
+    ...config,
+    startsAt: startsAt.toISOString(),
+    endsAt: endsAt.toISOString(),
+    rsvpClosesAt: rsvpClosesAt.toISOString(),
+    override: override === "before" || override === "during" || override === "after" ? override : null,
+    modules,
+  };
+  const problems = resolveConfig(candidate).issues.filter((i) => i.level === "error");
+  if (problems.length) return eventBack("err", problems.map((p) => p.message).join(" "));
+  await saveEventConfig(candidate);
+  revalidatePath("/admin/event");
+  eventBack("ok", "Saved. Guests see the change within about 20 seconds.");
+}
+
+/** The evening is running late: move the end later without touching anything else. */
+export async function extendEventEnd(formData: FormData) {
+  await requireAdmin();
+  const { getEventConfig, saveEventConfig } = await import("@/lib/eventConfig");
+  const minutes = Math.min(240, Math.max(5, Number(formData.get("minutes")) || 30));
+  const { config } = await getEventConfig();
+  await saveEventConfig({ ...config, endsAt: new Date(Date.parse(config.endsAt) + minutes * 60000).toISOString() });
+  revalidatePath("/admin/event");
+  eventBack("ok", `The event now ends ${minutes} minutes later.`);
+}
+
+/** Force a phase until cleared ("" returns to the automatic schedule). */
+export async function setEventOverride(formData: FormData) {
+  await requireAdmin();
+  const { getEventConfig, saveEventConfig } = await import("@/lib/eventConfig");
+  const v = String(formData.get("override") ?? "");
+  const { config } = await getEventConfig();
+  await saveEventConfig({ ...config, override: v === "before" || v === "during" || v === "after" ? v : null });
+  revalidatePath("/admin/event");
+  eventBack("ok", v ? `Phase forced to "${v}" until you switch back to automatic.` : "Back to the automatic schedule.");
+}
+
+export async function resetEventSettings() {
+  await requireAdmin();
+  const { resetEventConfig } = await import("@/lib/eventConfig");
+  await resetEventConfig();
+  revalidatePath("/admin/event");
+  eventBack("ok", "Event settings reset to the built-in defaults.");
+}

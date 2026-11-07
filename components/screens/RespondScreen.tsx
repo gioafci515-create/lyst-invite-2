@@ -4,7 +4,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
-import { RSVP_DEADLINE, RSVP_DEADLINE_LABEL } from "@/lib/event";
+import { shortDateLabel, timeLabel } from "@/lib/eventState";
+import { useEvent } from "@/lib/eventStore";
 
 const MEALS = ["Garden menu", "Fish", "Children's"];
 
@@ -43,7 +44,11 @@ export default function RespondScreen() {
     } catch {}
   }, []);
 
-  const closed = now > 0 && now > RSVP_DEADLINE.getTime();
+  const ev = useEvent();
+  // the server decides; until it has answered we do not claim the form works
+  const closed = ev.rsvpOpen !== true;
+  const closedForSure = ev.rsvpOpen === false;
+  const deadlineLabel = `${shortDateLabel(ev.rsvpClosesAt, ev.timezone)} ${new Date(ev.rsvpClosesAt).toLocaleDateString("en-GB", { timeZone: ev.timezone, year: "numeric" })} · ${timeLabel(ev.rsvpClosesAt, ev.timezone)}`;
 
   async function submit() {
     if (!name.trim()) return setError("Guest name is required before the deadline.");
@@ -88,8 +93,8 @@ export default function RespondScreen() {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <h2 className={styles.lead}>Will you be there?</h2>
-        <p className={styles.body}>Save your place, share a guest, and let the hosts know how you’ll join.</p>
+        <h2 className={styles.lead}>{closedForSure ? "Replies are closed" : "Will you be there?"}</h2>
+        <p className={styles.body}>{closedForSure ? `The deadline was ${shortDateLabel(ev.rsvpClosesAt, ev.timezone)}. New replies and changes are no longer possible.` : "Save your place, share a guest, and let the hosts know how you’ll join."}</p>
       </div>
 
       <div className={styles.choices} role="group" aria-label="Attendance">
@@ -193,8 +198,8 @@ export default function RespondScreen() {
       <div className={styles.field}>
         <span>RSVP deadline</span>
         <div className={styles.valueRow}>
-          <span style={{ fontSize: 12 }}>{RSVP_DEADLINE_LABEL}</span>
-          <span style={{ color: "var(--red-text)", fontSize: 12 }}>{closed ? "Closed" : "Open"}</span>
+          <span style={{ fontSize: 12 }}>{deadlineLabel}</span>
+          <span style={{ color: "var(--red-text)", fontSize: 12 }}>{ev.rsvpOpen === null ? "Checking…" : closedForSure ? "Closed" : "Open"}</span>
         </div>
       </div>
 
@@ -213,7 +218,7 @@ export default function RespondScreen() {
               {previous.attending === "accept" ? (previous.guests === 1 ? "One seat" : `${previous.guests} seats`) + " saved" : "Declined"}
             </b>
           </div>
-          <p>You can update your response until the deadline.</p>
+          <p>{closedForSure ? "Replies are closed, so this can no longer be changed." : "You can update your response until the deadline."}</p>
         </div>
       )}
 
