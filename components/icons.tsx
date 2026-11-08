@@ -39,6 +39,7 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   arrow: <path d="M4 12h15M13 6l6 6-6 6" />,
+  megaphone: <path d="M4 10v4h3l8 4V6L7 10H4zM18 9a4 4 0 010 6M8 14l1 5h3l-1-4" />,
   image: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="2" />

@@ -54,7 +54,9 @@
   transform: translate(14px, 14px);
   background: var(--ink);
   color: var(--acid);
-  font-size: 11px;
+  font-family: var(--f-mono);
+  text-transform: uppercase;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 1px;
   padding: 4px 8px;
@@ -78,7 +80,10 @@
   font-size: 14px;
 }
 .label {
-  letter-spacing: 1.3px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -98,7 +103,7 @@
   color: inherit;
   min-width: 44px;
   min-height: 44px;
-  font-size: 14px;
+  font-size: 12px;
 }
 .arrow {
   color: var(--ink);
@@ -127,9 +132,6 @@
     gap: 0;
     border: 0;
     padding: 0;
-  }
-  .label {
-    letter-spacing: 1.1px;
   }
 }
 @media (hover: none) {

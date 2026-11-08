@@ -1,61 +1,113 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { SECTION } from "@/lib/sections";
+import Link from "next/link";
+import { useEffect, useId, useRef, useState } from "react";
+import { timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
-import { useNav } from "@/lib/useNav";
-import { useActiveSection } from "@/lib/useActiveSection";
+import { NAV, ROUTE, SECTION, type NavItem } from "@/lib/sections";
 import styles from "./site.module.css";
 
-export default function SiteHeader() {
-  const nav = useNav();
+/** Phase status, written for a glance: "4 days to go" / "Live · ends 00:30" / "Memories open". */
+export function usePhaseStatus() {
   const ev = useEvent();
-  const active = useActiveSection(nav.map((n) => n.id), SECTION.invite);
-  const row = useRef<HTMLDivElement>(null);
+  if (ev.phase === "during") return { text: `Live · ends ${timeLabel(ev.endsAt, ev.timezone)}`, live: true };
+  if (ev.phase === "after") return { text: "Memories open", live: false };
+  return { text: ev.countdown || "Before the event", live: false };
+}
 
-  // keep the active link visible in the scrolling nav row
+/** Desktop dropdown: a disclosure button and a list of links. Escape, outside click and leaving with Tab close it. */
+function Dropdown({ label, items }: { label: string; items: NavItem[] }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const id = useId();
+
   useEffect(() => {
-    const el = row.current?.querySelector<HTMLElement>('[aria-current="location"]');
-    if (el && row.current) {
-      const r = row.current;
-      r.scrollTo({ left: el.offsetLeft - r.clientWidth / 2 + el.clientWidth / 2, behavior: "smooth" });
-    }
-  }, [active]);
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        button.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
-  // The header action only ever offers something that works right now.
-  //  - RSVP open            -> RSVP
-  //  - RSVP closed          -> the most useful next thing (gallery after the event, otherwise the hub)
-  //  - RSVP state unknown   -> keep the space, show nothing (no promise before the server has answered)
+  if (!items.length) return null;
+  return (
+    <div
+      className={styles.drop}
+      ref={wrap}
+      onBlur={(e) => {
+        if (!wrap.current?.contains(e.relatedTarget as Node)) setOpen(false);
+      }}
+    >
+      <button ref={button} className={styles.navLink} aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
+        {label}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      <ul id={id} className={styles.dropList} hidden={!open}>
+        {items.map((n) => (
+          <li key={n.href}>
+            <Link href={n.href} onClick={() => setOpen(false)}>
+              {n.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function SiteHeader() {
+  const ev = useEvent();
+  const status = usePhaseStatus();
+  const on = (n: NavItem) => !n.module || ev.enabled(n.module);
+
+  // One context action, and only when it works right now: RSVP while open, nothing during, the gallery after.
   let action: { label: string; href: string } | null = null;
-  if (ev.rsvpOpen === true) action = { label: "RSVP", href: `#${SECTION.rsvp}` };
-  else if (ev.rsvpOpen === false) {
-    action = ev.phase === "after" && ev.enabled("gallery") ? { label: "Gallery", href: `#${SECTION.gallery}` } : { label: "Hub", href: `#${SECTION.hub}` };
-  }
+  if (ev.phase === "before" && ev.rsvpOpen === true) action = { label: "RSVP", href: `/#${SECTION.rsvp}` };
+  else if (ev.phase === "after" && ev.enabled("gallery")) action = { label: "Gallery", href: ROUTE.gallery };
+
+  // before the event the programme is part of the invitation itself
+  const programme = ev.phase === "before" ? `/#${SECTION.programme}` : ROUTE.programme;
 
   return (
     <header className={styles.header}>
-      <a href={`#${SECTION.invite}`} className={styles.mark}>
+      <Link href="/" className={styles.mark} aria-label="LYST / 10, home">
         LYST / 10
-      </a>
-      {/* desktop: full section nav. On phones the bottom bar and menu replace it. */}
-      <nav className={styles.nav} aria-label="Sections" ref={row}>
-        {nav
-          .filter((n) => n.id !== SECTION.rsvp || ev.rsvpOpen !== false)
-          .map((n) => (
-            <a key={n.id} href={`#${n.id}`} aria-current={active === n.id ? "location" : undefined}>
-              {n.label}
-            </a>
-          ))}
+      </Link>
+      <nav className={styles.nav} aria-label="Main">
+        <Link href="/" className={styles.navLink}>
+          Invitation
+        </Link>
+        <Link href={programme} className={styles.navLink}>
+          Programme
+        </Link>
+        <Dropdown label="Tonight" items={NAV.filter((n) => n.group === "Tonight" && on(n))} />
+        <Dropdown label="Memories" items={NAV.filter((n) => n.group === "Memories" && on(n))} />
       </nav>
-      {action ? (
-        <a href={action.href} className={styles.cta} data-btn>
-          {action.label}
-        </a>
-      ) : (
-        <span className={styles.cta} aria-hidden style={{ visibility: "hidden" }}>
-          RSVP
-        </span>
-      )}
+      <p className={styles.status} data-live={status.live || undefined} aria-live="polite">
+        {status.live && <span className={styles.dot} aria-hidden />}
+        {status.text}
+      </p>
+      <div className={styles.actionSlot}>
+        {action && (
+          <Link href={action.href} className={styles.cta} data-btn>
+            {action.label}
+          </Link>
+        )}
+      </div>
     </header>
   );
 }

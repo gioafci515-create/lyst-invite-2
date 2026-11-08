@@ -1,72 +1,96 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { SECTION } from "@/lib/sections";
+import { useEffect, useRef, useState } from "react";
 import { useEvent } from "@/lib/eventStore";
-import { useNav } from "@/lib/useNav";
-import { useActiveSection } from "@/lib/useActiveSection";
+import { NAV, ROUTE, SECTION, type NavGroup } from "@/lib/sections";
 import { useTasks } from "@/lib/useTasks";
 import { Icon, type IconName } from "./icons";
 import styles from "./quick.module.css";
 
-const GROUPS = ["Start", "Tonight", "Prepare", "Remember"] as const;
+const GROUPS: NavGroup[] = ["Invitation", "Tonight", "Memories"];
 
-type Tab = { id: string; label: string; icon: IconName; badge?: number };
+type Tab = { key: string; href: string; label: string; icon: IconName; badge?: number };
+
+const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Phone navigation: two phase-aware tabs either side of the camera, plus Home and the full menu. */
 export default function QuickBar() {
   const ev = useEvent();
-  const nav = useNav();
   const { tasks } = useTasks();
-  const active = useActiveSection(nav.map((n) => n.id), SECTION.invite);
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
 
   const live = tasks.some((t) => t.inWindow);
   const openCount = tasks.filter((t) => t.open).length;
   const photoTask = tasks.find((t) => t.type === "photo" && t.open);
-  const cameraHref = photoTask ? `/camera?task=${encodeURIComponent(photoTask.id)}` : "/camera";
+  const cameraHref = photoTask ? `${ROUTE.camera}?task=${encodeURIComponent(photoTask.id)}` : ROUTE.camera;
 
+  // Modal sheet: focus moves in, Tab stays inside, Escape closes, focus returns to the Menu button.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
+    const el = sheet.current;
+    const back = trigger.current;
+    el?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (e.key !== "Tab" || !el) return;
+      const items = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((x) => x.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !el.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !el.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      back?.focus();
     };
   }, [open]);
 
   // first enabled candidate wins, so a switched-off module never leaves a dead tab or an empty slot
   const pick = (...c: (Tab | null)[]): Tab | null => c.find((x) => x !== null) ?? null;
   const T = {
-    rsvp: { id: SECTION.rsvp, label: "RSVP", icon: "check" } as Tab,
-    programme: { id: SECTION.programme, label: "Programme", icon: "clock" } as Tab,
-    hub: { id: SECTION.hub, label: "Hub", icon: "pin" } as Tab,
-    tasks: ev.enabled("tasks") ? ({ id: SECTION.tasks, label: "Tasks", icon: "tasks", badge: openCount || undefined } as Tab) : null,
-    live: ev.enabled("live") ? ({ id: SECTION.live, label: "Live", icon: "live" } as Tab) : null,
-    voice: ev.enabled("voice") ? ({ id: SECTION.voice, label: "Voice", icon: "mic" } as Tab) : null,
-    gallery: ev.enabled("gallery") ? ({ id: SECTION.gallery, label: "Gallery", icon: "image" } as Tab) : null,
-    capsule: ev.enabled("capsule") ? ({ id: SECTION.capsule, label: "Capsule", icon: "clock" } as Tab) : null,
+    rsvp: { key: "rsvp", href: `/#${SECTION.rsvp}`, label: "RSVP", icon: "check" } as Tab,
+    programme: { key: "programme", href: ev.phase === "before" ? `/#${SECTION.programme}` : ROUTE.programme, label: "Programme", icon: "clock" } as Tab,
+    updates: { key: "updates", href: ROUTE.updates, label: "Updates", icon: "live" } as Tab,
+    tasks: ev.enabled("tasks") ? ({ key: "tasks", href: ROUTE.tasks, label: "Tasks", icon: "tasks", badge: openCount || undefined } as Tab) : null,
+    live: ev.enabled("live") ? ({ key: "live", href: ROUTE.live, label: "Live", icon: "live" } as Tab) : null,
+    voice: ev.enabled("voice") ? ({ key: "voice", href: ROUTE.voice, label: "Voice", icon: "mic" } as Tab) : null,
+    gallery: ev.enabled("gallery") ? ({ key: "gallery", href: ROUTE.gallery, label: "Gallery", icon: "image" } as Tab) : null,
+    capsule: ev.enabled("capsule") ? ({ key: "capsule", href: ROUTE.capsule, label: "Capsule", icon: "clock" } as Tab) : null,
+    letter: ev.enabled("later") ? ({ key: "letter", href: ROUTE.later, label: "Letter", icon: "note" } as Tab) : null,
   };
 
   let left: Tab | null;
   let right: Tab | null;
   if (ev.phase === "before") {
     left = ev.rsvpOpen === true ? T.rsvp : T.programme;
-    right = T.hub;
+    right = ev.rsvpOpen === true ? T.programme : T.updates;
   } else if (ev.phase === "during") {
-    left = pick(T.tasks, T.voice, T.hub);
-    right = pick(T.live, T.gallery, T.hub);
+    left = pick(T.tasks, T.voice, T.programme);
+    right = pick(T.live, T.gallery, T.updates);
   } else {
-    left = pick(T.gallery, T.hub);
-    right = pick(T.capsule, T.hub);
+    left = pick(T.gallery, T.letter, T.programme);
+    right = pick(T.capsule, T.updates);
   }
-  if (left && right && left.id === right.id) right = null;
+  if (left && right && left.key === right.key) right = null;
 
   const tab = (t: Tab) => (
-    <a href={`#${t.id}`} className={styles.tab} aria-current={active === t.id ? "location" : undefined}>
+    <Link href={t.href} className={styles.tab}>
       <span className={styles.ico}>
         <Icon name={t.icon} />
         {t.badge ? (
@@ -76,20 +100,21 @@ export default function QuickBar() {
         ) : null}
       </span>
       {t.label}
-    </a>
+    </Link>
   );
 
   const cameraOn = ev.enabled("camera");
+  const close = () => setOpen(false);
 
   return (
     <>
       <nav className={styles.bar} aria-label="Quick navigation">
-        <a
-          href="#"
+        <Link
+          href="/"
           className={styles.tab}
-          aria-current={active === SECTION.invite ? "location" : undefined}
+          aria-current="page"
           onClick={(e) => {
-            // Home means the very top (above the status bar), not just the invitation section
+            // already home: Home means the very top
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
@@ -98,7 +123,7 @@ export default function QuickBar() {
             <Icon name="home" />
           </span>
           Home
-        </a>
+        </Link>
         {left && tab(left)}
         {cameraOn && (
           <Link href={cameraHref} className={styles.cam} aria-label="Open camera" data-btn>
@@ -106,7 +131,7 @@ export default function QuickBar() {
           </Link>
         )}
         {right && tab(right)}
-        <button className={styles.tab} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
+        <button ref={trigger} className={styles.tab} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
           <span className={styles.ico}>
             <Icon name="menu" />
           </span>
@@ -115,42 +140,35 @@ export default function QuickBar() {
       </nav>
 
       {open && (
-        <div className={styles.sheetWrap} role="dialog" aria-modal="true" aria-label="All sections">
-          <button className={styles.scrim} aria-label="Close menu" onClick={() => setOpen(false)} />
-          <div className={styles.sheet}>
+        <div className={styles.sheetWrap} role="dialog" aria-modal="true" aria-labelledby="menu-sheet-title">
+          <button className={styles.scrim} aria-label="Close menu" tabIndex={-1} onClick={close} />
+          <div className={styles.sheet} ref={sheet}>
             <div className={styles.sheetHead}>
-              <b>Jump to</b>
-              <button className={styles.x} onClick={() => setOpen(false)} aria-label="Close menu">
+              <h2 id="menu-sheet-title">Everything for the night</h2>
+              <button className={styles.x} onClick={close} aria-label="Close menu">
                 <Icon name="close" />
               </button>
             </div>
             {GROUPS.map((g) => {
-              const items = nav.filter((n) => n.group === g).filter((n) => n.id !== SECTION.rsvp || ev.rsvpOpen !== false);
+              const items = NAV.filter((n) => n.group === g && (!n.module || ev.enabled(n.module)));
               if (!items.length) return null;
               return (
-                <div key={g}>
-                  <p className={styles.group}>{g}</p>
-                  <div className={styles.grid}>
+                <section key={g} aria-labelledby={`sheet-${g}`}>
+                  <h3 id={`sheet-${g}`} className={styles.group}>
+                    {g}
+                  </h3>
+                  <ul className={styles.grid}>
                     {items.map((n) => (
-                      <a
-                        key={n.id}
-                        href={`#${n.id}`}
-                        className={styles.item}
-                        aria-current={active === n.id ? "location" : undefined}
-                        onClick={() => setOpen(false)}
-                      >
-                        {n.label}
-                      </a>
+                      <li key={n.href}>
+                        <Link href={n.href} className={styles.item} onClick={close}>
+                          {n.label}
+                        </Link>
+                      </li>
                     ))}
-                  </div>
-                </div>
+                  </ul>
+                </section>
               );
             })}
-            {cameraOn && (
-              <Link href={cameraHref} className={styles.sheetCam} data-btn>
-                <Icon name="camera" /> Open full-screen camera
-              </Link>
-            )}
           </div>
         </div>
       )}

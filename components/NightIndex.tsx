@@ -2,71 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
-import { shortDateLabel, timeLabel, type ModuleId } from "@/lib/eventState";
+import { useEffect, useState } from "react";
+import type { ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
-import { SECTION } from "@/lib/sections";
+import { moduleOf, ROUTE, toRoute } from "@/lib/sections";
 import { useTasks } from "@/lib/useTasks";
+import type { GalleryItem } from "./HomeView";
 import { Icon, type IconName } from "./icons";
 import styles from "./nightindex.module.css";
 
 /** Approved event photography only. Crops are done with object-position; the images themselves are untouched. */
 const PHOTO = {
   poster: { src: "/images/gallery1.png", pos: "50% 40%" },
-  portrait: { src: "/images/gallery2.png", pos: "50% 18%" },
+  portrait: { src: "/images/gallery2.png", pos: "50% 22%" },
   hall: { src: "/images/gallery3.png", pos: "50% 50%" },
   stage: { src: "/images/shard.png", pos: "50% 38%" },
 } as const;
 type PhotoKey = keyof typeof PHOTO;
 
-type Entry = {
-  key: string;
-  title: string;
-  line: string;
-  cta: string;
-  href: string;
-  photo: PhotoKey;
-  /** the module that must be enabled for this entry to exist */
-  module?: ModuleId;
-  note?: string;
-  icon: IconName;
-};
-
-/** task data links look like "/#voice"; on this page that is just "#voice" (scroll in place, no reload) */
-const norm = (href: string) => (href.startsWith("/#") ? href.slice(1) : href);
-const isRoute = (href: string) => href.startsWith("/");
-const path = (href: string) => norm(href).split("?")[0];
-
-/** a task's action must lead somewhere that exists for this event */
-function actionModule(href: string): ModuleId | undefined {
-  href = norm(href);
-  if (href.startsWith("/camera")) return "camera";
-  return (
-    {
-      "#voice": "voice",
-      "#video": "video",
-      "#later": "later",
-      "#gallery": "gallery",
-      "#live": "live",
-    } as Record<string, ModuleId>
-  )[href];
-}
-
-function subscribeRsvp(cb: () => void) {
-  window.addEventListener("storage", cb);
-  window.addEventListener("lyst:rsvp", cb);
-  return () => {
-    window.removeEventListener("storage", cb);
-    window.removeEventListener("lyst:rsvp", cb);
-  };
-}
-function readRsvp(): string | null {
-  try {
-    return localStorage.getItem("lyst_rsvp");
-  } catch {
-    return null;
-  }
-}
+type Row = { key: string; title: string; line: string; href: string; photo: PhotoKey; module?: ModuleId; desktopOnly?: boolean };
 
 const clock = (ms: number) => {
   const s = Math.max(0, Math.ceil(ms / 1000));
@@ -75,444 +29,266 @@ const clock = (ms: number) => {
   const sec = String(s % 60).padStart(2, "0");
   return h ? `${h}:${m}:${sec}` : `${m}:${sec}`;
 };
+const path = (href: string) => toRoute(href).split("?")[0];
 
-function Photo({ k, sizes }: { k: PhotoKey; sizes: string }) {
+function Photo({ k, sizes, priority }: { k: PhotoKey; sizes: string; priority?: boolean }) {
+  return <Image src={PHOTO[k].src} alt="" fill sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
+}
+
+function Rows({ rows }: { rows: Row[] }) {
+  if (!rows.length) return null;
   return (
-    <Image
-      src={PHOTO[k].src}
-      alt=""
-      fill
-      sizes={sizes}
-      style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }}
-    />
+    <ul className={styles.rows}>
+      {rows.map((r) => (
+        <li key={r.key} data-desktop-only={r.desktopOnly || undefined}>
+          <Link href={r.href} className={styles.row}>
+            <span className={styles.thumb}>
+              <Photo k={r.photo} sizes="56px" />
+            </span>
+            <span className={styles.rowCopy}>
+              <span className={styles.rowTitle}>{r.title}</span>
+              <span className={styles.rowLine}>{r.line}</span>
+            </span>
+            <span className={styles.go} aria-hidden>
+              <Icon name="arrow" />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function Go({
-  href,
-  className,
-  children,
-  label,
-}: {
-  href: string;
-  className: string;
-  children: React.ReactNode;
-  label?: string;
-}) {
-  return isRoute(href) ? (
-    <Link href={href} className={className} aria-label={label} data-btn>
-      {children}
-    </Link>
-  ) : (
-    <a href={href} className={className} aria-label={label} data-btn>
-      {children}
-    </a>
+/** Decorative photo band with the wordmark; the page's h1 says the same for screen readers. */
+function Band({ heading }: { heading: string }) {
+  return (
+    <>
+      <h1 className="sr-only">{heading}</h1>
+      <div className={styles.band} aria-hidden>
+        <Photo k="stage" sizes="100vw" priority />
+        <p className={styles.bandMark}>
+          UN/FOLD <span>2026</span>
+        </p>
+      </div>
+    </>
   );
 }
 
-/**
- * The guest's first decisions, ordered by what is actionable right now.
- * Everything shown here is one tap: a lead block (an open task when there is one) and compact rows for the rest.
- * Only modules the hosts enabled are ever listed.
- */
-export default function NightIndex() {
+/* ------------------------------------------------------------------ during the event */
+
+function Tonight() {
   const ev = useEvent();
   const { tasks, now } = useTasks();
-  const rsvpRaw = useSyncExternalStore(subscribeRsvp, readRsvp, () => null);
-  let replied: "yes" | "no" | null = null;
-  try {
-    const r = rsvpRaw ? JSON.parse(rsvpRaw) : null;
-    replied = r ? (r.attending === "accept" || r.attending === true ? "yes" : r.attending === "decline" || r.attending === false ? "no" : null) : null;
-  } catch {
-    replied = null;
-  }
-
   const on = (m?: ModuleId) => !m || ev.enabled(m);
-  const tz = ev.timezone;
 
-  /* ---- open task (the strongest emphasis, only when genuinely available) ---- */
-  const usable = ev.enabled("tasks")
-    ? tasks.filter((t) => t.open && on(actionModule(t.action.href)))
-    : [];
+  // the open task, but only one whose action leads somewhere that exists for this event
+  const tasksOn = ev.enabled("tasks");
+  const usable = tasksOn ? tasks.filter((t) => t.open && on(moduleOf(t.action.href))) : [];
   const task = usable.find((t) => t.inWindow) ?? usable[0];
-  const otherOpen = ev.enabled("tasks")
-    ? tasks.filter((t) => t.open).length
-    : 0;
-  const nextTask = ev.enabled("tasks")
-    ? tasks.find((t) => !t.unlocked && t.at !== null)
-    : undefined;
+  const openCount = tasksOn ? tasks.filter((t) => t.open).length : 0;
+  const next = tasksOn ? tasks.find((t) => !t.unlocked && t.at !== null) : undefined;
 
-  const E: Record<string, Entry> = {
-    camera: {
-      key: "camera",
-      title: "Capture a moment",
-      line: "What others might miss. The hosts approve photos first.",
-      cta: "Open the camera",
-      href:
-        task?.type === "photo"
-          ? `/camera?task=${encodeURIComponent(task.id)}`
-          : "/camera",
-      photo: "portrait",
-      module: "camera",
-      icon: "camera",
-    },
-    voice: {
-      key: "voice",
-      title: "Leave a voice",
-      line: "Say what tonight sounds like. Only the hosts hear it.",
-      cta: "Record a voice",
-      href: `#${SECTION.voice}`,
-      photo: "poster",
-      module: "voice",
-      icon: "mic",
-    },
-    video: {
-      key: "video",
-      title: "Say hello on film",
-      line: "Up to 45 seconds, cut into the one-year film.",
-      cta: "Record a clip",
-      href: `#${SECTION.video}`,
-      photo: "stage",
-      module: "video",
-      icon: "video",
-    },
-    gallery: {
-      key: "gallery",
-      title: ev.phase === "after" ? "Revisit the night" : "See the night",
-      line: "Photos and clips the hosts have approved.",
-      cta: "Open the gallery",
-      href: `#${SECTION.gallery}`,
-      photo: "hall",
-      module: "gallery",
-      icon: "image",
-    },
-    tasks: {
-      key: "tasks",
-      title: "Tonight's tasks",
-      line:
-        nextTask && now > 0
-          ? `Next task in ${clock(nextTask.at! - now)}.`
-          : tasks.length
-            ? "All tasks are done."
-            : "Short prompts through the night.",
-      cta: "See the tasks",
-      href: `#${SECTION.tasks}`,
-      photo: "poster",
-      module: "tasks",
-      icon: "tasks",
-    },
-    capsule: {
-      key: "capsule",
-      title: "Open the capsule",
-      line: "What the room left for later.",
-      cta: "Open the capsule",
-      href: `#${SECTION.capsule}`,
-      photo: "hall",
-      module: "capsule",
-      icon: "clock",
-    },
-    later: {
-      key: "later",
-      title: "Write to the future",
-      line: "Seal a note for a date you choose.",
-      cta: "Write a note",
-      href: `#${SECTION.later}`,
-      photo: "portrait",
-      module: "later",
-      icon: "note",
-    },
-    hub: {
-      key: "hub",
-      title: "Plan your night",
-      line: "Venue, directions, schedule and what to expect.",
-      cta: "Open the hub",
-      href: `#${SECTION.hub}`,
-      photo: "hall",
-      icon: "pin",
-    },
-    programme: {
-      key: "programme",
-      title: "See the programme",
-      line: `Page opens at ${timeLabel(ev.startsAt, tz)}, with ${ev.programme.length} moments after.`,
-      cta: "See the programme",
-      href: `#${SECTION.programme}`,
-      photo: "poster",
-      icon: "clock",
-    },
-    rsvp: {
-      key: "rsvp",
-      title: replied ? "Your reply is saved" : "Claim your place",
-      line: replied
-        ? replied === "yes"
-          ? "You're on the list. Change your answer any time."
-          : "You replied no. Change your answer any time."
-        : `Reply by ${shortDateLabel(ev.rsvpClosesAt, tz)}. It takes under a minute.`,
-      cta: replied ? "Review your reply" : "Reply now",
-      href: `#${SECTION.rsvp}`,
-      photo: "stage",
-      note: replied ? "Replied" : undefined,
-      icon: "check",
-    },
-  };
-
-  /* ---- ordering per phase ---- */
-  let heading = "Tonight";
-  let order: string[] = [];
-  if (ev.phase === "before") {
-    heading = "Before the night";
-    // while the server has not answered we promise nothing about RSVP
-    order = ["rsvp", "hub", "programme", "later"].filter((k) =>
-      k === "rsvp" ? ev.rsvpOpen === true : true,
-    );
-  } else if (ev.phase === "during") {
-    heading = "Tonight";
-    order = ["camera", "voice", "video", "gallery", "tasks"];
-  } else {
-    heading = "After the night";
-    order = ["gallery", "capsule", "voice", "video"];
-  }
-  let entries = order.map((k) => E[k]).filter((e) => on(e.module));
-  // a task row only makes sense when there is no open-task lead and the module has something to say
-  if (task || !tasks.length) entries = entries.filter((e) => e.key !== "tasks");
-
-  /* ---- lead ---- */
-  type Lead = {
-    title: string;
-    line: string;
-    cta: string;
-    href: string;
-    photo: PhotoKey;
-    tag?: string;
-    urgent?: boolean;
-    key: string;
-  };
+  type Lead = { title: string; line: string; cta: string; href: string; photo: PhotoKey; tag: string; urgent: boolean };
   let lead: Lead | null = null;
-  if (task && ev.phase === "during") {
+  if (task) {
     lead = {
-      key: `task-${task.id}`,
       title: task.title,
       line: task.text,
       cta: task.action.label,
-      href: norm(task.action.href),
-      photo:
-        task.type === "voice"
-          ? "poster"
-          : task.type === "video"
-            ? "stage"
-            : "portrait",
-      tag:
-        task.inWindow && now > 0
-          ? `Live now · ${clock(task.windowEnd! - now)} left`
-          : "Open task",
+      href: toRoute(task.action.href),
+      photo: task.type === "voice" ? "poster" : task.type === "video" ? "stage" : "portrait",
+      tag: task.inWindow && now > 0 ? `Live now · ${clock(task.windowEnd! - now)} left` : "Open task",
       urgent: !!task.inWindow,
     };
-    // the lead already covers this destination
-    entries = entries.filter((e) => path(e.href) !== path(task.action.href));
-  } else if (entries.length) {
-    const first = entries[0];
+  } else if (ev.enabled("camera")) {
     lead = {
-      key: first.key,
-      title: first.title,
-      line: first.line,
-      cta: first.cta,
-      href: first.href,
-      photo: first.photo,
-      tag: first.note,
+      title: "Capture a moment",
+      line: "What others might miss. The hosts approve photos first.",
+      cta: "Open the camera",
+      href: ROUTE.camera,
+      photo: "portrait",
+      tag: "Disposable camera",
+      urgent: false,
     };
-    entries = entries.slice(1);
   }
-  if (
-    lead &&
-    ev.phase === "before" &&
-    ev.rsvpOpen === false &&
-    replied === "yes"
+
+  const rows = (
+    [
+      // phones open the camera from the bar's centre button; desktop has no bar, so it gets a row there
+      { key: "camera", title: "Capture a moment", line: "The hosts approve photos first.", href: ROUTE.camera, photo: "portrait", module: "camera", desktopOnly: true },
+      { key: "voice", title: "Leave a voice", line: "Only the hosts will hear it.", href: ROUTE.voice, photo: "poster", module: "voice" },
+      { key: "video", title: "Say hello on film", line: "Up to 45 seconds.", href: ROUTE.video, photo: "stage", module: "video" },
+      { key: "gallery", title: "See the night", line: "Approved photos and clips.", href: ROUTE.gallery, photo: "hall", module: "gallery" },
+    ] as Row[]
+  ).filter((r) => on(r.module) && (!lead || path(lead.href) !== r.href)); // the lead already covers its own destination
+
+  const more: [string, string, IconName][] = (
+    [
+      [ROUTE.live, "Live room", "live", "live"],
+      [ROUTE.later, "Letter", "note", "later"],
+      [ROUTE.updates, "Updates", "megaphone"],
+      [ROUTE.programme, "Programme", "clock"],
+    ] as [string, string, IconName, ModuleId?][]
   )
-    lead.tag = "You're on the list";
+    .filter(([, , , m]) => on(m))
+    .map(([h, l, i]) => [h, l, i]);
 
-  /* ---- secondary: everything else that exists for this event, in a calm two-column list ---- */
-  const shown = new Set([
-    ...(lead ? [lead.key] : []),
-    ...entries.map((e) => e.key),
-  ]);
-  const covers = (k: string) =>
-    shown.has(k) || (lead && path(lead.href) === path(E[k]?.href ?? ""));
-  const moreKeys: [string, string, IconName, string, string, ModuleId?][] = [
-    [
-      "live",
-      "Live room",
-      "live",
-      "Letters, questions and the live poll.",
-      `#${SECTION.live}`,
-      "live",
-    ],
-    [
-      "tasks",
-      "Tasks",
-      "tasks",
-      otherOpen ? `${otherOpen} open now.` : "Short prompts through the night.",
-      `#${SECTION.tasks}`,
-      "tasks",
-    ],
-    [
-      "camera",
-      "Camera",
-      "camera",
-      "A disposable camera for the night.",
-      "/camera",
-      "camera",
-    ],
-    [
-      "voice",
-      "Voice",
-      "mic",
-      "A short spoken memory.",
-      `#${SECTION.voice}`,
-      "voice",
-    ],
-    [
-      "video",
-      "Video",
-      "video",
-      "A short clip for the film.",
-      `#${SECTION.video}`,
-      "video",
-    ],
-    [
-      "later",
-      "Letter",
-      "note",
-      "Seal a note for later.",
-      `#${SECTION.later}`,
-      "later",
-    ],
-    [
-      "gallery",
-      "Gallery",
-      "image",
-      "What the room has shared.",
-      `#${SECTION.gallery}`,
-      "gallery",
-    ],
-    [
-      "capsule",
-      "Capsule",
-      "clock",
-      "A year-long archive.",
-      `#${SECTION.capsule}`,
-      "capsule",
-    ],
-    [
-      "hub",
-      "Hub",
-      "pin",
-      "Venue, directions and the schedule.",
-      `#${SECTION.hub}`,
-    ],
-    [
-      "updates",
-      "Updates",
-      "live",
-      "Changes from the hosts.",
-      `#${SECTION.updates}`,
-    ],
-    ...(ev.rsvpOpen === true
-      ? ([
-          [
-            "details",
-            "Your details",
-            "check",
-            "Meal, plus-one and access.",
-            `#${SECTION.details}`,
-          ],
-        ] as [string, string, IconName, string, string][])
-      : []),
-  ];
-  const more = moreKeys.filter(([k, , , , , m]) => !covers(k) && on(m));
-
-  if (!lead && !more.length) return null;
+  // a secondary link inside the lead: the other open tasks, or when the next one opens
+  const taskLink =
+    task && openCount > 1
+      ? `All tasks (${openCount})`
+      : !task && next && now > 0
+        ? `Next task in ${clock(next.at! - now)}`
+        : tasksOn && openCount
+          ? `All tasks (${openCount})`
+          : null;
 
   return (
-    <section
-      className={styles.wrap}
-      aria-labelledby="night-index-title"
-      data-phase={ev.phase}
-    >
-      <h2 id="night-index-title" className={styles.eyebrow}>
-        {heading}
-      </h2>
-      {(lead || entries.length > 0) && (
+    <section className={styles.wrap} data-phase="during" aria-labelledby="tonight-title">
+      <Band heading="UN/FOLD 2026, tonight" />
+      <div className={styles.body}>
+        <h2 id="tonight-title" className="sr-only">
+          Tonight
+        </h2>
         <div className={styles.layout}>
           {lead && (
-            <article
-              className={styles.lead}
-              data-urgent={lead.urgent ? "true" : undefined}
-            >
+            <article className={styles.lead} data-urgent={lead.urgent || undefined}>
               <div className={styles.leadPhoto}>
-                <Photo k={lead.photo} sizes="(max-width: 900px) 100vw, 60vw" />
+                <Photo k={lead.photo} sizes="(max-width: 900px) 100vw, 640px" />
               </div>
               <div className={styles.leadBody}>
-                {lead.tag && <span className={styles.tag}>{lead.tag}</span>}
+                <p className={styles.tag}>{lead.tag}</p>
                 <h3 className={styles.leadTitle}>{lead.title}</h3>
                 <p className={styles.leadLine}>{lead.line}</p>
                 <div className={styles.leadActions}>
-                  <Go href={lead.href} className={styles.leadCta}>
-                    {lead.cta} <Icon name="arrow" />
-                  </Go>
-                  {task && ev.phase === "during" && otherOpen > 0 && (
-                    <a
-                      href={`#${SECTION.tasks}`}
-                      className={styles.leadLink}
-                      data-btn
-                    >
-                      All tasks ({otherOpen})
-                    </a>
+                  <Link href={lead.href} className={styles.leadCta} data-btn>
+                    {lead.cta}
+                  </Link>
+                  {taskLink && (
+                    <Link href={ROUTE.tasks} className={styles.leadLink}>
+                      {taskLink}
+                    </Link>
                   )}
                 </div>
               </div>
             </article>
           )}
-
-          {entries.length > 0 && (
-            <ul className={styles.rows}>
-              {entries.map((e) => (
-                <li key={e.key}>
-                  <Go href={e.href} className={styles.row}>
-                    <span className={styles.thumb}>
-                      <Photo k={e.photo} sizes="72px" />
-                    </span>
-                    <span className={styles.rowCopy}>
-                      <span className={styles.rowTitle}>{e.title}</span>
-                      <span className={styles.rowLine}>{e.line}</span>
-                    </span>
-                    <span className={styles.go} aria-hidden>
-                      <Icon name="arrow" />
-                    </span>
-                  </Go>
+          <Rows rows={rows} />
+          {more.length > 0 && (
+          <nav className={styles.more} aria-labelledby="more-tonight">
+            <h3 id="more-tonight" className={styles.moreLabel}>
+              More tonight
+            </h3>
+            <ul>
+              {more.map(([href, label, icon]) => (
+                <li key={href}>
+                  <Link href={href} className={styles.moreLink}>
+                    <Icon name={icon} />
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>
+          </nav>
           )}
         </div>
-      )}
-
-      {more.length > 0 && (
-        <nav className={styles.more} aria-label="More to explore">
-          <p className={styles.moreLabel}>Also here</p>
-          <ul>
-            {more.map(([k, label, icon, line, href]) => (
-              <li key={k}>
-                <Go href={href} className={styles.moreLink}>
-                  <Icon name={icon} />
-                  <span>
-                    <b>{label}</b>
-                    <small>{line}</small>
-                  </span>
-                </Go>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
+      </div>
     </section>
   );
+}
+
+/* ------------------------------------------------------------------ after the event */
+
+function GalleryLead({ initial }: { initial: GalleryItem[] | null }) {
+  const [items, setItems] = useState<GalleryItem[] | null>(initial);
+  useEffect(() => {
+    if (initial) return;
+    // the page was opened before the event ended: ask now
+    fetch("/api/gallery", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: GalleryItem[]) => setItems(Array.isArray(rows) ? rows : []))
+      .catch(() => setItems([]));
+  }, [initial]);
+
+  const photos = (items ?? []).filter((i) => i.kind === "photo").slice(0, 3);
+  const count = items?.length ?? 0;
+  return (
+    <article className={`${styles.lead} ${styles.galleryLead}`}>
+      {photos.length > 0 && (
+        <div className={styles.mosaic} data-count={photos.length}>
+          {photos.map((p) => (
+            <span key={p.id}>
+              <Image src={`/api/media/${p.id}`} alt="" fill unoptimized sizes="(max-width: 900px) 50vw, 400px" style={{ objectFit: "cover" }} />
+            </span>
+          ))}
+        </div>
+      )}
+      <div className={styles.leadBody}>
+        <p className={styles.tag}>{items === null ? "Gallery" : count ? `${count} in the gallery` : "Gallery"}</p>
+        <h3 className={styles.leadTitle}>Revisit the night</h3>
+        <p className={styles.leadLine}>
+          {items === null
+            ? "Photos and clips the hosts have approved."
+            : count
+              ? "Photos and clips from the room, approved by the hosts."
+              : "Nothing is up yet. The hosts approve every photo and clip before it appears here."}
+        </p>
+        <div className={styles.leadActions}>
+          <Link href={ROUTE.gallery} className={styles.leadCta} data-btn>
+            Open the gallery
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
+  const ev = useEvent();
+  const on = (m?: ModuleId) => !m || ev.enabled(m);
+  const keep = (
+    [
+      { key: "capsule", title: "Time capsule", line: "Sealed, to open a year from now.", href: ROUTE.capsule, photo: "hall", module: "capsule" },
+      { key: "letter", title: "Write to the future", line: "Seal a note for a date you choose.", href: ROUTE.later, photo: "portrait", module: "later" },
+    ] as Row[]
+  ).filter((r) => on(r.module));
+  // the server still accepts these after the event while the hosts keep them switched on
+  const late = (
+    [
+      { key: "voice", title: "Leave a voice", line: "Only the hosts will hear it.", href: ROUTE.voice, photo: "poster", module: "voice" },
+      { key: "video", title: "Send a clip", line: "Up to 45 seconds.", href: ROUTE.video, photo: "stage", module: "video" },
+    ] as Row[]
+  ).filter((r) => on(r.module));
+  const galleryOn = ev.enabled("gallery");
+
+  return (
+    <section className={styles.wrap} data-phase="after" aria-labelledby="memories-title">
+      <h1 className="sr-only">UN/FOLD 2026, memories</h1>
+      <div className={styles.body}>
+        <h2 id="memories-title" className={styles.sectionLabel}>
+          After the night
+        </h2>
+        <div className={styles.layout}>
+          {galleryOn && <GalleryLead initial={gallery} />}
+          <Rows rows={galleryOn ? keep : [...keep, ...late]} />
+        </div>
+        {galleryOn && late.length > 0 && (
+          <div className={styles.late}>
+            <h3 className={styles.moreLabel}>Still want to leave something?</h3>
+            <Rows rows={late} />
+          </div>
+        )}
+        {!galleryOn && !keep.length && !late.length && (
+          <p className={styles.quiet}>
+            Thank you for coming. The programme and venue details stay here: <Link href={ROUTE.programme}>programme and venue</Link>.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function NightIndex({ gallery }: { gallery: GalleryItem[] | null }) {
+  const ev = useEvent();
+  return ev.phase === "after" ? <Memories gallery={gallery} /> : <Tonight />;
 }
