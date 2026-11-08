@@ -87,6 +87,12 @@
   text-transform: uppercase;
   color: var(--muted);
 }
+/* the annotation cursor only exists where there is a pointer */
+@media (hover: none) {
+  .pointerOnly {
+    display: none;
+  }
+}
 .controls {
   display: flex;
   align-items: center;

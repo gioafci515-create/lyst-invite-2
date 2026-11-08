@@ -199,7 +199,8 @@
   .rows li[data-desktop-only] {
     display: none;
   }
-  .layout > .more {
+  .layout > .more,
+  .layout > .late {
     margin-top: 8px;
   }
 }
@@ -322,7 +323,8 @@
   .layout > .lead {
     grid-row: 1 / span 2;
   }
-  .layout > .more {
+  .layout > .more,
+  .layout > .late {
     grid-column: 2;
   }
   .leadPhoto {
@@ -354,11 +356,6 @@
     flex-direction: row;
     min-height: 52px;
     gap: 10px;
-  }
-  .late {
-    max-width: calc(5 / 12 * 100%);
-    margin-left: auto;
-    width: 100%;
   }
 }
 

@@ -60,7 +60,7 @@ export type NavItem = { href: string; label: string; group: NavGroup; module?: M
 /** One navigation model for the desktop header menus and the phone menu sheet. */
 export const NAV: NavItem[] = [
   { href: "/", label: "Invitation", group: "Invitation" },
-  { href: ROUTE.programme, label: "Programme and venue", group: "Invitation" },
+  { href: ROUTE.programme, label: "Programme", group: "Invitation" },
   { href: ROUTE.details, label: "Your details", group: "Invitation" },
   { href: ROUTE.updates, label: "Updates", group: "Invitation" },
   { href: ROUTE.tasks, label: "Tasks", group: "Tonight", module: "tasks" },

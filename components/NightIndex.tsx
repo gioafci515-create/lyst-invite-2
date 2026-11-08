@@ -271,13 +271,13 @@ function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
         <div className={styles.layout}>
           {galleryOn && <GalleryLead initial={gallery} />}
           <Rows rows={galleryOn ? keep : [...keep, ...late]} />
+          {galleryOn && late.length > 0 && (
+            <div className={styles.late}>
+              <h3 className={styles.moreLabel}>Still want to leave something?</h3>
+              <Rows rows={late} />
+            </div>
+          )}
         </div>
-        {galleryOn && late.length > 0 && (
-          <div className={styles.late}>
-            <h3 className={styles.moreLabel}>Still want to leave something?</h3>
-            <Rows rows={late} />
-          </div>
-        )}
         {!galleryOn && !keep.length && !late.length && (
           <p className={styles.quiet}>
             Thank you for coming. The programme and venue details stay here: <Link href={ROUTE.programme}>programme and venue</Link>.
