@@ -48,7 +48,7 @@ export async function announceTask(id: string) {
   return sendToAll({
     title: NOTIFY_TITLE,
     body: notifyBody(task.title),
-    url: "/#tasks",
+    url: "/tasks",
     tag: `task-${task.id}`,
     requireInteraction: true,
     timestamp: Date.now(),
@@ -63,7 +63,7 @@ export async function remindTask(id: string) {
   const task = found.row;
   const done = await doneSet(task.id);
   return sendToAll(
-    { title: REMIND_TITLE, body: remindBody(task.title), url: "/#tasks", tag: `task-${task.id}`, requireInteraction: true, timestamp: Date.now(), task: task.id },
+    { title: REMIND_TITLE, body: remindBody(task.title), url: "/tasks", tag: `task-${task.id}`, requireInteraction: true, timestamp: Date.now(), task: task.id },
     (s) => done.has(endpointHash(s.endpoint)),
   );
 }
@@ -73,7 +73,7 @@ export async function notifyGuests(p: Pick<PushPayload, "title" | "body"> & { ur
   return sendToAll({
     title: p.title,
     body: p.body,
-    url: p.url ?? "/#updates",
+    url: p.url ?? "/updates",
     tag: `update-${Date.now()}`,
     timestamp: Date.now(),
   });

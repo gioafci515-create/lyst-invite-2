@@ -248,7 +248,7 @@ export async function sendTestToAll() {
   await sendToAll({
     title: "Test from the hosts",
     body: "If you can read this, task reminders will reach your phone.",
-    url: "/#tasks",
+    url: "/tasks",
     tag: "admin-test",
   });
   revalidatePath("/admin/tasks");

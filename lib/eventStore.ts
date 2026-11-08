@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { createContext, createElement, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { computeEventState, countdownLabel, DEFAULT_CONFIG, MODULE_IDS, type EventConfig, type EventState, type ModuleId, type Phase } from "./eventState";
 
 /** What the browser knows about the event. The server stays authoritative: this is re-fetched every 20 s and on focus. */
@@ -22,7 +22,7 @@ export type EventView = {
   now: number;
 };
 
-type Wire = EventState & { now: number };
+export type Wire = EventState & { now: number };
 const CACHE = "lyst_event_v1";
 
 const SERVER_VIEW: EventView = {
@@ -51,11 +51,10 @@ function toConfig(w: Wire): EventConfig {
   return { timezone: w.timezone, startsAt: w.startsAt, endsAt: w.endsAt, rsvpClosesAt: w.rsvp.closesAt, override: w.override, programme: w.programme, modules: w.modules };
 }
 
-function recompute() {
-  if (!wire) return;
-  const now = Date.now() + offset;
-  const s = computeEventState(toConfig(wire), now);
-  const next: EventView = {
+/** The view of a server answer at a given (server-corrected) instant. Pure, so the server render and the browser agree. */
+function viewFromWire(w: Wire, now: number): EventView {
+  const s = computeEventState(toConfig(w), now);
+  return {
     loaded: true,
     phase: s.phase,
     rsvpOpen: s.rsvp.open,
@@ -69,6 +68,12 @@ function recompute() {
     countdown: countdownLabel(now, s.startsAt, s.timezone),
     now,
   };
+}
+
+function recompute() {
+  if (!wire) return;
+  const now = Date.now() + offset;
+  const next = viewFromWire(wire, now);
   // only publish a new snapshot when something a component renders actually changed
   const key = JSON.stringify([next.phase, next.rsvpOpen, next.startsAt, next.endsAt, next.rsvpClosesAt, next.modules, next.programme, next.countdown, next.timezone]);
   if (key !== sig) {
@@ -101,7 +106,8 @@ async function load() {
 }
 
 function start() {
-  try {
+  // a page rendered by the server already handed over a fresh answer: never fall back to an older cached one
+  if (!wire) try {
     const cached = JSON.parse(localStorage.getItem(CACHE) ?? "null") as Wire | null;
     // a cached answer only seeds the first paint; the clock offset is NOT reused (it would be stale)
     if (cached && cached.modules && cached.rsvp && cached.startsAt) {
@@ -140,8 +146,36 @@ function subscribe(cb: () => void) {
   };
 }
 
+/** Accept the answer the server rendered this page with, once, before anything subscribes. Browser only. */
+function seedFrom(w: Wire) {
+  if (wire || typeof window === "undefined") return;
+  wire = w;
+  offset = w.now - Date.now();
+  recompute();
+  try {
+    localStorage.setItem(CACHE, JSON.stringify(w));
+  } catch {}
+}
+
+const SeedContext = createContext<EventView | null>(null);
+
+/**
+ * Guest pages render with the event state the server read for this request. This puts that state in place for the first
+ * paint (server HTML and hydration agree) and hands it to the live store, which keeps polling from there.
+ */
+export function EventSeed({ wire: w, children }: { wire: Wire; children: ReactNode }) {
+  const seeded = useMemo(() => viewFromWire(w, w.now), [w]);
+  seedFrom(w);
+  return createElement(SeedContext.Provider, { value: seeded }, children);
+}
+
 export function useEvent() {
-  const v = useSyncExternalStore(subscribe, () => view, () => SERVER_VIEW);
+  const seed = useContext(SeedContext);
+  const v = useSyncExternalStore(
+    subscribe,
+    () => (wire ? view : (seed ?? view)),
+    () => seed ?? SERVER_VIEW,
+  );
   const enabled = (id: ModuleId) => v.modules[id] !== false;
   return { ...v, enabled };
 }

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const ok = await sendToEndpoint(body.endpoint, {
     title: "Reminders are on ✓",
     body: "You'll get a new task here every 20 minutes during the night.",
-    url: "/#tasks",
+    url: "/tasks",
     tag: "test",
   });
   return ok ? Response.json({ ok: true }) : Response.json({ error: "Couldn't reach this device. Turn reminders off and on again." }, { status: 502 });
