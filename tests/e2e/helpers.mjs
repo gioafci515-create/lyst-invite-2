@@ -44,7 +44,7 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
           json.tasks.forEach((t) => { t.unlocked = t.at <= json.now; });
           if (modulesOff.includes("tasks")) { json.tasks = []; json.started = false; }
           // mirror the server: a task whose action leads to a switched-off feature is not offered (tested for real in server.e2e.mjs)
-          const mod = (h) => { h = h.startsWith("/#") ? h.slice(1) : h; return h.startsWith("/camera") ? "camera" : { "#voice": "voice", "#video": "video", "#later": "later", "#gallery": "gallery", "#live": "live" }[h]; };
+          const mod = (h) => routeModule(h);
           json.tasks = json.tasks.filter((x) => !modulesOff.includes(mod(x.action.href)));
         }
         await page.send("Fetch.fulfillRequest", { requestId: id, responseCode: 200, responseHeaders: [{ name: "content-type", value: "application/json" }], body: Buffer.from(JSON.stringify(json)).toString("base64") });
@@ -85,7 +85,7 @@ export async function open({ w = 390, h = 844, mobile = true, dsf = 1, path = "/
  * Real hit test: the element at the centre of the link must be the link itself (not covered by the bottom bar,
  * a sheet or another element). `barPx` is the fixed bottom bar height on phones.
  */
-export const tappable = (page, hrefTest, { barPx = 64, includeHeader = false } = {}) =>
+export const tappable = (page, hrefTest, { barPx = 65, includeHeader = false } = {}) =>
   page.ev(`(() => {
     const test = ${hrefTest.toString()};
     const vh = innerHeight, lim = vh - ${barPx};
@@ -107,12 +107,20 @@ export const tappable = (page, hrefTest, { barPx = 64, includeHeader = false } =
     return out;
   })()`);
 
+/** Feature routes and the host switch behind each (mirrors lib/sections.ts). */
+export const ROUTES = { camera: "/camera", voice: "/voice", video: "/video", live: "/live", later: "/letter", gallery: "/gallery", capsule: "/capsule", tasks: "/tasks" };
+export const routeModule = (href) => {
+  const p = href.replace(/^\/?#/, "/#").split("?")[0];
+  const legacy = { "/#voice": "voice", "/#video": "video", "/#later": "later", "/#gallery": "gallery", "/#live": "live", "/#camera": "camera", "/#tasks": "tasks", "/#capsule": "capsule" }[p];
+  return legacy ?? Object.entries(ROUTES).find(([, r]) => r === p)?.[0];
+};
+
 export const FEATURES = {
   Camera: (h) => h.startsWith("/camera"),
-  Voice: (h) => h === "#voice",
-  Video: (h) => h === "#video",
-  Gallery: (h) => h === "#gallery",
-  Tasks: (h) => h === "#tasks",
+  Voice: (h) => h === "/voice",
+  Video: (h) => h === "/video",
+  Gallery: (h) => h === "/gallery",
+  Tasks: (h) => h === "/tasks",
 };
 
 export const text = (page, sel) => page.ev(`(document.querySelector(${JSON.stringify(sel)}) || {}).textContent || ''`);
