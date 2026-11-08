@@ -1,4 +1,4 @@
-// @ts-nocheck — vendored from React Bits (TechText, JS + CSS variant); kept verbatim apart from this header.
+// Vendored from React Bits (TechText, JS + CSS variant); kept verbatim apart from this header. Plain JS on purpose.
 "use client";
 
 import { useEffect, useRef } from "react";
@@ -62,7 +62,7 @@ const TechText = ({
   introDuration = 2,
   guides = false,
   className = "",
-  style = undefined as import("react").CSSProperties | undefined,
+  style = undefined,
 }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);

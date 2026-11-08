@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { relative } from "@/lib/time";
+import { readStored, useHydrated, useNow } from "@/lib/useClient";
 import { readIds, useLive } from "@/lib/useLive";
 
 const KEY = "lyst_read";
@@ -12,17 +13,18 @@ const KEY = "lyst_read";
 export default function NotificationsScreen() {
   const { live, failed } = useLive();
   const [read, setRead] = useState<string[]>([]);
-  const [now, setNow] = useState(0);
+  const now = useNow();
   const [settings, setSettings] = useState(false);
   const [prefs, setPrefs] = useState({ priority: true, schedule: true, activity: true });
 
-  useEffect(() => {
+  // what this device has already read, and its preferences (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
     setRead(readIds());
-    setNow(Date.now());
-    try {
-      setPrefs((p) => ({ ...p, ...JSON.parse(localStorage.getItem("lyst_prefs") ?? "{}") }));
-    } catch {}
-  }, []);
+    setPrefs((p) => ({ ...p, ...(readStored<Partial<typeof p>>("lyst_prefs") ?? {}) }));
+  }
 
   // priority first, then newest
   const notices = [...(live?.notices ?? [])].sort(
@@ -57,7 +59,7 @@ export default function NotificationsScreen() {
           <Image src="/images/app/unread-status.svg" alt="" width={9} height={9} />
           <span style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>{unreadIds.length} unread</span>
         </span>
-        <span className={styles.choice} aria-pressed style={{ fontSize: 12, minHeight: 0 }}>
+        <span className={`${styles.choice} label-mono`} aria-pressed style={{ minHeight: 0 }}>
           Priority first
         </span>
       </div>
@@ -70,7 +72,7 @@ export default function NotificationsScreen() {
       )}
       {live && notices.length === 0 && (
         <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>All quiet</b>
+          <b className="label-mono">All quiet</b>
           <p className={styles.body}>No notifications yet. Updates from the hosts will appear here.</p>
         </div>
       )}
@@ -97,12 +99,12 @@ export default function NotificationsScreen() {
                 >
                   <Image src={`/images/app/${n.icon}.svg`} alt="" width={18} height={18} />
                   <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                    <b style={{ fontSize: 12, textTransform: "uppercase" }}>{n.title}</b>
-                    <span className={styles.muted} style={{ fontSize: 13 }}>
+                    <b className="label-mono">{n.title}</b>
+                    <span className={styles.muted}>
                       {n.text}
                     </span>
                   </span>
-                  <span className={styles.muted} style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                  <span className="label-mono" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
                     {now ? relative(n.createdAt, now) : ""}
                   </span>
                   {isUnread && <Image src="/images/app/unread.svg" alt="Unread" width={7} height={7} />}
@@ -134,7 +136,7 @@ export default function NotificationsScreen() {
               ["activity", "Other room activity"],
             ] as const
           ).map(([k, label]) => (
-            <label key={k} className={styles.row} style={{ minHeight: 44, fontSize: 14 }}>
+            <label key={k} className={styles.row} style={{ minHeight: 44 }}>
               <input type="checkbox" checked={prefs[k]} onChange={() => togglePref(k)} style={{ width: 20, height: 20, accentColor: "var(--red)" }} />
               {label}
             </label>

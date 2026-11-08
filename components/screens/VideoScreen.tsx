@@ -131,7 +131,7 @@ export default function VideoScreen() {
       <div className={styles.card}>
         <div className={styles.between}>
           <span style={{ fontFamily: "var(--f-display)", fontSize: 16 }}>Future montage</span>
-          <span className={styles.choice} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, minHeight: 0 }}>
+          <span className={`${styles.choice} label-mono`} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 0 }}>
             <Image src="/images/app/status-dot.svg" alt="" width={6} height={6} />
             {films + sent} film{films + sent === 1 ? "" : "s"}
           </span>

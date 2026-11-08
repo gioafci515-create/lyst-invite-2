@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { cacheTasks, readCachedTasks, readProgress, serverNow, TASKS_EVENT, type ClientTask } from "./taskProgress";
+import { useHydrated } from "./useClient";
 
 export type TaskView = ClientTask & {
   progress: number;
@@ -22,11 +23,17 @@ export function useTasks() {
   const [started, setStarted] = useState(true);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
+  // the last list this device saw, so countdowns show before the first answer (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
     setTasks(readCachedTasks());
     setProgress(readProgress());
     setNow(serverNow());
+  }
 
+  useEffect(() => {
     let stop = false;
     const load = async () => {
       try {

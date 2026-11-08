@@ -74,7 +74,7 @@ export default function TasksScreen() {
       {/* reminder opt-in */}
       {push.state === "ios-install" && (
         <div className={styles.cardRed}>
-          <b style={{ fontSize: 12 }}>iPhone: one extra step</b>
+          <b className="label-mono">iPhone: one extra step</b>
           <p>
             Tap <b>Share</b>, then <b>Add to Home Screen</b>. Open UN/FOLD from your Home Screen and turn reminders on from
             here.
@@ -83,13 +83,13 @@ export default function TasksScreen() {
       )}
       {push.state === "unsupported" && (
         <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>Reminders aren’t available in this browser</b>
+          <b className="label-mono">Reminders aren’t available in this browser</b>
           <p className={styles.body}>Keep this page open and each task will appear here as it unlocks.</p>
         </div>
       )}
       {push.state === "denied" && (
         <div className={styles.card} role="alert">
-          <b style={{ fontSize: 12 }}>Notifications are blocked</b>
+          <b className="label-mono">Notifications are blocked</b>
           <p className={styles.body}>Allow notifications for this site in your browser settings, then reload.</p>
         </div>
       )}
@@ -97,7 +97,7 @@ export default function TasksScreen() {
         <div className={styles.card} role="status">
           <div className={styles.row}>
             <Image src="/images/app/check-dark.svg" alt="" width={16} height={16} />
-            <b style={{ fontSize: 13 }}>Reminders on · a new task every 20 minutes</b>
+            <b>Reminders on · a new task every 20 minutes</b>
           </div>
           <button className={styles.secondary} onClick={push.disable}>
             Turn reminders off
@@ -117,7 +117,7 @@ export default function TasksScreen() {
       )}
       {loaded && !started && (
         <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>Tasks haven’t started</b>
+          <b className="label-mono">Tasks haven’t started</b>
           <p className={styles.body}>The hosts will start them during the night — you’ll be notified.</p>
         </div>
       )}

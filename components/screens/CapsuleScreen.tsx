@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { submitContribution } from "@/lib/submit";
+import { readRaw, useHydrated, useNow } from "@/lib/useClient";
 
 function remaining(to: Date, now: number) {
   const ms = Math.max(0, to.getTime() - now);
@@ -19,15 +20,19 @@ export default function CapsuleScreen() {
   const [sealed, setSealed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [now, setNow] = useState(0);
+  const now = useNow();
   const [reveal, setReveal] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // sealed earlier on this device? (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
+    if (readRaw("lyst_capsule_sealed")) setSealed(true);
+  }
+
   useEffect(() => {
-    setNow(Date.now());
-    try {
-      if (localStorage.getItem("lyst_capsule_sealed")) setSealed(true);
-    } catch {}
     fetch("/api/stats").then((r) => r.json()).then(setCounts).catch(() => {});
   }, []);
 
@@ -68,7 +73,7 @@ export default function CapsuleScreen() {
         {stats.map(([n, label]) => (
           <div key={label} className={styles.card} style={{ flex: 1, minWidth: 0, padding: 10 }}>
             <span style={{ fontFamily: "var(--f-display)", fontSize: 19 }}>{n}</span>
-            <span className={styles.muted} style={{ fontSize: 12 }}>
+            <span className="label-mono" style={{ color: "var(--muted)" }}>
               {label}
             </span>
           </div>
@@ -103,13 +108,13 @@ export default function CapsuleScreen() {
           <Image src="/images/app/archive-18.svg" alt="" width={18} height={18} />
         </div>
         <p style={{ fontWeight: 700, fontSize: 27 }}>{now ? remaining(unlock, now) : "—"}</p>
-        <p style={{ fontSize: 14, lineHeight: 1.5 }}>Film · voices · letters · poll results · host answers</p>
+        <p>Film · voices · letters · poll results · host answers</p>
       </div>
 
       <div className={styles.card} style={{ background: "var(--acid)" }}>
         <div className={styles.row}>
           <Image src="/images/app/check-acid.svg" alt="" width={16} height={16} />
-          <span style={{ fontSize: 12, textTransform: "uppercase" }}>Reveal preview</span>
+          <span className="label-mono">Reveal preview</span>
         </div>
         <p style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
           {ready ? "The archive is ready to open." : reveal ? "Still sealed. It opens on the unlock date." : "Sealed until the unlock date."}
@@ -123,7 +128,7 @@ export default function CapsuleScreen() {
       <div className={styles.card} style={{ background: "var(--acid)" }}>
         <div className={styles.row}>
           <Image src="/images/app/check-acid.svg" alt="" width={16} height={16} />
-          <span style={{ fontSize: 12, textTransform: "uppercase" }}>Contributors</span>
+          <span className="label-mono">Contributors</span>
         </div>
         <p style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
           {counts.rsvpGuests ?? 0} guests · {stats[2][0]} voices · {stats[1][0]} films
@@ -135,15 +140,15 @@ export default function CapsuleScreen() {
       </div>
 
       <div className={styles.card}>
-        <b style={{ fontSize: 12 }}>Montage processing</b>
+        <b className="label-mono">Montage processing</b>
         <p className={styles.body}>Your clip is queued for the one-year film.</p>
       </div>
       <div className={styles.card}>
-        <b style={{ fontSize: 14 }}>Ready / watch / replay</b>
+        <b>Ready / watch / replay</b>
         <p className={styles.body}>{ready ? "The archive is ready to open." : "The archive opens on the unlock date."}</p>
       </div>
       <div className={styles.card}>
-        <b style={{ fontSize: 14 }}>Share / download</b>
+        <b>Share / download</b>
         <p className={styles.body}>Share the capsule link or download the archive after reveal.</p>
         <button
           className={styles.secondary}

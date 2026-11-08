@@ -21,18 +21,20 @@ export default function GalleryScreen() {
   const [msg, setMsg] = useState("");
   const [failed, setFailed] = useState("");
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/gallery", { cache: "no-store" });
-      if (!res.ok) throw new Error();
-      const rows: { id: string; kind: "photo" | "video" }[] = await res.json();
-      setRemote(rows.map((r) => ({ key: r.id, src: `/api/media/${r.id}`, kind: r.kind })));
-    } catch {
-      /* keep what we have */
-    } finally {
-      setLoaded(true);
-    }
-  }, []);
+  const load = useCallback(
+    () =>
+      fetch("/api/gallery", { cache: "no-store" })
+        .then((res) => {
+          if (!res.ok) throw new Error();
+          return res.json() as Promise<{ id: string; kind: "photo" | "video" }[]>;
+        })
+        .then((rows) => setRemote(rows.map((r) => ({ key: r.id, src: `/api/media/${r.id}`, kind: r.kind }))))
+        .catch(() => {
+          /* keep what we have */
+        })
+        .finally(() => setLoaded(true)),
+    [],
+  );
 
   useEffect(() => {
     load();
@@ -98,7 +100,7 @@ export default function GalleryScreen() {
         <p className={styles.body}>Loading…</p>
       ) : shown.length === 0 ? (
         <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>{filter === "hidden" ? "Nothing waiting" : "Gallery empty"}</b>
+          <b className="label-mono">{filter === "hidden" ? "Nothing waiting" : "Gallery empty"}</b>
           <p className={styles.body}>
             {filter === "hidden"
               ? "Moments you upload stay private here until the hosts approve them."
@@ -120,7 +122,7 @@ export default function GalleryScreen() {
                 <Image src={it.src} alt="" fill sizes="240px" unoptimized style={{ objectFit: "cover" }} />
               )}
               {it.pending && (
-                <span className={styles.tag} style={{ position: "absolute", left: 6, bottom: 6, fontSize: 10 }}>
+                <span className={styles.tag} style={{ position: "absolute", left: 6, bottom: 6 }}>
                   PENDING
                 </span>
               )}
@@ -131,7 +133,7 @@ export default function GalleryScreen() {
 
       {failed && (
         <div className={styles.card} role="alert">
-          <b style={{ fontSize: 12 }}>Failed upload</b>
+          <b className="label-mono">Failed upload</b>
           <p className={styles.body}>{failed}</p>
         </div>
       )}
@@ -179,7 +181,7 @@ export default function GalleryScreen() {
               <Image src={current.src} alt="" fill sizes="100vw" unoptimized style={{ objectFit: "contain" }} />
             )}
           </div>
-          <p style={{ color: "#bbb", fontSize: 12, padding: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p className="label-mono" style={{ color: "#bbb", padding: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <button onClick={() => step(-1)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", minHeight: 44, padding: "0 12px" }}>← Prev</button>
             {viewer! + 1}/{shown.length} · Swipe to continue
             <button onClick={() => step(1)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", minHeight: 44, padding: "0 12px" }}>Next →</button>

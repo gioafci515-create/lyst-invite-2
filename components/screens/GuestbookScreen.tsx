@@ -65,7 +65,7 @@ export default function GuestbookScreen() {
       </div>
 
       <div className={styles.card} style={{ padding: 18 }}>
-        <p className={styles.eyebrow} style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", opacity: 0.6 }}>
+        <p className="label-mono" style={{ color: "var(--muted)" }}>
           Optional prompt · up to {clock(MAX_SECONDS)}
         </p>
         <p style={{ fontFamily: "var(--f-display)", fontSize: 20 }} aria-live="polite">
@@ -125,7 +125,7 @@ export default function GuestbookScreen() {
         <div className={styles.cardRed} role="status">
           <div className={styles.row}>
             <Image src="/images/app/check-light.svg" alt="" width={16} height={16} />
-            <b style={{ fontSize: 12 }}>Voice memory submitted · thank you</b>
+            <b className="label-mono">Voice memory submitted · thank you</b>
           </div>
         </div>
       )}

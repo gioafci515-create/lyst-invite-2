@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { getGuest, submitContribution } from "@/lib/submit";
+import { useHydrated, useNow } from "@/lib/useClient";
 
 function countdown(to: Date, now: number) {
   const ms = Math.max(0, to.getTime() - now);
@@ -26,14 +27,15 @@ export default function LaterScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [peek, setPeek] = useState(false);
-  const [now, setNow] = useState(0);
+  const now = useNow(30_000);
 
-  useEffect(() => {
+  // the name typed earlier on this device (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
     setGuestName(getGuest().name);
-    setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(t);
-  }, []);
+  }
 
   async function seal() {
     if (!message.trim()) return setError("Write a message first.");
@@ -116,7 +118,7 @@ export default function LaterScreen() {
 
       {sealed && (
         <div className={styles.card} role="status">
-          <div className={styles.between} style={{ fontSize: 14 }}>
+          <div className={styles.between}>
             <b>🔒 Submitted &amp; locked</b>
             <span style={{ color: "var(--red-text)" }}>Sealed</span>
           </div>
@@ -129,7 +131,7 @@ export default function LaterScreen() {
         onClick={() => setPeek((v) => !v)}
         style={{ background: "var(--acid)", border: "1px solid var(--ink)", padding: 12, textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}
       >
-        <span style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Reveal state preview</span>
+        <span className="label-mono">Reveal state preview</span>
         <span style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
           {peek ? (message ? `“${message}”` : "Your letter will appear here.") : "Open the letter →"}
         </span>

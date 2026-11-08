@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { shortDateLabel, timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
+import { readStored, useHydrated } from "@/lib/useClient";
 
 const MEALS = ["Garden menu", "Fish", "Children's"];
 
@@ -21,28 +22,27 @@ export default function RespondScreen() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
-  const [now, setNow] = useState(0);
   const [previous, setPrevious] = useState<{ guests: number; attending: string } | null>(null);
 
-  // reuse details typed on the invitation page / an earlier visit
-  useEffect(() => {
-    setNow(Date.now());
-    try {
-      const g = JSON.parse(localStorage.getItem("lyst_guest") ?? "null");
-      if (g?.name) setName(g.name);
-      if (g?.email) setEmail(g.email);
-      const prev = JSON.parse(localStorage.getItem("lyst_rsvp") ?? "null");
-      if (prev) {
-        setPrevious(prev);
-        setAttending(prev.attending);
-        setGuests(prev.guests);
-        setCompanion(prev.companion ?? "");
-        setMeal(prev.meal ?? MEALS[0]);
-        setDietary(prev.dietary ?? "");
-        setRequests(prev.requests ?? "");
-      }
-    } catch {}
-  }, []);
+  // reuse details typed on the invitation page / an earlier visit (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
+    const g = readStored<{ name?: string; email?: string }>("lyst_guest");
+    if (g?.name) setName(g.name);
+    if (g?.email) setEmail(g.email);
+    const prev = readStored<{ attending: "accept" | "decline"; guests?: number; companion?: string; meal?: string; dietary?: string; requests?: string }>("lyst_rsvp");
+    if (prev) {
+      setPrevious({ guests: prev.guests ?? 2, attending: prev.attending });
+      setAttending(prev.attending);
+      setGuests(prev.guests ?? 2);
+      setCompanion(prev.companion ?? "");
+      setMeal(prev.meal ?? MEALS[0]);
+      setDietary(prev.dietary ?? "");
+      setRequests(prev.requests ?? "");
+    }
+  }
 
   const ev = useEvent();
   // the server decides; until it has answered we do not claim the form works
@@ -124,7 +124,7 @@ export default function RespondScreen() {
       {going && (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 14 }} id="guests-label">
+            <span id="guests-label">
               Guests
             </span>
             <div className={styles.stepper} role="group" aria-labelledby="guests-label">
@@ -198,8 +198,8 @@ export default function RespondScreen() {
       <div className={styles.field}>
         <span>RSVP deadline</span>
         <div className={styles.valueRow}>
-          <span style={{ fontSize: 12 }}>{deadlineLabel}</span>
-          <span style={{ color: "var(--red-text)", fontSize: 12 }}>{ev.rsvpOpen === null ? "Checking…" : closedForSure ? "Closed" : "Open"}</span>
+          <span className="label-mono">{deadlineLabel}</span>
+          <span className="label-mono" style={{ color: "var(--red-text)" }}>{ev.rsvpOpen === null ? "Checking…" : closedForSure ? "Closed" : "Open"}</span>
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export default function RespondScreen() {
       )}
 
       <div className={styles.card}>
-        <b style={{ fontSize: 12 }}>Validation</b>
+        <b className="label-mono">Validation</b>
         <p className={styles.body}>Guest name and dietary note are required before the deadline.</p>
       </div>
 

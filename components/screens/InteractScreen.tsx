@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
 import { getGuest, submitContribution } from "@/lib/submit";
+import { useHydrated } from "@/lib/useClient";
 import { useLive, voterId } from "@/lib/useLive";
 
 const lsGet = (k: string) => {
@@ -36,12 +37,20 @@ export default function InteractScreen() {
   const pollKey = live ? `lyst_vote:${live.poll.question}` : "";
   const challengeKey = live ? `lyst_challenge:${live.challenge.prompt}` : "";
 
-  useEffect(() => setGuestName(getGuest().name), []);
-  useEffect(() => {
-    if (!live) return;
+  // the name typed earlier on this device (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
+    setGuestName(getGuest().name);
+  }
+  // this device's vote and challenge progress, re-read whenever the hosts change the poll or the challenge
+  const [syncedFor, setSyncedFor] = useState("");
+  if (live && syncedFor !== pollKey + "|" + challengeKey) {
+    setSyncedFor(pollKey + "|" + challengeKey);
     setVotedFor(lsGet(pollKey));
     setDone(Number(lsGet(challengeKey) ?? 0));
-  }, [live?.poll.question, live?.challenge.prompt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const who = named ? guestName || "Guest" : "Anonymous";
 
@@ -108,8 +117,8 @@ export default function InteractScreen() {
     >
       {live?.announcement.text && (
         <div className={styles.cardRed} style={{ whiteSpace: "normal" }} role="status">
-          <div className={styles.between} style={{ fontSize: 14 }}>
-            <b style={{ textTransform: "uppercase" }}>{live.announcement.label}</b>
+          <div className={styles.between}>
+            <b className="label-mono">{live.announcement.label}</b>
             <span>Now</span>
           </div>
           <p style={{ fontFamily: "var(--f-display)", fontSize: 16 }}>{live.announcement.text}</p>
@@ -132,7 +141,7 @@ export default function InteractScreen() {
           <span>Letter</span>
           <textarea rows={2} value={letter} onChange={(e) => setLetter(e.target.value)} maxLength={3000} placeholder="Write a long-form note for the room." />
         </label>
-        <div className={styles.between} style={{ alignItems: "center", fontSize: 14 }}>
+        <div className={styles.between} style={{ alignItems: "center" }}>
           <span className={styles.muted}>🔒 Future reveal · 1 year</span>
           <button className={styles.choice} aria-pressed onClick={sendLetter} disabled={busy}>
             Submit letter
@@ -143,11 +152,11 @@ export default function InteractScreen() {
       {live &&
         (live.challenge.open || done > 0 ? (
           <section className={styles.card}>
-            <div className={styles.between} style={{ fontSize: 14 }}>
+            <div className={styles.between}>
               <h2 style={{ fontFamily: "var(--f-display)", fontWeight: 400, fontSize: 15 }}>{live.challenge.title}</h2>
               <span style={{ color: "var(--red-text)" }}>{pct}%</span>
             </div>
-            <p style={{ fontSize: 14 }}>{live.challenge.prompt}</p>
+            <p>{live.challenge.prompt}</p>
             <div style={{ height: 5, background: `linear-gradient(90deg, var(--red) ${pct}%, rgba(10,10,10,.125) ${pct}%)` }} />
             <div className={styles.between} style={{ alignItems: "center" }}>
               <span className={styles.choice} style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 44 }}>
@@ -162,13 +171,13 @@ export default function InteractScreen() {
           </section>
         ) : (
           <div className={styles.card}>
-            <b style={{ fontSize: 12 }}>No active challenge</b>
+            <b className="label-mono">No active challenge</b>
             <p className={styles.body}>The current challenge is closed. Wait for the next prompt.</p>
           </div>
         ))}
       {live && live.challenge.open && done >= goal && (
         <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>Challenge complete</b>
+          <b className="label-mono">Challenge complete</b>
           <p className={styles.body}>You’ve found them all. Wait for the next prompt.</p>
         </div>
       )}
@@ -178,11 +187,11 @@ export default function InteractScreen() {
           <section className={styles.card}>
             <div className={styles.row}>
               <Image src="/images/app/check-dark.svg" alt="" width={16} height={16} />
-              <p className={styles.muted} style={{ fontSize: 14, textTransform: "uppercase" }}>
+              <p className="label-mono">
                 Live poll · multiple choice · {votedFor ? "voted" : "open"}
               </p>
             </div>
-            <p style={{ fontFamily: "var(--f-display)", fontSize: 14 }}>{live.poll.question}</p>
+            <p style={{ fontFamily: "var(--f-display)" }}>{live.poll.question}</p>
             <div className={styles.choices} role="group" aria-label="Poll choices">
               {live.poll.options.map((o) => (
                 <button key={o} className={styles.choice} aria-pressed={votedFor === o} disabled={!!votedFor || busy} onClick={() => vote(o)}>
@@ -198,7 +207,7 @@ export default function InteractScreen() {
           </section>
         ) : (
           <div className={styles.card}>
-            <b style={{ fontSize: 12 }}>No active poll</b>
+            <b className="label-mono">No active poll</b>
             <p className={styles.body}>The current poll is closed. Wait for the next question.</p>
           </div>
         ))}
@@ -219,7 +228,7 @@ export default function InteractScreen() {
       </section>
 
       {notice && (
-        <p role="status" style={{ fontSize: 14, background: "var(--cream)", border: "1px solid var(--ink)", padding: 10 }}>
+        <p role="status" style={{ background: "var(--cream)", border: "1px solid var(--ink)", padding: 10 }}>
           {notice}
         </p>
       )}
