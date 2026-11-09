@@ -2,7 +2,7 @@
  * Gallery uploads made on this phone. The server hands back an id and a private key for each one; with them this phone
  * (and nobody else) can see its own upload while it waits for the hosts' approval.
  */
-export type MineEntry = { id: string; key: string; kind: "photo" | "video"; at: string; w?: number; h?: number };
+export type MineEntry = { id: string; key: string; kind: "photo" | "video"; at: string; w?: number; h?: number; /** the moment it counted toward */ task?: string };
 
 const KEY = "lyst_mine";
 const MAX = 50;

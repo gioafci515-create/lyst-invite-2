@@ -10,7 +10,7 @@ const ROUTE_MODULE: Record<string, ModuleId> = {
   "/live": "live",
   "/for-later": "later",
   "/gallery": "gallery",
-  "/tasks": "tasks",
+  "/moments": "tasks",
 };
 
 /**
@@ -18,7 +18,11 @@ const ROUTE_MODULE: Record<string, ModuleId> = {
  * page before anything renders, so no guest ever sees it, not even for a frame. (The pages check again on render.)
  */
 export async function proxy(request: NextRequest) {
-  const mod = ROUTE_MODULE[request.nextUrl.pathname];
+  // a table card's QR code: /?card=<task id> opens that moment
+  const card = request.nextUrl.pathname === "/" ? request.nextUrl.searchParams.get("card") : null;
+  if (card) return NextResponse.redirect(new URL(`/moments/${encodeURIComponent(card.slice(0, 60))}`, request.url), 307);
+  const path = request.nextUrl.pathname.startsWith("/moments/") ? "/moments" : request.nextUrl.pathname;
+  const mod = ROUTE_MODULE[path];
   if (!mod) return NextResponse.next();
   const { config } = await getEventConfig();
   if (config.modules[mod]) return NextResponse.next();
@@ -26,5 +30,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/camera", "/voice", "/video", "/live", "/for-later", "/gallery", "/tasks"],
+  matcher: ["/camera", "/voice", "/video", "/live", "/for-later", "/gallery", "/moments", "/moments/:id", "/"],
 };

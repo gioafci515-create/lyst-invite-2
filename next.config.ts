@@ -14,7 +14,8 @@ const nextConfig: NextConfig = {
       ["/hub", "/programme"],
       ["/prepare", "/programme"],
       ["/respond", "/details"],
-      ["/participate", "/tasks"],
+      ["/participate", "/moments"],
+      ["/tasks", "/moments"],
       ["/guestbook", "/voice"],
       ["/later", "/for-later"],
       // the letter, the message for later and the capsule became one screen

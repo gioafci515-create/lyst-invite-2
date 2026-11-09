@@ -4,6 +4,7 @@ import Image from "next/image";
 import { TonightEssentials } from "./Essentials";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { COPY } from "@/lib/copy";
 import { untilLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { moduleOf, ROUTE, toRoute } from "@/lib/sections";
@@ -23,13 +24,6 @@ type PhotoKey = keyof typeof PHOTO;
 
 type Row = { key: string; title: string; line: string; href: string; photo: PhotoKey; module?: ModuleId; desktopOnly?: boolean };
 
-const clock = (ms: number) => {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const sec = String(s % 60).padStart(2, "0");
-  return h ? `${h}:${m}:${sec}` : `${m}:${sec}`;
-};
 const path = (href: string) => toRoute(href).split("?")[0];
 
 function Photo({ k, sizes, priority }: { k: PhotoKey; sizes: string; priority?: boolean }) {
@@ -98,8 +92,8 @@ function Tonight() {
       cta: task.action.label,
       href: toRoute(task.action.href),
       photo: task.type === "voice" ? "poster" : task.type === "video" ? "stage" : "portrait",
-      tag: task.inWindow && now > 0 ? `Live now · ${clock(task.windowEnd! - now)} left` : "Open task",
-      urgent: !!task.inWindow,
+      tag: COPY.live.label,
+      urgent: false,
     };
   } else if (ev.enabled("camera")) {
     lead = {
@@ -137,13 +131,13 @@ function Tonight() {
   // a secondary link inside the lead: the other open tasks, or when the next one opens
   const taskLink =
     task && openCount > 1
-      ? `All tasks (${openCount})`
+      ? COPY.moments.allMoments(openCount)
       : !task && next && now > 0
         ? next.at! - now > 86400_000
-          ? `Next task ${untilLabel(next.at!, now, ev.timezone)}`
-          : `Next task in ${untilLabel(next.at!, now, ev.timezone)}`
+          ? COPY.moments.nextMoment(untilLabel(next.at!, now, ev.timezone))
+          : COPY.moments.nextMomentIn(untilLabel(next.at!, now, ev.timezone))
         : tasksOn && openCount
-          ? `All tasks (${openCount})`
+          ? COPY.moments.allMoments(openCount)
           : null;
 
   return (

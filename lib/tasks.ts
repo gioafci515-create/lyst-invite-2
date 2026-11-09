@@ -37,11 +37,11 @@ export function actionFor(t: Pick<TaskDef, "id" | "type">): TaskAction {
     case "photo":
       return { label: "Open camera", href: "/camera?task=" + encodeURIComponent(t.id) };
     case "voice":
-      return { label: "Record voice", href: "/voice" };
+      return { label: "Record voice", href: "/voice?task=" + encodeURIComponent(t.id) };
     case "video":
-      return { label: "Record video", href: "/video" };
+      return { label: "Record video", href: "/video?task=" + encodeURIComponent(t.id) };
     default:
-      return { label: "Write note", href: "/letter" };
+      return { label: "Write note", href: "/for-later?task=" + encodeURIComponent(t.id) };
   }
 }
 
