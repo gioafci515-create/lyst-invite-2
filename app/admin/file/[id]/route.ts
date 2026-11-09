@@ -1,5 +1,5 @@
 import { isAdmin } from "@/lib/auth";
-import { getContribution } from "@/lib/contrib";
+import { getContribution, isSealed } from "@/lib/contrib";
 import { serveMedia } from "@/lib/media";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -7,6 +7,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const row = await getContribution(id);
   if (!row?.file) return new Response("Not found", { status: 404 });
+  // sealed for later: not even the hosts can open it before its day
+  if (isSealed(row)) return new Response(`Sealed until ${row.openAt}`, { status: 403 });
   return serveMedia(row.file, {
     "Content-Disposition": `inline; filename="${row.file.name.replace(/[^\w.\- ]/g, "_")}"`,
     "Cache-Control": "private, no-store",

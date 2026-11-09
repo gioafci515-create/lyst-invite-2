@@ -74,8 +74,7 @@ export default function QuickBar() {
     live: ev.enabled("live") ? ({ key: "live", href: ROUTE.live, label: "Live", icon: "live" } as Tab) : null,
     voice: ev.enabled("voice") ? ({ key: "voice", href: ROUTE.voice, label: "Voice", icon: "mic" } as Tab) : null,
     gallery: ev.enabled("gallery") ? ({ key: "gallery", href: ROUTE.gallery, label: "Gallery", icon: "image" } as Tab) : null,
-    capsule: ev.enabled("capsule") ? ({ key: "capsule", href: ROUTE.capsule, label: "Capsule", icon: "clock" } as Tab) : null,
-    letter: ev.enabled("later") ? ({ key: "letter", href: ROUTE.later, label: "Letter", icon: "note" } as Tab) : null,
+    letter: ev.enabled("later") ? ({ key: "letter", href: ROUTE.later, label: "For later", icon: "note" } as Tab) : null,
   };
 
   let left: Tab | null;
@@ -88,8 +87,8 @@ export default function QuickBar() {
     left = pick(T.tasks, T.voice, T.programme);
     right = pick(T.live, T.gallery, T.updates);
   } else {
-    left = pick(T.gallery, T.letter, T.programme);
-    right = pick(T.capsule, T.updates);
+    left = pick(T.gallery, T.programme);
+    right = pick(T.letter, T.updates);
   }
   if (left && right && left.key === right.key) right = null;
 

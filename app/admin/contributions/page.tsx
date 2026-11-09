@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
-import { countByType, isGalleryMedia, listContributions, TYPES } from "@/lib/contrib";
+import { countByType, isGalleryMedia, isSealed, listContributions, TYPES } from "@/lib/contrib";
 import { removeContribution, setMediaApproval } from "../actions";
 import styles from "../admin.module.css";
 
@@ -18,12 +18,18 @@ const LABEL: Record<string, string> = {
   challenge: "Challenges",
   poll: "Poll votes",
   question: "Host questions",
-  capsule: "Time capsule",
+  capsule: "Time capsule (before for later)",
+  forlater: "For later",
 };
 
 async function List({ type }: { type?: string }) {
   if (!(await isAdmin())) redirect("/admin/login");
-  const [rows, counts] = await Promise.all([listContributions(type), countByType()]);
+  const [all, counts] = await Promise.all([listContributions(type), countByType()]);
+  // "for later" rows stay sealed until their day: here only as a count, never their content
+  const now = new Date().getTime();
+  const sealed = all.filter((r) => isSealed(r, now));
+  const rows = all.filter((r) => !isSealed(r, now));
+  const firstOpen = sealed.map((r) => r.openAt!).sort()[0];
 
   return (
     <main className={styles.page}>
@@ -36,8 +42,18 @@ async function List({ type }: { type?: string }) {
           <Link className={styles.btnGhost} data-btn href="/admin">
             RSVPs
           </Link>
+          <Link className={styles.btnGhost} data-btn href="/admin/capsule">
+            Sealed for later
+          </Link>
         </div>
       </header>
+
+      {sealed.length > 0 && (
+        <p className={styles.note} data-sealed={sealed.length}>
+          {sealed.length} sealed for later. Sealed until {new Date(firstOpen!).toLocaleDateString("en-GB", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", year: "numeric" })}
+          {sealed.length > 1 ? " (the first one)" : ""}: you can&apos;t read {sealed.length > 1 ? "them" : "it"} before then. <Link href="/admin/capsule">See when each opens</Link>.
+        </p>
+      )}
 
       <nav className={styles.filters} aria-label="Filter by type">
         <Link href="/admin/contributions" data-btn aria-current={!type ? "page" : undefined}>

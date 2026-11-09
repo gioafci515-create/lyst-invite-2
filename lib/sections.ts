@@ -16,7 +16,7 @@ export const ROUTE = {
   voice: "/voice",
   video: "/video",
   live: "/live",
-  later: "/letter",
+  later: "/for-later",
   gallery: "/gallery",
   capsule: "/capsule",
   tasks: "/tasks",
@@ -71,7 +71,6 @@ export const NAV: NavItem[] = [
   { href: ROUTE.voice, label: "Voice", group: "Tonight", module: "voice" },
   { href: ROUTE.video, label: "Video", group: "Tonight", module: "video" },
   { href: ROUTE.live, label: "Live room", group: "Tonight", module: "live" },
-  { href: ROUTE.later, label: "Letter", group: "Tonight", module: "later" },
   { href: ROUTE.gallery, label: "Gallery", group: "Memories", module: "gallery" },
-  { href: ROUTE.capsule, label: "Capsule", group: "Memories", module: "capsule" },
+  { href: ROUTE.later, label: "For later", group: "Memories", module: "later" },
 ];
