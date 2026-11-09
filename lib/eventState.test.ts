@@ -150,3 +150,20 @@ test("countdown counts calendar days in the event timezone", () => {
   assert.equal(countdownLabel(Date.parse("2026-11-13T10:00:00Z"), DEFAULT_CONFIG.startsAt, "Europe/Amsterdam"), "Tomorrow");
   assert.equal(countdownLabel(0, DEFAULT_CONFIG.startsAt, "Europe/Amsterdam"), "");
 });
+
+/* ---------- camera roll ---------- */
+test("camera roll: 24 frames by default, hosts can set a whole number from 1 to 99", () => {
+  assert.equal(resolveConfig(null).config.cameraFrames, 24);
+  assert.equal(at(undefined, start).cameraFrames, 24);
+  const r = resolveConfig({ cameraFrames: 12 });
+  assert.equal(r.config.cameraFrames, 12);
+  assert.equal(r.issues.length, 0);
+  assert.equal(computeEventState(r.config, start).cameraFrames, 12);
+});
+test("camera roll: an invalid frame count falls back to the default and is reported", () => {
+  for (const bad of [0, 100, 2.5, "12", -3, null]) {
+    const r = resolveConfig({ cameraFrames: bad });
+    assert.equal(r.config.cameraFrames, 24, String(bad));
+    assert.ok(r.issues.some((i) => i.level === "error" && /frames/i.test(i.message)), String(bad));
+  }
+});

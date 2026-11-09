@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { getEventConfig } from "@/lib/eventConfig";
-import { computeEventState, MODULE_IDS, timeLabel, dateLabel, type ModuleId } from "@/lib/eventState";
+import { computeEventState, FRAMES_MAX, FRAMES_MIN, MODULE_IDS, timeLabel, dateLabel, type ModuleId } from "@/lib/eventState";
 import { buildRows, getTaskState, utcToZonedLocal } from "@/lib/tasks";
 import { extendEventEnd, resetEventSettings, saveEventSettings, setEventOverride } from "../actions";
 import styles from "../admin.module.css";
@@ -134,6 +134,11 @@ async function Panel({ searchParams }: { searchParams: Promise<{ ok?: string; er
               {MODULE_LABEL[id]}
             </label>
           ))}
+          <label className={styles.label}>
+            Frames on each guest&apos;s disposable camera
+            <input type="number" name="cameraFrames" min={FRAMES_MIN} max={FRAMES_MAX} step={1} required defaultValue={config.cameraFrames} className={styles.input} />
+          </label>
+          <p className={styles.note}>A photo task asks for its own number of photos (set on the Tasks page).</p>
           <button className={styles.btn}>Save event settings</button>
         </form>
 

@@ -31,7 +31,13 @@ export type EventConfig = {
   /** programme rows after the opening one */
   programme: ProgrammeItem[];
   modules: Modules;
+  /** frames on each guest's disposable camera roll (a photo task brings its own count) */
+  cameraFrames: number;
 };
+
+/** the roll size the hosts can choose from */
+export const FRAMES_MIN = 1;
+export const FRAMES_MAX = 99;
 
 export const DEFAULT_TIMEZONE = "Europe/Amsterdam";
 
@@ -47,6 +53,7 @@ export const DEFAULT_CONFIG: EventConfig = {
     { at: "2026-11-14T22:40:00.000Z", label: "Edition zero leaves press" }, // 23:40
   ],
   modules: { camera: true, voice: true, video: true, gallery: true, tasks: true, live: true, later: true, capsule: true },
+  cameraFrames: 24,
 };
 
 export type ConfigIssue = { level: "error" | "warning"; message: string };
@@ -126,6 +133,11 @@ export function resolveConfig(raw: unknown): { config: EventConfig; issues: Conf
       else issues.push({ level: "error", message: `Module "${id}" has a non-boolean value; treated as enabled.` });
     }
   }
+  if (r.cameraFrames !== undefined) {
+    const n = r.cameraFrames;
+    if (typeof n === "number" && Number.isInteger(n) && n >= FRAMES_MIN && n <= FRAMES_MAX) cfg.cameraFrames = n;
+    else issues.push({ level: "error", message: `Camera frames must be a whole number from ${FRAMES_MIN} to ${FRAMES_MAX}; using ${d.cameraFrames}.` });
+  }
   return { config: cfg, issues };
 }
 
@@ -141,6 +153,8 @@ export type EventState = {
   rsvp: { open: boolean; closesAt: string };
   modules: Modules;
   programme: ProgrammeItem[];
+  /** frames on each guest's camera roll */
+  cameraFrames: number;
   /** the next automatic change, or null (an override suppresses automatic changes) */
   next: { at: string; to: Phase } | null;
 };
@@ -178,6 +192,7 @@ export function computeEventState(cfg: EventConfig, now: number): EventState {
     rsvp: { open, closesAt: cfg.rsvpClosesAt },
     modules: cfg.modules,
     programme: cfg.programme,
+    cameraFrames: cfg.cameraFrames,
     next,
   };
 }

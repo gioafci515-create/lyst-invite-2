@@ -283,6 +283,8 @@ export async function saveEventSettings(formData: FormData) {
 
   const override = String(formData.get("override") ?? "");
   const modules = Object.fromEntries(MODULE_IDS.map((id) => [id, formData.get(`m_${id}`) === "on"]));
+  const framesRaw = String(formData.get("cameraFrames") ?? "").trim();
+  const cameraFrames = framesRaw === "" ? config.cameraFrames : Number(framesRaw);
   const candidate = {
     ...config,
     startsAt: startsAt.toISOString(),
@@ -290,6 +292,7 @@ export async function saveEventSettings(formData: FormData) {
     rsvpClosesAt: rsvpClosesAt.toISOString(),
     override: override === "before" || override === "during" || override === "after" ? override : null,
     modules,
+    cameraFrames,
   };
   const problems = resolveConfig(candidate).issues.filter((i) => i.level === "error");
   if (problems.length) return eventBack("err", problems.map((p) => p.message).join(" "));

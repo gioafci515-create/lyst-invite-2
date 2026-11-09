@@ -65,6 +65,13 @@ try {
   ok("a switched-off feature is refused by the server", home.status === 403);
 
   await go("/admin/event");
+  ok("the camera roll size is shown (24 by default)", (await p.ev(`document.querySelector('input[name=cameraFrames]').value`)) === "24");
+  await setVal("input[name=cameraFrames]", "12");
+  await submit("form[action] ");
+  e = await ev();
+  ok("the camera roll size saves and guests get it from the server", e.cameraFrames === 12, String(e.cameraFrames));
+
+  await go("/admin/event");
   await clickBtn("Reset to built-in defaults");
   e = await ev();
   ok("reset restores the defaults", e.modules.video === true && e.endsAt === "2026-11-14T23:30:00.000Z" && e.degraded === false);
