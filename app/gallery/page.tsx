@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Gallery — UN/FOLD 2026" };
 
 export default function GalleryPage() {
   return (
-    <FeatureRoute module="gallery" title="Gallery" intro="Photos and clips from the night appear here once the hosts approve them.">
+    <FeatureRoute module="gallery" title="Gallery" framed={false}>
       <GalleryScreen />
     </FeatureRoute>
   );
