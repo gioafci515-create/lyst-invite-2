@@ -2,190 +2,393 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import AppShell from "@/components/AppShell";
-import styles from "@/components/app.module.css";
+import { keepMine, readMine } from "@/lib/mine";
 import { submitContribution } from "@/lib/submit";
+import { Progress } from "./CaptureBits";
+import r from "./room.module.css";
+import g from "./gallery.module.css";
 
-type Item = { key: string; src: string; kind: "photo" | "video"; pending?: boolean };
-type Filter = "all" | "photo" | "video" | "hidden";
+type Kind = "photo" | "video";
+type Tile = { id: string; kind: Kind; w?: number; h?: number; src: string; pending: boolean };
+type Upload = { qid: string; file: File; state: "waiting" | "sending" | "failed"; progress: number | null; error?: string };
+type Filter = "all" | Kind;
 
+const clampRatio = (x: number) => Math.min(2.4, Math.max(0.42, x));
+
+/** the width of an element that may mount later (a callback ref); the observer reports the first size itself */
+function useWidth() {
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return [setEl, width] as const;
+}
+
+/** A clip only starts loading when it comes near the screen; it shows its first frame. */
+function LazyVideo({ src, onRatio }: { src: string; onRatio: (r: number) => void }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "300px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <video
+      ref={ref}
+      src={near ? `${src}#t=0.1` : undefined}
+      muted
+      playsInline
+      preload={near ? "metadata" : "none"}
+      onLoadedMetadata={(e) => e.currentTarget.videoWidth && onRatio(e.currentTarget.videoWidth / e.currentTarget.videoHeight)}
+      tabIndex={-1}
+      aria-hidden
+    />
+  );
+}
+
+/** Full-screen viewer: arrow keys, swipe, Escape; focus stays inside and returns to the photo it came from. */
+function Viewer({ tiles, index, setIndex, onClose }: { tiles: Tile[]; index: number; setIndex: (i: number) => void; onClose: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const touch = useRef<number | null>(null);
+  const t = tiles[index];
+  const step = useCallback((d: number) => setIndex((index + d + tiles.length) % tiles.length), [index, tiles.length, setIndex]);
+
+  useEffect(() => {
+    box.current?.querySelector<HTMLButtonElement>("[data-close]")?.focus();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === "Escape") onClose();
+    else if (e.key === "ArrowRight") step(1);
+    else if (e.key === "ArrowLeft") step(-1);
+    else if (e.key === "Tab") {
+      const f = [...(box.current?.querySelectorAll<HTMLElement>("button, video[controls]") ?? [])];
+      if (!f.length) return;
+      const i = f.indexOf(document.activeElement as HTMLElement);
+      if (e.shiftKey && i <= 0) {
+        e.preventDefault();
+        f[f.length - 1].focus();
+      } else if (!e.shiftKey && i === f.length - 1) {
+        e.preventDefault();
+        f[0].focus();
+      }
+    }
+  }
+
+  return (
+    <div
+      ref={box}
+      className={g.viewer}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${t.kind === "video" ? "Clip" : "Photo"} ${index + 1} of ${tiles.length}`}
+      onKeyDown={onKey}
+      onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
+      onTouchEnd={(e) => {
+        if (touch.current === null) return;
+        const dx = e.changedTouches[0].clientX - touch.current;
+        touch.current = null;
+        if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
+      }}
+    >
+      <div className={g.viewerTop}>
+        <span className={g.viewerCount} aria-live="polite">
+          {index + 1} / {tiles.length}
+        </span>
+        {t.pending && <span className={g.pending}>Waiting for host approval</span>}
+        <button type="button" className={g.viewerBtn} data-close onClick={onClose} aria-label="Close the viewer">
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <div className={g.viewerStage}>
+        {t.kind === "video" ? (
+          <video key={t.id} src={t.src} controls playsInline preload="metadata" className={g.viewerMedia} />
+        ) : (
+          <Image key={t.id} src={t.src} alt={`Photo ${index + 1} of ${tiles.length}`} fill sizes="100vw" unoptimized className={g.viewerImg} />
+        )}
+      </div>
+      {tiles.length > 1 && (
+        <div className={g.viewerNav}>
+          <button type="button" className={g.viewerBtn} onClick={() => step(-1)} aria-label="Previous">
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+          <span className={g.viewerHint}>
+            <span className={g.touchOnly}>Swipe for the next one</span>
+            <span className={g.pointerOnly}>Arrow keys work too</span>
+          </span>
+          <button type="button" className={g.viewerBtn} onClick={() => step(1)} aria-label="Next">
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The gallery. Rules from the code: only media the hosts approved is public; an upload is visible to the phone that sent
+ * it (with its private key) while it waits; voice memories never appear here; the gallery is open whenever the hosts have
+ * it switched on (there is no "locked until after the event" rule).
+ */
 export default function GalleryScreen() {
-  const file = useRef<HTMLInputElement>(null);
-  const touch = useRef(0);
-  const [remote, setRemote] = useState<Item[]>([]);
-  const [pending, setPending] = useState<Item[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const [approved, setApproved] = useState<Tile[] | null>(null);
+  const [mine, setMine] = useState<Tile[]>([]);
+  const [failed, setFailed] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [ratios, setRatios] = useState<Record<string, number>>({});
   const [viewer, setViewer] = useState<number | null>(null);
-  const [uploading, setUploading] = useState(0);
-  const [msg, setMsg] = useState("");
-  const [failed, setFailed] = useState("");
+  const [queue, setQueue] = useState<Upload[]>([]);
+  const [sentNote, setSentNote] = useState("");
+  const [gridRef, width] = useWidth();
+  const queueRef = useRef<Upload[]>([]);
+  const running = useRef(false);
+
+  const loadMine = useCallback(async () => {
+    const list = readMine();
+    if (!list.length) return setMine([]);
+    try {
+      const res = await fetch("/api/gallery/mine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: list.map(({ id, key }) => ({ id, key })) }),
+      });
+      if (!res.ok) return;
+      const rows: { id: string; kind: Kind; w?: number; h?: number; approved: boolean }[] = await res.json();
+      keepMine(new Set(rows.map((x) => x.id)));
+      const keys = new Map(list.map((e) => [e.id, e.key]));
+      setMine(
+        rows.filter((x) => !x.approved).map((x) => ({ id: x.id, kind: x.kind, w: x.w, h: x.h, src: `/api/media/${x.id}?k=${keys.get(x.id)}`, pending: true })),
+      );
+    } catch {
+      /* keep what we have */
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/gallery", { cache: "no-store" });
       if (!res.ok) throw new Error();
-      const rows: { id: string; kind: "photo" | "video" }[] = await res.json();
-      setRemote(rows.map((r) => ({ key: r.id, src: `/api/media/${r.id}`, kind: r.kind })));
+      const rows: { id: string; kind: Kind; w?: number; h?: number }[] = await res.json();
+      setApproved(rows.map((x) => ({ ...x, src: `/api/media/${x.id}`, pending: false })));
+      setFailed(false);
     } catch {
-      /* keep what we have */
-    } finally {
-      setLoaded(true);
+      setFailed(true);
     }
-  }, []);
+    void loadMine();
+  }, [loadMine]);
 
   useEffect(() => {
-    load();
+    const first = setTimeout(load, 0);
     const t = setInterval(load, 20000);
-    return () => clearInterval(t);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+    };
   }, [load]);
 
-  const count = (f: Filter) =>
-    f === "all" ? remote.length : f === "hidden" ? pending.length : remote.filter((i) => i.kind === f).length;
+  const update = (fn: (q: Upload[]) => Upload[]) => {
+    queueRef.current = fn(queueRef.current);
+    setQueue(queueRef.current);
+  };
+  /** send the queue one file at a time; a failed one waits for "Try again". Success only when the server said OK. */
+  async function run() {
+    if (running.current) return;
+    running.current = true;
+    for (;;) {
+      const next = queueRef.current.find((u) => u.state === "waiting");
+      if (!next) break;
+      const set = (patch: Partial<Upload>) => update((q) => q.map((u) => (u.qid === next.qid ? { ...u, ...patch } : u)));
+      set({ state: "sending", progress: null, error: undefined });
+      const res = await submitContribution({ type: "photo", file: next.file, onProgress: (p) => set({ progress: p }) });
+      if (res.ok) {
+        update((q) => q.filter((u) => u.qid !== next.qid));
+        setSentNote("Sent. You can see it here now; everyone else sees it once the hosts approve it.");
+        await loadMine();
+      } else set({ state: "failed", error: res.error });
+    }
+    running.current = false;
+  }
 
-  const shown = filter === "hidden" ? pending : filter === "all" ? remote : remote.filter((i) => i.kind === filter);
-
-  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+  function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
-    setMsg("");
-    setFailed("");
-    setUploading((u) => u + files.length);
-    let error = "";
-    let ok = 0;
-    for (const f of files) {
-      const res = await submitContribution({ type: "photo", file: f });
-      setUploading((u) => u - 1);
-      if (res.ok) {
-        ok++;
-        const kind = f.type.startsWith("video/") ? "video" : "photo";
-        setPending((p) => [{ key: crypto.randomUUID(), src: URL.createObjectURL(f), kind, pending: true }, ...p]);
-      } else error = res.error.includes("Network") ? "Upload failed. Check connection and try again." : res.error;
-    }
-    setFailed(error);
-    if (ok) setMsg(`${ok} moment${ok > 1 ? "s" : ""} sent. They appear in the gallery once the hosts approve them.`);
+    setSentNote("");
+    update((q) => [...q, ...files.map((file) => ({ qid: crypto.randomUUID(), file, state: "waiting" as const, progress: null }))]);
+    void run();
   }
 
-  const open = (i: number) => setViewer(i);
-  const step = (d: number) => setViewer((v) => (v === null || !shown.length ? v : (v + d + shown.length) % shown.length));
-  const current = viewer !== null ? shown[viewer] : undefined;
+  const all = [...mine, ...(approved ?? []).filter((t) => !mine.some((m) => m.id === t.id))];
+  const tiles = filter === "all" ? all : all.filter((t) => t.kind === filter);
+  const count = (f: Filter) => (f === "all" ? all.length : all.filter((t) => t.kind === f).length);
+
+  // masonry: every tile keeps its real shape; each goes to the shortest column, DOM order stays newest first
+  const cols = width >= 1000 ? 4 : width >= 600 ? 3 : 2;
+  const gap = width >= 600 ? 12 : 8;
+  const colW = width ? (width - gap * (cols - 1)) / cols : 0;
+  const heights = new Array(cols).fill(0);
+  const placed = tiles.map((t) => {
+    const ratio = clampRatio(t.w && t.h ? t.w / t.h : (ratios[t.id] ?? 0.8));
+    const h = Math.round(colW / ratio);
+    const c = heights.indexOf(Math.min(...heights));
+    const pos = { x: c * (colW + gap), y: heights[c], h };
+    heights[c] += h + gap;
+    return pos;
+  });
+  const gridH = Math.max(0, Math.max(...heights) - gap);
+  const measure = (id: string, ratio: number) => setRatios((m) => (m[id] ? m : { ...m, [id]: ratio }));
+
+  function close() {
+    setViewer(null);
+    requestAnimationFrame(() => opener.current?.focus());
+  }
 
   const FILTERS: [Filter, string][] = [
     ["all", "All"],
     ["photo", "Photos"],
-    ["video", "Videos"],
-    ["hidden", "Hidden"],
+    ["video", "Clips"],
   ];
 
   return (
-    <AppShell
-      header={{ src: "/images/app/header-gallery.svg", width: 44 }}
-      step={4}
-      action={{ label: "Upload moment", onClick: () => file.current?.click() }}
-    >
-      <div className={styles.choices}>
-        {FILTERS.map(([id, label]) => (
-          <button key={id} className={`${styles.choice} ${styles.small}`} aria-pressed={filter === id} onClick={() => setFilter(id)}>
-            {label} {count(id)}
-          </button>
-        ))}
+    <div className={`${r.screen} ${r.wide}`}>
+      <div className={g.top}>
+        <p className={`${r.body} ${g.lead}`}>Photos and clips from the night, once the hosts approve them. Yours show here for you while they wait.</p>
+        <input ref={fileInput} type="file" accept="image/*,video/*" multiple hidden onChange={pick} />
+        <button type="button" className={r.secondary} onClick={() => fileInput.current?.click()}>
+          Add photos or clips
+        </button>
       </div>
 
-      <input ref={file} type="file" accept="image/*,video/*" multiple hidden onChange={onFiles} />
-
-      {!loaded ? (
-        <p className={styles.body}>Loading…</p>
-      ) : shown.length === 0 ? (
-        <div className={styles.card}>
-          <b style={{ fontSize: 12 }}>{filter === "hidden" ? "Nothing waiting" : "Gallery empty"}</b>
-          <p className={styles.body}>
-            {filter === "hidden"
-              ? "Moments you upload stay private here until the hosts approve them."
-              : "No public media is available yet. Private media is hidden until reveal."}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridAutoRows: 125, gap: 8, gridAutoFlow: "dense" }}>
-          {shown.map((it, i) => (
-            <button
-              key={it.key}
-              aria-label={`Open ${it.kind} ${i + 1}`}
-              onClick={() => open(i)}
-              style={{ position: "relative", border: 0, padding: 0, background: "#000", overflow: "hidden", width: "100%", height: "100%", gridRow: i % 3 === 0 ? "span 2" : "span 1" }}
-            >
-              {it.kind === "video" ? (
-                <video src={it.src} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <Image src={it.src} alt="" fill sizes="240px" unoptimized style={{ objectFit: "cover" }} />
-              )}
-              {it.pending && (
-                <span className={styles.tag} style={{ position: "absolute", left: 6, bottom: 6, fontSize: 10 }}>
-                  PENDING
-                </span>
-              )}
+      {count("photo") > 0 && count("video") > 0 && (
+        <div className={g.filters} role="group" aria-label="Show">
+          {FILTERS.map(([id, label]) => (
+            <button key={id} type="button" className={g.filter} aria-pressed={filter === id} onClick={() => setFilter(id)}>
+              {label} <span className={g.filterCount}>{count(id)}</span>
             </button>
           ))}
         </div>
       )}
 
-      {failed && (
-        <div className={styles.card} role="alert">
-          <b style={{ fontSize: 12 }}>Failed upload</b>
-          <p className={styles.body}>{failed}</p>
+      {queue.length > 0 && (
+        <ul className={g.queue} aria-label="Uploads">
+          {queue.map((u, i) => (
+            <li key={u.qid} className={g.queueItem}>
+              <span className={g.queueName}>{u.file.name || `Upload ${i + 1}`}</span>
+              {u.state === "sending" ? (
+                <Progress fraction={u.progress} label={`Sending ${u.file.name || "your upload"}`} />
+              ) : u.state === "waiting" ? (
+                <span className={`${r.body} ${r.muted}`}>Waiting to send</span>
+              ) : (
+                <>
+                  <p className={r.error} role="alert">
+                    {u.error} It wasn&rsquo;t sent.
+                  </p>
+                  <div className={r.actions}>
+                    <button
+                      type="button"
+                      className={r.primary}
+                      onClick={() => {
+                        update((q) => q.map((x) => (x.qid === u.qid ? { ...x, state: "waiting" } : x)));
+                        void run();
+                      }}
+                    >
+                      Try again
+                    </button>
+                    <button type="button" className={r.secondary} onClick={() => update((q) => q.filter((x) => x.qid !== u.qid))}>
+                      Remove
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {sentNote && (
+        <p className={r.status} role="status">
+          {sentNote}
+        </p>
+      )}
+
+      {approved === null && !failed ? (
+        <div className={g.skeleton} aria-busy="true" aria-label="Loading the gallery">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : approved === null && failed && !mine.length ? (
+        <p className={r.error} role="alert">
+          The gallery can&rsquo;t be loaded right now. This page keeps trying.
+        </p>
+      ) : tiles.length === 0 ? (
+        <div className={g.empty}>
+          <p className={r.title}>{filter === "video" ? "No clips yet." : filter === "photo" ? "No photos yet." : "Nothing here yet."}</p>
+          <p className={r.body}>The hosts look at every photo and clip first. What they approve appears here for everyone.</p>
+        </div>
+      ) : (
+        <div ref={gridRef} className={g.grid} style={{ height: gridH }}>
+          {width > 0 &&
+            tiles.map((t, i) => {
+              const p = placed[i];
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={g.tile}
+                  style={{ transform: `translate(${p.x}px, ${p.y}px)`, width: colW, height: p.h }}
+                  onClick={(e) => {
+                    opener.current = e.currentTarget;
+                    setViewer(i);
+                  }}
+                  aria-label={`${t.kind === "video" ? "Clip" : "Photo"} ${i + 1} of ${tiles.length}${t.pending ? ", waiting for host approval" : ""}. Open full screen.`}
+                >
+                  {t.kind === "video" ? (
+                    <LazyVideo src={t.src} onRatio={(x) => measure(t.id, x)} />
+                  ) : (
+                    <Image
+                      src={t.src}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="(max-width: 600px) 50vw, 25vw"
+                      onLoad={(e) => e.currentTarget.naturalWidth && measure(t.id, e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+                    />
+                  )}
+                  {t.kind === "video" && (
+                    <span className={g.play} aria-hidden>
+                      <svg viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </span>
+                  )}
+                  {t.pending && <span className={g.pending}>Waiting for host approval</span>}
+                </button>
+              );
+            })}
         </div>
       )}
 
-      <div className={styles.row}>
-        <button className={styles.primary} style={{ flex: 1, gap: 4 }} onClick={() => file.current?.click()}>
-          <Image src="/images/app/upload-44.svg" alt="" width={44} height={44} />
-          Upload
-        </button>
-        <button className={styles.secondary} style={{ flex: 1 }} onClick={() => open(0)} disabled={!shown.length}>
-          <Image src="/images/app/maximize-2.svg" alt="" width={16} height={16} />
-          Open viewer
-        </button>
-      </div>
-
-      <p className={styles.body} style={{ lineHeight: 1.4 }} role="status">
-        {msg ||
-          `${uploading ? `${uploading} upload${uploading === 1 ? "" : "s"} processing` : "All uploads processed"} · private media hidden until reveal`}
-      </p>
-
-      {current && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Full-screen viewer"
-          onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
-          onTouchEnd={(e) => {
-            const dx = e.changedTouches[0].clientX - touch.current;
-            if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setViewer(null);
-            if (e.key === "ArrowRight") step(1);
-            if (e.key === "ArrowLeft") step(-1);
-          }}
-          style={{ position: "fixed", inset: 0, background: "rgba(10,10,10,.96)", zIndex: 50, display: "flex", flexDirection: "column", padding: 10 }}
-        >
-          <button autoFocus aria-label="Close viewer" onClick={() => setViewer(null)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", width: 44, height: 44, display: "grid", placeItems: "center" }}>
-            <Image src="/images/app/x.svg" alt="" width={14} height={14} />
-          </button>
-          <div style={{ position: "relative", flex: 1 }}>
-            {current.kind === "video" ? (
-              <video key={current.key} src={current.src} controls autoPlay playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-            ) : (
-              <Image src={current.src} alt="" fill sizes="100vw" unoptimized style={{ objectFit: "contain" }} />
-            )}
-          </div>
-          <p style={{ color: "#bbb", fontSize: 12, padding: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <button onClick={() => step(-1)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", minHeight: 44, padding: "0 12px" }}>← Prev</button>
-            {viewer! + 1}/{shown.length} · Swipe to continue
-            <button onClick={() => step(1)} style={{ background: "var(--cream)", color: "var(--ink)", border: "1px solid var(--ink)", minHeight: 44, padding: "0 12px" }}>Next →</button>
-          </p>
-        </div>
-      )}
-    </AppShell>
+      {viewer !== null && tiles[viewer] && <Viewer tiles={tiles} index={viewer} setIndex={setViewer} onClose={close} />}
+    </div>
   );
 }

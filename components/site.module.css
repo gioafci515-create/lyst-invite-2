@@ -1,15 +1,15 @@
-/* ---------- Site header ---------- */
+/* ---------- Site header: wordmark, phase status, one context action ---------- */
 .header {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--cream);
-  border-bottom: 1px solid var(--ink);
   height: var(--header-h);
-  padding: 0 24px;
+  padding: 0 36px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 28px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--ink);
 }
 .mark {
   font-family: var(--f-grotesk);
@@ -21,172 +21,221 @@
   display: inline-flex;
   align-items: center;
 }
+
 .nav {
   flex: 1;
   min-width: 0;
   display: flex;
-  gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
   align-items: center;
+  gap: 4px;
 }
-.nav::-webkit-scrollbar {
-  display: none;
-}
-.nav a {
-  flex: none;
+.navLink {
   min-height: 44px;
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  font-family: var(--f-mono);
   font-size: 12px;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-  border-bottom: 3px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
-}
-.nav a:hover {
-  color: var(--ink);
-}
-.nav a[aria-current="location"] {
-  color: var(--ink);
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.navLink:hover,
+.navLink[aria-expanded="true"] {
   border-bottom-color: var(--red);
 }
-.cta {
+.navLink svg {
+  width: 14px;
+  height: 14px;
+}
+/* the header links are not lifted like buttons */
+.nav .navLink:hover {
+  transform: none;
+  filter: none;
+}
+
+.drop {
+  position: relative;
+}
+.dropList {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 220px;
+  list-style: none;
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 6px 0;
+  z-index: 30;
+}
+.dropList a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 16px;
+}
+.dropList a:hover,
+.dropList a:focus-visible {
+  background: var(--sand);
+}
+.dropList a:focus-visible {
+  outline-offset: -3px;
+}
+
+.status {
   flex: none;
-  background: var(--red);
-  color: var(--btn-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 12px;
   font-weight: 700;
-  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.actionSlot {
+  flex: none;
+  min-width: 44px;
+  display: flex;
+  justify-content: flex-end;
+}
+/* nothing to offer right now: no empty gap at the end of the header */
+.actionSlot:empty {
+  display: none;
+}
+.cta {
   min-height: 44px;
   min-width: 44px;
   padding: 0 18px;
-  border-radius: 999px;
   display: inline-flex;
   align-items: center;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--btn-ink);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 900px) {
+  /* phones: three columns, the status sits in the middle; the bottom bar and menu do the navigating */
   .header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 8px;
     padding: 0 16px;
-    gap: 12px;
   }
-  .mark {
-    flex: 1;
-  }
-  /* phones navigate with the bottom bar and menu sheet */
   .nav {
     display: none;
   }
+  .status {
+    letter-spacing: 0.04em;
+  }
 }
 
-/* ---------- Stacked sections ---------- */
-.stage {
-  background: var(--sand);
-  padding: 80px 24px;
-}
-.cream {
-  background: var(--cream);
-}
-.stageInner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
-  gap: 56px;
-  align-items: start;
-}
-.wide {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 32px;
-  max-width: 1344px;
-}
-.copy {
-  position: sticky;
-  top: calc(var(--header-h) + 32px);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.wide .copy {
-  position: static;
-}
-.eyebrow {
-  font-size: 12px;
-  letter-spacing: 1.7px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.title {
-  font-family: var(--f-display);
-  font-weight: 700;
-  font-size: 52px;
-  line-height: 1;
-  letter-spacing: -2px;
-}
-.lead {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--muted);
-  max-width: 420px;
-}
-.screen {
-  min-width: 0;
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
 }
 
+/* ---------- Page body: never under the fixed phone bar ---------- */
+/* The footer always ends the page, so it carries the bar's height (plus the safe area) in its own colour. */
 @media (max-width: 900px) {
-  .stage {
-    padding: 32px 16px;
-  }
-  .stageInner {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-  }
-  .copy {
-    position: static;
-    gap: 6px;
-  }
-  .title {
-    font-size: 28px;
-    letter-spacing: -1px;
-  }
-  .lead {
-    font-size: 13px;
-    line-height: 1.5;
+  .page > footer {
+    padding-bottom: calc(32px + var(--bar-h) + env(safe-area-inset-bottom, 0px));
   }
 }
 
-/* ---------- Footer ---------- */
+/* ---------- Footer: a quiet index of everything, plus host contact ---------- */
 .footer {
   background: var(--ink);
   color: var(--sand);
-  padding: 34px 48px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-}
-.footer p {
-  font-size: 14px;
-  line-height: 1.5;
+  padding: 40px 36px 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 32px;
 }
 .footerMark {
   font-family: var(--f-grotesk);
   font-weight: 700;
   letter-spacing: 1.5px;
   font-size: 16px;
+  color: var(--cream);
 }
-.footerRight {
-  text-align: right;
+.footerNote {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+  max-width: 34ch;
+}
+.footerNote a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footerIndex {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.footerIndex h2 {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sand);
+  margin-bottom: 8px;
+}
+.footerIndex ul {
+  list-style: none;
+}
+.footerIndex a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 16px;
+  color: var(--cream);
+}
+.footerIndex a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footer :focus-visible {
+  outline-color: var(--cream);
 }
 @media (max-width: 760px) {
   .footer {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 34px 24px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 32px 16px;
+    gap: 24px;
   }
-  .footerRight {
-    text-align: left;
+  .footerIndex {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 }

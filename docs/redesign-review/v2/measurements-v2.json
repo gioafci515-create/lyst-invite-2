@@ -1,0 +1,192 @@
+[
+  {
+    "vp": "mobile",
+    "scene": "before-rsvp-open",
+    "reach": {
+      "Camera": true,
+      "Tasks": false,
+      "Live room": false,
+      "Voice": false,
+      "Video": false,
+      "Letter": false,
+      "Gallery": false,
+      "Capsule": false,
+      "RSVP": true,
+      "Hub": true
+    },
+    "count": 3,
+    "pageHeight": 16077,
+    "errors": []
+  },
+  {
+    "vp": "mobile",
+    "scene": "before-rsvp-closed",
+    "reach": {
+      "Camera": true,
+      "Tasks": false,
+      "Live room": false,
+      "Voice": false,
+      "Video": false,
+      "Letter": false,
+      "Gallery": false,
+      "Capsule": false,
+      "RSVP": false,
+      "Hub": true
+    },
+    "count": 2,
+    "pageHeight": 15755,
+    "errors": []
+  },
+  {
+    "vp": "mobile",
+    "scene": "during-task-live",
+    "reach": {
+      "Camera": true,
+      "Tasks": true,
+      "Live room": true,
+      "Voice": true,
+      "Video": true,
+      "Letter": false,
+      "Gallery": true,
+      "Capsule": false,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 6,
+    "pageHeight": 15797,
+    "errors": []
+  },
+  {
+    "vp": "mobile",
+    "scene": "during-no-task",
+    "reach": {
+      "Camera": true,
+      "Tasks": true,
+      "Live room": true,
+      "Voice": true,
+      "Video": true,
+      "Letter": false,
+      "Gallery": true,
+      "Capsule": false,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 6,
+    "pageHeight": 15716,
+    "errors": []
+  },
+  {
+    "vp": "mobile",
+    "scene": "after",
+    "reach": {
+      "Camera": true,
+      "Tasks": true,
+      "Live room": true,
+      "Voice": true,
+      "Video": true,
+      "Letter": false,
+      "Gallery": true,
+      "Capsule": true,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 7,
+    "pageHeight": 15666,
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "scene": "before-rsvp-open",
+    "reach": {
+      "Camera": false,
+      "Tasks": false,
+      "Live room": false,
+      "Voice": false,
+      "Video": false,
+      "Letter": false,
+      "Gallery": false,
+      "Capsule": false,
+      "RSVP": true,
+      "Hub": false
+    },
+    "count": 1,
+    "pageHeight": 15298,
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "scene": "before-rsvp-closed",
+    "reach": {
+      "Camera": false,
+      "Tasks": false,
+      "Live room": false,
+      "Voice": false,
+      "Video": false,
+      "Letter": false,
+      "Gallery": false,
+      "Capsule": false,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 0,
+    "pageHeight": 15209,
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "scene": "during-task-live",
+    "reach": {
+      "Camera": true,
+      "Tasks": true,
+      "Live room": false,
+      "Voice": true,
+      "Video": true,
+      "Letter": false,
+      "Gallery": true,
+      "Capsule": false,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 5,
+    "pageHeight": 15010,
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "scene": "during-no-task",
+    "reach": {
+      "Camera": true,
+      "Tasks": true,
+      "Live room": false,
+      "Voice": true,
+      "Video": true,
+      "Letter": false,
+      "Gallery": true,
+      "Capsule": false,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 5,
+    "pageHeight": 14947,
+    "errors": []
+  },
+  {
+    "vp": "desktop",
+    "scene": "after",
+    "reach": {
+      "Camera": false,
+      "Tasks": false,
+      "Live room": false,
+      "Voice": true,
+      "Video": true,
+      "Letter": false,
+      "Gallery": true,
+      "Capsule": true,
+      "RSVP": false,
+      "Hub": false
+    },
+    "count": 4,
+    "pageHeight": 14895,
+    "errors": []
+  }
+]

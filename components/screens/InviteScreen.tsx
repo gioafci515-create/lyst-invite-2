@@ -1,17 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import Carousel from "@/components/Carousel";
+import Essentials, { ScheduleList } from "@/components/Essentials";
 import TechText from "@/components/TechText";
+import { dateLabel, shortDateLabel, timeLabel, type ModuleId } from "@/lib/eventState";
+import { useEvent } from "@/lib/eventStore";
+import { EMPTY_REPLY, readReply, sendReply, useReply } from "@/lib/rsvp";
+import { getGuest } from "@/lib/submit";
+import { useHydrated } from "@/lib/useClient";
+import { ROUTE, SECTION } from "@/lib/sections";
 import styles from "./invite.module.css";
-
-const SCHEDULE = [
-  ["19:13", "Page opens"],
-  ["20:02", "Type becomes sound"],
-  ["21:17", "Audience edit"],
-  ["23:40", "Edition zero leaves press"],
-];
 
 const SCENES = [
   { src: "/images/gallery1.png", alt: "Torn brutalist typography poster pasted on concrete" },
@@ -20,11 +21,33 @@ const SCENES = [
   { src: "/images/story-mobile.png", alt: "Performers in front of projected type" },
 ];
 
-function Arrow({ src, size }: { src: string; size: number }) {
-  return <Image src={src} alt="" width={size} height={size} aria-hidden />;
+/** What each enabled feature lets a guest do, in the order they would meet them. Not links: they open on the night. */
+const ON_THE_NIGHT: [ModuleId, string][] = [
+  ["camera", "take photos with a disposable camera"],
+  ["tasks", "follow short tasks through the night"],
+  ["voice", "leave a voice memory for the hosts"],
+  ["video", "record a short video"],
+  ["live", "join the live room"],
+  ["later", "write a letter to be opened later"],
+];
+const AFTERWARDS: [ModuleId, string][] = [
+  ["gallery", "the gallery"],
+  ["capsule", "the time capsule"],
+];
+const list = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+
+function Arrow() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 12h15M13 6l6 6-6 6" />
+    </svg>
+  );
 }
 
-export default function InviteScreen() {
+function Rsvp() {
+  const ev = useEvent();
+  const stored = useReply();
+  const replied = stored ? (stored.attending === "accept" ? "yes" : "no") : null;
   const [attending, setAttending] = useState<"accept" | "decline">("accept");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -34,62 +57,167 @@ export default function InviteScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
+  // start from this phone's answer, so changing it never wipes the details given on the details screen
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
+    const prev = readReply();
+    const g = getGuest();
+    setName(prev?.name || g.name);
+    setEmail(prev?.email || g.email);
+    if (prev) {
+      setAttending(prev.attending);
+      setGuest(prev.companion);
+      setDiet(prev.dietary);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
     setError("");
-    try {
-      const res = await fetch("/api/rsvp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, attending, companion: guest, dietary: diet }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) setError(data.error ?? "Something went wrong. Try again.");
-      else {
-        setConfirmed(true);
-        try {
-          localStorage.setItem("lyst_guest", JSON.stringify({ name, email }));
-        } catch {}
-      }
-    } catch {
-      setError("Network error. Try again.");
-    } finally {
-      setSending(false);
-    }
+    // the same reply the details screen edits: party size, meal and requests given there are kept
+    const base = readReply() ?? EMPTY_REPLY;
+    const res = await sendReply({ ...base, attending, name, email, companion: guest, dietary: diet, guests: guest.trim() ? Math.max(2, base.guests) : base.guests });
+    setSending(false);
+    if (res.ok) setConfirmed(true);
+    else setError(res.error);
   }
 
+  const closed = ev.rsvpOpen === false;
   return (
-    <div id="invite">
-      <section className={styles.hero}>
-        <div className={styles.shard}>
-          <Image src="/images/shard.png" alt="" width={520} height={690} priority />
+    <section id={SECTION.rsvp} className={styles.rsvp} aria-labelledby="rsvp-title">
+      <div className={styles.rsvpCopy}>
+        <p className={styles.label}>Your response, private to the hosts</p>
+        <h2 id="rsvp-title" className={styles.rsvpTitle}>
+          {closed ? "Replies closed" : "Claim a position"}
+        </h2>
+        {replied && !confirmed && (
+          <p className={styles.replied} role="status">
+            {replied === "yes" ? "You're on the list." : "You replied no."}{" "}
+            {closed ? "Replies are closed now." : "You can change your answer below."}
+          </p>
+        )}
+        <p className={styles.rsvpBody}>
+          {closed
+            ? `Replies closed on ${shortDateLabel(ev.rsvpClosesAt, ev.timezone)} at ${timeLabel(ev.rsvpClosesAt, ev.timezone)}.`
+            : `Reply by ${shortDateLabel(ev.rsvpClosesAt, ev.timezone)}. Capacity is limited, and your dietary, access and guest details stay with the hosts.`}
+        </p>
+      </div>
+
+      {closed ? (
+        <div className={styles.form} role="status">
+          <p className={styles.notice}>
+            New replies and changes are no longer possible. Everything for the night is in{" "}
+            <a href={`#${SECTION.essentials}`}>the practical details</a> below.
+          </p>
         </div>
-        <div className={styles.shardMobile}>
-          <Image src="/images/shard-mobile.png" alt="" width={300} height={430} priority />
+      ) : ev.rsvpOpen === null ? (
+        <div className={styles.form} role="status" aria-busy="true">
+          <p className={styles.notice}>Checking whether replies are still open…</p>
         </div>
-        <div className={styles.acid} aria-hidden />
-        <p className={styles.hint}>Scroll sideways / cursor becomes annotation</p>
+      ) : (
+        <form className={styles.form} onSubmit={submit}>
+          <div className={styles.options} role="group" aria-label="Your answer">
+            <button type="button" className={styles.option} aria-pressed={attending === "accept"} onClick={() => setAttending("accept")}>
+              Joyfully accept
+            </button>
+            <button type="button" className={styles.option} aria-pressed={attending === "decline"} onClick={() => setAttending("decline")}>
+              Decline
+            </button>
+          </div>
+          <label className={styles.field}>
+            <span>Your name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required maxLength={100} autoComplete="name" />
+          </label>
+          <label className={styles.field}>
+            <span>Email</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required maxLength={200} autoComplete="email" />
+          </label>
+          {attending === "accept" && (
+            <>
+              <label className={styles.field}>
+                <span>Companion</span>
+                <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Name, if you bring someone" maxLength={100} />
+              </label>
+              <label className={styles.field}>
+                <span>Dietary or access</span>
+                <input value={diet} onChange={(e) => setDiet(e.target.value)} placeholder="Only the hosts see this" maxLength={500} />
+              </label>
+            </>
+          )}
+          {error && (
+            <p role="alert" className={styles.formError}>
+              {error}
+            </p>
+          )}
+          {confirmed ? (
+            <p className={styles.notice} role="status">
+              {attending === "accept" ? "Position claimed. Your details stay with the hosts." : "Response recorded. Thank you for letting us know."}
+              {attending === "accept" && (
+                <>
+                  {" "}
+                  <Link href={ROUTE.details}>Add meal and guest details</Link>
+                </>
+              )}
+            </p>
+          ) : (
+            <button type="submit" disabled={sending} className={styles.submit}>
+              {sending ? "Sending…" : "Confirm response"} <Arrow />
+            </button>
+          )}
+        </form>
+      )}
+    </section>
+  );
+}
+
+/** The invitation: everything a guest needs before the night, in the order they need it. */
+export default function InviteScreen() {
+  const ev = useEvent();
+  const tonight = ON_THE_NIGHT.filter(([m]) => ev.enabled(m)).map(([, t]) => t);
+  const after = AFTERWARDS.filter(([m]) => ev.enabled(m)).map(([, t]) => t);
+
+  return (
+    <div id={SECTION.invite}>
+      <section className={styles.hero} aria-labelledby="invite-title">
+        <div className={styles.media}>
+          <div className={styles.photo}>
+            <Image className={styles.photoWide} src="/images/shard.png" alt="" width={520} height={690} priority sizes="520px" />
+            <Image className={styles.photoNarrow} src="/images/shard-mobile.png" alt="" width={300} height={430} priority sizes="60vw" />
+          </div>
+          <div className={styles.acid} aria-hidden />
+        </div>
         <div className={styles.heroCopy}>
-          <h1 className={styles.title}>
+          <h1 id="invite-title" className={styles.title}>
             UN/
             <br />
-            FOLD
+            FOLD{" "}
+            <span className={styles.year}>2026</span>
           </h1>
-          <p className={styles.year}>2026</p>
-          <p className={styles.lede}>
-            A live publishing experiment: type, sound, performance and an audience that edits the ending.
+          <p className={styles.lede}>A live publishing experiment: type, sound, performance and an audience that edits the ending.</p>
+          <p className={styles.when}>
+            {dateLabel(ev.startsAt, ev.timezone)}, {timeLabel(ev.startsAt, ev.timezone)}
           </p>
-          <a href="#rsvp" className={styles.cta} data-btn>
-            Claim a position <Arrow src="/images/arrow-right.svg" size={14} />
-          </a>
+          {ev.rsvpOpen === true ? (
+            <a href={`#${SECTION.rsvp}`} className={styles.cta} data-btn>
+              Claim a position <Arrow />
+            </a>
+          ) : ev.rsvpOpen === false ? (
+            <a href={`#${SECTION.programme}`} className={styles.cta} data-btn>
+              See the programme <Arrow />
+            </a>
+          ) : null}
         </div>
       </section>
 
-      <section id="story" className={styles.story}>
-        <div>
-          <p className={styles.eyebrow}>The invitation, in scenes</p>
-          <h2 className={styles.h2}>A visual language made for this moment.</h2>
+      <section id={SECTION.story} className={styles.story} aria-labelledby="story-title">
+        <div className={styles.sectionHead}>
+          <p className={styles.label}>The invitation, in scenes</p>
+          <h2 id="story-title" className={styles.h2}>
+            A visual language made for this moment.
+          </h2>
         </div>
         <Carousel slides={SCENES} label="The invitation, in scenes" />
       </section>
@@ -97,7 +225,6 @@ export default function InviteScreen() {
       <section className={styles.wordmark} aria-label="UN/FOLD wordmark. Hover or drag the letters.">
         <TechText
           text="UN/FOLD"
-          style={{ fontFamily: "var(--f-display), sans-serif" }}
           fontWeight={700}
           fontSize={200}
           letterSpacing={-0.04}
@@ -108,146 +235,34 @@ export default function InviteScreen() {
           introDuration={2}
           specks={15}
         />
-        <p className={styles.wordmarkHint}>Hover or drag a letter · tap to kick</p>
+        <p className={styles.wordmarkHint}>Hover or drag a letter</p>
       </section>
 
-      <section id="programme" className={styles.programme}>
-        <div>
-          <p className={styles.eyebrow}>Programme / location / practical</p>
-          <h2 className={styles.h2}>TIME IS MATERIAL.</h2>
+      <section id={SECTION.programme} className={styles.programme} aria-labelledby="programme-title">
+        <div className={styles.sectionHead}>
+          <p className={styles.label}>Programme, {dateLabel(ev.startsAt, ev.timezone)}</p>
+          <h2 id="programme-title" className={styles.h2}>
+            TIME IS MATERIAL.
+          </h2>
         </div>
-        <div className={styles.info}>
-          <div className={styles.card}>
-            <h3 className={styles.cardTitle}>Schedule</h3>
-            <ul className={styles.timeline}>
-              {SCHEDULE.map(([t, label]) => (
-                <li key={t}>
-                  <time>{t}</time>
-                  <span className={styles.sep}>·</span>
-                  <span>{label}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className={styles.location}>
-            <div className={styles.mapField} />
-            <Image src="/images/map-pin.svg" alt="" width={28} height={28} />
-            <div>
-              <p className={styles.locName}>Former Print Works 4B</p>
-              <a
-                className={styles.mapLink}
-                href="https://maps.google.com/?q=Former+Print+Works+4B+Rotterdam"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Rotterdam · Open map <Arrow src="/images/arrow-up-right-14.svg" size={14} />
-              </a>
-              <p className={styles.locNote}>
-                Step-free arrival details are saved with your response. Hosts can arrange transport assistance
-                privately.
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.know}>
-            <div className={styles.dress}>
-              <p className={styles.kicker}>Dress code</p>
-              <p>Come as a visual interruption.</p>
-            </div>
-            <div className={styles.notes}>
-              <p className={styles.kicker}>Good to know</p>
-              <ul>
-                <li>Ear protection + quiet edition available</li>
-                <li>Venue entrance behind loading bay 4</li>
-                <li>Printed edition collected on exit</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <ScheduleList />
       </section>
 
-      <section id="rsvp" className={styles.rsvp}>
-        <div className={styles.rsvpCopy}>
-          <p className={styles.rsvpKicker}>Your response / private</p>
-          <div className={styles.rsvpHead}>
-            <h2>CLAIM A POSITION</h2>
-            <Arrow src="/images/arrow-up-right-28.svg" size={28} />
-          </div>
-          <p className={styles.rsvpBody}>
-            Capacity is a changing number. Dietary, access and guest details remain private to the host.
+      <Rsvp />
+
+      <Essentials />
+
+      {(tonight.length > 0 || after.length > 0) && (
+        <section className={styles.night} aria-labelledby="night-title">
+          <h2 id="night-title" className={styles.label}>
+            On the night
+          </h2>
+          <p>
+            {tonight.length > 0 && <>On the night you&rsquo;ll be able to {list(tonight)}.</>}
+            {after.length > 0 && <> Afterwards, {list(after)} open{after.length === 1 ? "s" : ""} here.</>}
           </p>
-          <p className={styles.states}>Default state　→　Hover / open form　→　Confirmed</p>
-        </div>
-
-        <form
-          className={styles.form}
-          onSubmit={submit}
-        >
-          <div className={styles.options}>
-            <button
-              type="button"
-              className={styles.option}
-              aria-pressed={attending === "accept"}
-              onClick={() => setAttending("accept")}
-            >
-              Joyfully accept
-            </button>
-            <button
-              type="button"
-              className={styles.option}
-              aria-pressed={attending === "decline"}
-              onClick={() => setAttending("decline")}
-            >
-              Decline
-            </button>
-          </div>
-          <label className={styles.field}>
-            <span>Your name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required maxLength={100} />
-          </label>
-          <label className={styles.field}>
-            <span>Email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required maxLength={200} />
-          </label>
-          <label className={styles.field}>
-            <span>Companion</span>
-            <input value={guest} onChange={(e) => setGuest(e.target.value)} placeholder="Add companion ＋" maxLength={100} />
-          </label>
-          <label className={styles.field}>
-            <span>Dietary / access</span>
-            <input value={diet} onChange={(e) => setDiet(e.target.value)} placeholder="Edit privately" maxLength={500} />
-          </label>
-          {error && (
-            <p role="alert" className={styles.formError}>
-              {error}
-            </p>
-          )}
-          {confirmed ? (
-            <p className={styles.confirmed} role="status">
-              {attending === "accept"
-                ? "Position claimed. Your details stay private to the host."
-                : "Response recorded. Thank you for letting us know."}
-              {attending === "accept" && (
-                <>
-                  {" "}
-                  <a href="#details" style={{ textDecoration: "underline" }}>
-                    Add meal &amp; guest details →
-                  </a>{" "}
-                  <a href="#hub" style={{ textDecoration: "underline" }}>
-                    Open event hub →
-                  </a>
-                </>
-              )}
-            </p>
-          ) : (
-            <button type="submit" disabled={sending} className={`${styles.cta} ${styles.ctaFull}`}>
-              {sending ? "Sending…" : "Confirm response"} <Arrow src="/images/arrow-right-2.svg" size={14} />
-            </button>
-          )}
-        </form>
-      </section>
-
+        </section>
+      )}
     </div>
   );
 }

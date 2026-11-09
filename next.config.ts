@@ -7,22 +7,20 @@ const nextConfig: NextConfig = {
   experimental: {
     agentUpgrade: "security",
   },
-  // old per-screen routes now live as sections of the home page
+  // Older addresses for screens that now have their own routes. (Old in-page links like /#voice are forwarded by the
+  // home page itself, because the part after # never reaches the server.)
   async redirects() {
     return [
-      ["/hub", "hub"],
-      ["/respond", "details"],
-      ["/prepare", "hub"],
-      ["/participate", "tasks"],
-      ["/guestbook", "voice"],
-      ["/video", "video"],
-      ["/later", "later"],
-      ["/interact", "live"],
-      ["/remember", "live"],
-      ["/gallery", "gallery"],
-      ["/capsule", "capsule"],
-      ["/notifications", "updates"],
-    ].map(([source, id]) => ({ source, destination: `/#${id}`, permanent: false }));
+      ["/hub", "/programme"],
+      ["/prepare", "/programme"],
+      ["/respond", "/details"],
+      ["/participate", "/tasks"],
+      ["/guestbook", "/voice"],
+      ["/later", "/letter"],
+      ["/interact", "/live"],
+      ["/remember", "/live"],
+      ["/notifications", "/updates"],
+    ].map(([source, destination]) => ({ source, destination, permanent: false }));
   },
 };
 

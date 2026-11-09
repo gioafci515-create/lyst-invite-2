@@ -1,172 +1,169 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import AppShell from "@/components/AppShell";
-import styles from "@/components/app.module.css";
+import { useEffect, useRef, useState } from "react";
 import { submitContribution } from "@/lib/submit";
+import { readRaw, readStored, useHydrated, useNow } from "@/lib/useClient";
+import { Progress } from "./CaptureBits";
+import { Facts, longDate, SealedCard, untilDay, WritingSheet } from "./Sealed";
+import r from "./room.module.css";
 
-function remaining(to: Date, now: number) {
-  const ms = Math.max(0, to.getTime() - now);
-  return `${Math.floor(ms / 864e5)}d : ${String(Math.floor((ms % 864e5) / 36e5)).padStart(2, "0")}h`;
-}
+const FIRST_DAY = "2026-11-15";
+const DEFAULT_DAY = "2027-11-14";
+const STORE = "lyst_capsule";
 
-export default function CapsuleScreen() {
-  const [name, setName] = useState("UN/FOLD 2026 · Edition 01");
-  const [date, setDate] = useState("2027-11-14");
-  const [editDate, setEditDate] = useState(false);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [sealed, setSealed] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [now, setNow] = useState(0);
-  const [reveal, setReveal] = useState(false);
-  const [copied, setCopied] = useState(false);
+type Sealed = { name: string; day: string };
+type Counts = Record<string, number>;
 
-  useEffect(() => {
-    setNow(Date.now());
-    try {
-      if (localStorage.getItem("lyst_capsule_sealed")) setSealed(true);
-    } catch {}
-    fetch("/api/stats").then((r) => r.json()).then(setCounts).catch(() => {});
-  }, []);
-
-  const unlock = new Date(`${date}T00:00:00`);
-  const ready = now > 0 && now >= unlock.getTime();
-  const years = Math.max(1, Math.round((unlock.getTime() - (now || unlock.getTime() - 365 * 864e5)) / (365 * 864e5)));
-
-  async function seal() {
-    setBusy(true);
-    setError("");
-    const res = await submitContribution({ type: "capsule", text: name, meta: { unlock: date } });
-    setBusy(false);
-    if (res.ok) {
-      setSealed(true);
-      try {
-        localStorage.setItem("lyst_capsule_sealed", "1");
-      } catch {}
-    } else setError(res.error);
-  }
-
-  const stats: [number, string][] = [
-    [(counts.photo ?? 0) + (counts.challenge ?? 0), "Photos"],
-    [counts.video ?? 0, "Video"],
-    [counts.voice ?? 0, "Voice"],
-    [(counts.letter ?? 0) + (counts.later ?? 0), "Letters"],
-    [(counts.poll ?? 0) + (counts.question ?? 0), "Answers"],
+/** What the archive holds so far, from the public aggregate counts. Numbers only: no previews of anyone's content. */
+function Inside({ counts, failed }: { counts: Counts | null; failed: boolean }) {
+  if (failed) return <p className={`${r.body} ${r.muted}`}>The count of what&rsquo;s inside couldn&rsquo;t be loaded right now.</p>;
+  const n = (k: string) => (counts ? (counts[k] ?? 0) : null);
+  const sum = (...ks: string[]) => (counts ? ks.reduce((a, k) => a + (counts[k] ?? 0), 0) : null);
+  const rows: [number | null, string, string][] = [
+    [sum("photo", "challenge"), "photo", "photos"],
+    [n("video"), "video", "videos"],
+    [n("voice"), "voice memory", "voice memories"],
+    [sum("letter", "later"), "letter", "letters"],
+    [sum("poll", "question"), "answer", "answers"],
   ];
-
   return (
-    <AppShell
-      header={{ src: "/images/app/header-capsule.svg", width: 44 }}
-      step={4}
-      action={{ label: sealed ? "Capsule sealed" : busy ? "Sealing…" : "Seal capsule", onClick: seal, disabled: busy || sealed }}
-    >
-      <h2 style={{ fontFamily: "var(--f-display)", fontWeight: 400, fontSize: 22 }}>Build a future room from this one.</h2>
-
-      <div className={styles.choices} style={{ flexWrap: "nowrap", gap: 6 }}>
-        {stats.map(([n, label]) => (
-          <div key={label} className={styles.card} style={{ flex: 1, minWidth: 0, padding: 10 }}>
-            <span style={{ fontFamily: "var(--f-display)", fontSize: 19 }}>{n}</span>
-            <span className={styles.muted} style={{ fontSize: 12 }}>
-              {label}
-            </span>
+    <section aria-labelledby="inside-title" className={r.field}>
+      <h2 id="inside-title" className={r.fieldLabel}>
+        Shared tonight so far
+      </h2>
+      <div className={r.inside} aria-busy={!counts}>
+        {rows.map(([v, one, many]) => (
+          <div key={many}>
+            <b>{v ?? "–"}</b> <span className={r.body}>{v === 1 ? one : many}</span>
           </div>
         ))}
       </div>
+    </section>
+  );
+}
 
-      <label className={styles.field}>
-        <span>Capsule name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} readOnly={sealed} maxLength={100} />
-      </label>
+/**
+ * The time capsule. Rules from the code: type "capsule", the guest names it and picks the day it should open (meta.unlock),
+ * only the hosts receive it, it can't be changed once sealed, and this phone remembers that it sealed one.
+ */
+export default function CapsuleScreen() {
+  const sealedRef = useRef<HTMLDivElement>(null);
+  const [name, setName] = useState("UN/FOLD 2026");
+  const [day, setDay] = useState(DEFAULT_DAY);
+  const [sealed, setSealed] = useState<Sealed | "unknown" | null>(null);
+  const [send, setSend] = useState<"idle" | "sending" | "failed">("idle");
+  const [error, setError] = useState("");
+  const [counts, setCounts] = useState<Counts | null>(null);
+  const [countsFailed, setCountsFailed] = useState(false);
+  const now = useNow(60_000);
 
-      <div className={styles.field}>
-        <span>Unlock date</span>
-        <div className={styles.valueRow}>
-          {editDate ? (
-            <input type="date" value={date} min="2026-11-15" onChange={(e) => e.target.value && setDate(e.target.value)} />
-          ) : (
-            <span>{unlock.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
-          )}
-          <button
-            onClick={() => !sealed && setEditDate((v) => !v)}
-            style={{ background: "none", border: 0, color: "var(--red-text)", minHeight: 44, padding: "0 4px" }}
-          >
-            {editDate ? "Done" : `${years} year${years > 1 ? "s" : ""}`}
-          </button>
-        </div>
-      </div>
+  // sealed earlier on this phone? (once, as soon as the page runs in the browser)
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
+    const s = readStored<Sealed>(STORE);
+    if (s?.day && s?.name) setSealed(s);
+    else if (readRaw("lyst_capsule_sealed")) setSealed("unknown"); // sealed before this phone kept the day
+  }
 
-      <div className={styles.card} style={{ background: "var(--ink)", color: "var(--cream)" }}>
-        <div className={styles.between}>
-          <b style={{ color: "var(--red)" }}>🔒 {sealed ? "SEALED ARCHIVE" : "LOCKED ARCHIVE"}</b>
-          <Image src="/images/app/archive-18.svg" alt="" width={18} height={18} />
-        </div>
-        <p style={{ fontWeight: 700, fontSize: 27 }}>{now ? remaining(unlock, now) : "—"}</p>
-        <p style={{ fontSize: 14, lineHeight: 1.5 }}>Film · voices · letters · poll results · host answers</p>
-      </div>
+  useEffect(() => {
+    fetch("/api/stats", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then(setCounts)
+      .catch(() => setCountsFailed(true));
+  }, []);
 
-      <div className={styles.card} style={{ background: "var(--acid)" }}>
-        <div className={styles.row}>
-          <Image src="/images/app/check-acid.svg" alt="" width={16} height={16} />
-          <span style={{ fontSize: 12, textTransform: "uppercase" }}>Reveal preview</span>
-        </div>
-        <p style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
-          {ready ? "The archive is ready to open." : reveal ? "Still sealed. It opens on the unlock date." : "Sealed until the unlock date."}
-        </p>
-        <button className={styles.secondary} onClick={() => setReveal(true)}>
-          <Image src="/images/app/unlock.svg" alt="" width={16} height={16} />
-          Reveal capsule
-        </button>
-      </div>
+  async function seal() {
+    if (!name.trim()) return setError("Give the capsule a name first.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day < FIRST_DAY) return setError(`Pick a day from ${longDate(FIRST_DAY)} on.`);
+    setSend("sending");
+    setError("");
+    const res = await submitContribution({ type: "capsule", text: name.trim(), meta: { unlock: day } });
+    if (res.ok) {
+      const s = { name: name.trim(), day };
+      try {
+        localStorage.setItem(STORE, JSON.stringify(s));
+        localStorage.setItem("lyst_capsule_sealed", "1");
+      } catch {}
+      setSealed(s);
+      setSend("idle");
+      requestAnimationFrame(() => sealedRef.current?.focus());
+    } else {
+      setSend("failed");
+      setError(res.error);
+    }
+  }
 
-      <div className={styles.card} style={{ background: "var(--acid)" }}>
-        <div className={styles.row}>
-          <Image src="/images/app/check-acid.svg" alt="" width={16} height={16} />
-          <span style={{ fontSize: 12, textTransform: "uppercase" }}>Contributors</span>
-        </div>
-        <p style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
-          {counts.rsvpGuests ?? 0} guests · {stats[2][0]} voices · {stats[1][0]} films
-        </p>
-        <div className={styles.between}>
-          <span>{stats[3][0]} letters</span>
-          <span>{stats[4][0]} answers</span>
-        </div>
-      </div>
-
-      <div className={styles.card}>
-        <b style={{ fontSize: 12 }}>Montage processing</b>
-        <p className={styles.body}>Your clip is queued for the one-year film.</p>
-      </div>
-      <div className={styles.card}>
-        <b style={{ fontSize: 14 }}>Ready / watch / replay</b>
-        <p className={styles.body}>{ready ? "The archive is ready to open." : "The archive opens on the unlock date."}</p>
-      </div>
-      <div className={styles.card}>
-        <b style={{ fontSize: 14 }}>Share / download</b>
-        <p className={styles.body}>Share the capsule link or download the archive after reveal.</p>
-        <button
-          className={styles.secondary}
-          onClick={() =>
-            navigator.clipboard?.writeText(location.href).then(
-              () => {
-                setError("");
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              },
-              () => setError("Couldn't copy. Copy the address from your browser instead."),
-            )
-          }
+  if (sealed) {
+    const left = sealed !== "unknown" && now ? untilDay(sealed.day, now) : null;
+    return (
+      <div className={r.screen}>
+        <SealedCard
+          headingRef={sealedRef}
+          title={sealed === "unknown" ? "Your capsule is sealed." : sealed.name}
+          facts={[
+            ["For", "The hosts, and no one else"],
+            ["Opens", sealed === "unknown" ? "On the day you picked (this phone didn't keep it)" : longDate(sealed.day)],
+          ]}
         >
-          {copied ? "Link copied ✓" : "Copy capsule link"}
-        </button>
+          {left && (
+            <p className={r.countdown} aria-live="off">
+              {left.ms > 0 ? `Opens in ${left.text}` : "Its day has come."}
+            </p>
+          )}
+          <p className={r.body}>It can&rsquo;t be changed now. The hosts have its name and its day.</p>
+        </SealedCard>
+        <Inside counts={counts} failed={countsFailed} />
       </div>
+    );
+  }
 
+  const sending = send === "sending";
+  return (
+    <div className={r.screen}>
+      <Facts>Only the hosts get your capsule&rsquo;s name and the day it opens, {longDate(day)}. It can&rsquo;t be changed once sealed.</Facts>
+      <WritingSheet
+        id="capsule-name"
+        single
+        head={[
+          ["For", "The hosts"],
+          [
+            "Opens",
+            <input
+              key="day"
+              type="date"
+              className={r.headDate}
+              aria-label="Opens on"
+              value={day}
+              min={FIRST_DAY}
+              onChange={(e) => e.target.value && setDay(e.target.value)}
+              disabled={sending}
+            />,
+          ],
+        ]}
+        label="Capsule name"
+        value={name}
+        onChange={setName}
+        placeholder="Name this capsule"
+        maxLength={100}
+        disabled={sending}
+      />
+      <Inside counts={counts} failed={countsFailed} />
       {error && (
-        <p role="alert" className={styles.error}>
+        <p className={r.error} role="alert">
           {error}
         </p>
       )}
-    </AppShell>
+      {sending ? (
+        <Progress fraction={null} label="Sealing the capsule" />
+      ) : (
+        <div className={r.actions}>
+          <button type="button" className={r.primary} onClick={seal}>
+            {send === "failed" ? "Try sealing again" : "Seal the capsule"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

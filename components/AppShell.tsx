@@ -2,16 +2,15 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { useEmbedded } from "./Embed";
-import { SECTION } from "@/lib/sections";
+import { useEmbedMode } from "./Embed";
 import styles from "./app.module.css";
 
 export const STEPS = [
-  { label: "Invite", href: `#${SECTION.invite}` },
-  { label: "Respond", href: `#${SECTION.details}` },
-  { label: "Prepare", href: `#${SECTION.hub}` },
-  { label: "Participate", href: `#${SECTION.camera}` },
-  { label: "Remember", href: `#${SECTION.live}` },
+  { label: "Invite", href: "/" },
+  { label: "Respond", href: "/details" },
+  { label: "Prepare", href: "/programme" },
+  { label: "Participate", href: "/tasks" },
+  { label: "Remember", href: "/gallery" },
 ] as const;
 
 type Props = {
@@ -27,7 +26,8 @@ type Props = {
 };
 
 export default function AppShell({ header, title, step, action, bg, children }: Props) {
-  const embedded = useEmbedded();
+  const mode = useEmbedMode();
+  const embedded = mode !== false;
   const actionInner = (
     <>
       {action?.icon !== false && (
@@ -38,7 +38,7 @@ export default function AppShell({ header, title, step, action, bg, children }: 
   );
 
   return (
-    <div className={`${styles.phone} ${embedded ? styles.embedded : ""}`} style={bg ? { background: bg } : undefined}>
+    <div className={`${styles.phone} ${embedded ? styles.embedded : ""} ${mode === "route" ? styles.routed : ""}`} style={bg ? { background: bg } : undefined}>
       <header className={styles.bar}>
         <div className={styles.heading}>{title && <h3>{title}</h3>}</div>
         {header && (

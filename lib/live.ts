@@ -13,12 +13,12 @@ export type Notice = {
   priority: boolean;
 };
 
+/** `since`: when the hosts last published or changed it (ISO), so the live room can list the newest first */
 export type Live = {
-  announcement: { label: string; text: string };
-  schedule: string[];
+  announcement: { label: string; text: string; since?: string };
   notices: Notice[];
-  poll: { question: string; options: string[]; open: boolean; showResults: boolean };
-  challenge: { title: string; prompt: string; goal: number; open: boolean };
+  poll: { question: string; options: string[]; open: boolean; showResults: boolean; since?: string };
+  challenge: { title: string; prompt: string; goal: number; open: boolean; since?: string };
 };
 
 const KEY = "live";
@@ -27,14 +27,6 @@ function defaults(): Live {
   const ago = (m: number) => new Date(Date.now() - m * 60000).toISOString();
   return {
     announcement: { label: "Host announcement · priority", text: "Dinner begins in 18 minutes." },
-    schedule: [
-      "19:13 · Page opens",
-      "19:47 · Ceremony / issue zero",
-      "20:02 · Type becomes sound",
-      "21:17 · Audience edit",
-      "22:04 · Speech interruption",
-      "23:40 · Edition leaves press",
-    ],
     notices: [
       { id: randomUUID(), icon: "map-pin-18", title: "Priority · Location change", text: "Loading bay 4 after 18:45 · cycle racks inside the press hall", createdAt: ago(0), priority: true },
       { id: randomUUID(), icon: "megaphone", title: "Host announcement", text: "The next moment begins in 18 minutes.", createdAt: ago(2), priority: true },
@@ -60,7 +52,12 @@ function defaults(): Live {
 export async function getLive(): Promise<Live> {
   const kv = getKV();
   const stored = await kv.get<Live>(KEY);
-  if (stored) return { ...defaults(), ...stored };
+  if (stored) {
+    // the running order lives in the event settings (the programme); an old stored copy here is ignored
+    const { schedule: _old, ...rest } = stored as Live & { schedule?: unknown };
+    void _old;
+    return { ...defaults(), ...rest };
+  }
   const d = defaults();
   await kv.setnx(KEY, d);
   return { ...d, ...((await kv.get<Live>(KEY)) ?? d) };

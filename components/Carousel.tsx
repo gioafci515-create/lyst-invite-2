@@ -141,7 +141,9 @@ export default function Carousel({ slides, label }: { slides: Slide[]; label: st
       </div>
 
       <div className={styles.bar}>
-        <p className={styles.label}>Scroll sideways / cursor becomes annotation</p>
+        <p className={styles.label}>
+          Scroll sideways<span className={styles.pointerOnly}> / cursor becomes annotation</span>
+        </p>
         <div className={styles.controls}>
           <button className={styles.arrow} aria-label="Previous scene" disabled={active === 0} onClick={() => goTo(active - 1)}>
             ←

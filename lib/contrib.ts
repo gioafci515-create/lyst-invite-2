@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { getKV } from "./kv";
 import { deleteMedia, MEDIA_MIME, type MediaFile } from "./media";
 
@@ -15,6 +15,9 @@ export const TYPES = [
 ] as const;
 export type ContribType = (typeof TYPES)[number];
 
+/** The only kinds of submission that can ever reach the public gallery (after a host approves them). */
+export const GALLERY_TYPES: readonly ContribType[] = ["photo", "video", "challenge"];
+
 export type Contribution = {
   id: string;
   createdAt: string;
@@ -25,7 +28,25 @@ export type Contribution = {
   file?: MediaFile;
   /** media only: visible in the public gallery once approved by an admin */
   approved?: boolean;
+  /** gallery media only: hash of the key the uploader's phone keeps, so it alone can see its own pending upload */
+  owner?: string;
 };
+
+const hashKey = (key: string) => createHash("sha256").update(key).digest("hex");
+/** a fresh owner key for an upload: returned once to the uploader's phone, only its hash is stored */
+export const newOwnerKey = () => randomBytes(16).toString("hex");
+
+/** true when `key` is the owner key of this row */
+export function ownsRow(row: Contribution, key: unknown): boolean {
+  if (!row.owner || typeof key !== "string" || !/^[0-9a-f]{32}$/.test(key)) return false;
+  const a = Buffer.from(row.owner, "hex");
+  const b = Buffer.from(hashKey(key), "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** gallery media: an image or video (never audio) of a gallery type */
+export const isGalleryMedia = (r: Contribution) =>
+  GALLERY_TYPES.includes(r.type) && !!r.file && MEDIA_MIME.test(r.file.mime) && !r.file.mime.startsWith("audio/");
 
 const KEY = "contribs";
 
@@ -34,10 +55,17 @@ async function all(): Promise<Contribution[]> {
 }
 
 export async function addContribution(
-  input: Omit<Contribution, "id" | "createdAt" | "file" | "approved">,
+  input: Omit<Contribution, "id" | "createdAt" | "file" | "approved" | "owner">,
   file?: MediaFile,
+  ownerKey?: string,
 ): Promise<Contribution> {
-  const row: Contribution = { id: randomUUID(), createdAt: new Date().toISOString(), ...input, ...(file ? { file } : {}) };
+  const row: Contribution = {
+    id: randomUUID(),
+    createdAt: new Date().toISOString(),
+    ...input,
+    ...(file ? { file } : {}),
+    ...(ownerKey ? { owner: hashKey(ownerKey) } : {}),
+  };
   await getKV().hset(KEY, row.id, row);
   return row;
 }
@@ -71,9 +99,15 @@ export async function setApproved(id: string, approved: boolean): Promise<void> 
 }
 
 export async function approvedMedia(): Promise<Contribution[]> {
-  return (await all())
-    .filter((r) => r.approved && r.file && MEDIA_MIME.test(r.file.mime) && !r.file.mime.startsWith("audio/"))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return (await all()).filter((r) => r.approved && isGalleryMedia(r)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** What the gallery may say about one media row: its kind and, when the phone measured it, its real size. */
+export function galleryItem(r: Contribution) {
+  const w = Number(r.meta?.w);
+  const h = Number(r.meta?.h);
+  const size = w > 0 && h > 0 && w <= 20000 && h <= 20000 ? { w, h } : {};
+  return { id: r.id, kind: r.file!.mime.startsWith("video/") ? ("video" as const) : ("photo" as const), ...size };
 }
 
 /* ---------- poll votes: one atomic vote per voter per question ---------- */

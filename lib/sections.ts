@@ -1,38 +1,74 @@
-/** Section ids on the single page — shared by the header, the journey bar and in-screen links.
- *  Kept out of any "use client" module so server components can read the values. */
+/** Where everything lives. Kept out of any "use client" module so server code (tasks, push, API routes) can use it too. */
+import type { ModuleId } from "./eventState";
+
+/** In-page anchors that still exist on the home page (before the event). */
 export const SECTION = {
   invite: "invite",
   story: "story",
   programme: "programme",
   rsvp: "rsvp",
-  hub: "hub",
-  tasks: "tasks",
-  details: "details",
-  camera: "camera",
-  voice: "voice",
-  video: "video",
-  later: "later",
-  live: "live",
-  gallery: "gallery",
-  capsule: "capsule",
-  updates: "updates",
+  essentials: "essentials",
 } as const;
 
-/** Navigation order = page order. Grouped for the mobile menu sheet. */
-export const NAV: { id: string; label: string; group: "Start" | "Tonight" | "Prepare" | "Remember" }[] = [
-  { id: SECTION.invite, label: "Invite", group: "Start" },
-  { id: SECTION.story, label: "Story", group: "Start" },
-  { id: SECTION.programme, label: "Programme", group: "Start" },
-  { id: SECTION.rsvp, label: "RSVP", group: "Start" },
-  { id: SECTION.tasks, label: "Tasks", group: "Tonight" },
-  { id: SECTION.camera, label: "Camera", group: "Tonight" },
-  { id: SECTION.voice, label: "Voice", group: "Tonight" },
-  { id: SECTION.video, label: "Video", group: "Tonight" },
-  { id: SECTION.live, label: "Live room", group: "Tonight" },
-  { id: SECTION.later, label: "Letter", group: "Tonight" },
-  { id: SECTION.hub, label: "Hub", group: "Prepare" },
-  { id: SECTION.updates, label: "Updates", group: "Prepare" },
-  { id: SECTION.details, label: "Details", group: "Prepare" },
-  { id: SECTION.gallery, label: "Gallery", group: "Remember" },
-  { id: SECTION.capsule, label: "Capsule", group: "Remember" },
+/** Every screen with its own route. */
+export const ROUTE = {
+  camera: "/camera",
+  voice: "/voice",
+  video: "/video",
+  live: "/live",
+  later: "/letter",
+  gallery: "/gallery",
+  capsule: "/capsule",
+  tasks: "/tasks",
+  details: "/details",
+  updates: "/updates",
+  programme: "/programme",
+} as const;
+
+/** Old in-page links (/#voice) and where they live now. The home page forwards them. */
+export const HASH_ROUTE: Record<string, string> = {
+  camera: ROUTE.camera,
+  voice: ROUTE.voice,
+  video: ROUTE.video,
+  live: ROUTE.live,
+  later: ROUTE.later,
+  gallery: ROUTE.gallery,
+  capsule: ROUTE.capsule,
+  tasks: ROUTE.tasks,
+  details: ROUTE.details,
+  updates: ROUTE.updates,
+  hub: ROUTE.programme,
+  schedule: ROUTE.programme,
+};
+
+/** A link stored before the screens had routes ("/#voice", "#later") becomes its route; anything else is unchanged. */
+export function toRoute(href: string): string {
+  const m = href.match(/^\/?#([a-z]+)$/);
+  return m && HASH_ROUTE[m[1]] ? HASH_ROUTE[m[1]] : href;
+}
+
+/** The host switch a link depends on, if any. */
+export function moduleOf(href: string): ModuleId | undefined {
+  const path = toRoute(href).split(/[?#]/)[0];
+  return (Object.entries(ROUTE) as [string, string][]).find(([k, p]) => p === path && k in MODULE_KEYS)?.[0] as ModuleId | undefined;
+}
+const MODULE_KEYS: Record<ModuleId, true> = { camera: true, voice: true, video: true, live: true, later: true, gallery: true, capsule: true, tasks: true };
+
+export type NavGroup = "Invitation" | "Tonight" | "Memories";
+export type NavItem = { href: string; label: string; group: NavGroup; module?: ModuleId; note?: string };
+
+/** One navigation model for the desktop header menus and the phone menu sheet. */
+export const NAV: NavItem[] = [
+  { href: "/", label: "Invitation", group: "Invitation" },
+  { href: ROUTE.programme, label: "Programme", group: "Invitation" },
+  { href: ROUTE.details, label: "Your details", group: "Invitation" },
+  { href: ROUTE.updates, label: "Updates", group: "Invitation" },
+  { href: ROUTE.tasks, label: "Tasks", group: "Tonight", module: "tasks" },
+  { href: ROUTE.camera, label: "Camera", group: "Tonight", module: "camera" },
+  { href: ROUTE.voice, label: "Voice", group: "Tonight", module: "voice" },
+  { href: ROUTE.video, label: "Video", group: "Tonight", module: "video" },
+  { href: ROUTE.live, label: "Live room", group: "Tonight", module: "live" },
+  { href: ROUTE.later, label: "Letter", group: "Tonight", module: "later" },
+  { href: ROUTE.gallery, label: "Gallery", group: "Memories", module: "gallery" },
+  { href: ROUTE.capsule, label: "Capsule", group: "Memories", module: "capsule" },
 ];

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /** Bars driven by the live microphone level. Static low bars when idle/paused or when reduced motion is on. */
-export default function LiveWave({ stream, active }: { stream: MediaStream | null; active: boolean }) {
+export default function LiveWave({ stream, active, height = 36 }: { stream: MediaStream | null; active: boolean; height?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -61,5 +61,5 @@ export default function LiveWave({ stream, active }: { stream: MediaStream | nul
     };
   }, [stream, active]);
 
-  return <canvas ref={ref} aria-hidden style={{ width: "100%", height: 36, display: "block" }} />;
+  return <canvas ref={ref} aria-hidden style={{ width: "100%", height, display: "block" }} />;
 }

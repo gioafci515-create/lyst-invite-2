@@ -1,0 +1,80 @@
+/* Full-screen feature routes: one header with a way back, then the screen. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-h);
+  padding: 0 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--ink);
+}
+.back {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 10px 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.back svg {
+  width: 20px;
+  height: 20px;
+}
+.title {
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--ink);
+  font-family: var(--f-grotesk);
+  font-size: 18px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.main {
+  background: var(--sand);
+  min-height: calc(100dvh - var(--header-h));
+}
+.framed {
+  max-width: 480px;
+  margin: 0 auto;
+}
+.open {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.intro {
+  padding: 20px 16px 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 60ch;
+}
+.loading {
+  min-height: 50dvh;
+}
+
+@media (min-width: 901px) {
+  .header {
+    padding: 0 36px 0 28px;
+  }
+  .title {
+    font-size: 20px;
+  }
+  .framed {
+    padding-top: 24px;
+  }
+  .intro {
+    padding: 0 0 16px;
+  }
+}
