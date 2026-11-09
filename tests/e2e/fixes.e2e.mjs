@@ -114,7 +114,7 @@ try {
       const c = await open({ path, wait: 4500 });
       const t = await body(c);
       const working = await c.page.ev(`!!document.querySelector('video, [aria-label="Start recording"], [data-phase=live]') || [...document.querySelectorAll('button')].some(b => /^(Open camera|Send question|Seal letter)$/i.test(b.textContent.trim()))`);
-      ok(`before: ${path} shows the opens-on screen for the ${name}, not a working feature`, /Opens on\s*Saturday 14 November at 19:13/.test(t) && !working, t.slice(0, 120));
+      ok(`before: ${path} shows the opens-on screen for the ${name}, not a working feature`, /(Opens|open) on\s*Saturday 14 November at 19:13/.test(t) && !working, t.slice(0, 120));
       ok(`before: ${path} never says "tonight"`, !/\btonight\b/i.test(t));
       await c.close();
     }

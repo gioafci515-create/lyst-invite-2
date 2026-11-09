@@ -1,5 +1,6 @@
 // Shared helpers for the browser tests. Everything here changes what the TEST browser sees (clock, enabled modules,
 // RSVP deadline); the application and its data are never touched.
+import fs from "node:fs";
 import { launch, sleep } from "./cdp.mjs";
 
 export { launch, sleep };
@@ -32,7 +33,7 @@ export const AT = {
 export async function installMocks(page, { now, modulesOff = [], eventPatch, failEvent = false, contribute, livePatch, rsvp } = {}) {
   const plan = [...(contribute ?? [])];
   const rsvpPlan = [...(rsvp ?? [])];
-  const ctl = { held: [], contributions: 0, rsvpBodies: [] };
+  const ctl = { held: [], contributions: 0, rsvpBodies: [], contributeBodies: [] };
   const answer = async (id, a) => {
     if (a === "fail") return page.send("Fetch.failRequest", { requestId: id, errorReason: "InternetDisconnected" });
     const body = a === "error" ? { error: "We couldn't save that right now. Please try again." } : { ok: true };
@@ -59,6 +60,7 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
       }
       if (url.includes("/api/contribute")) {
         ctl.contributions++;
+        ctl.contributeBodies.push(d.params.request.postData ?? "");
         const a = plan.length ? plan.shift() : "ok";
         if (a === "hold") ctl.held.push(id);
         else await answer(id, a);
@@ -104,6 +106,23 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
 }
 
 let port = 9700 + Math.floor(Math.random() * 150);
+/**
+ * The built-in task timeline (first moment 19:33 on the night, one every 20 minutes) in the LOCAL store for this run,
+ * whatever an earlier run left there. Returns restore(), which puts the store back exactly as it was.
+ */
+export function pinTaskSchedule() {
+  const KV = new URL("../../data/kv.json", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+  const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
+  const d = backup ? JSON.parse(backup.toString()) : {};
+  d["tasks:start"] = "2026-11-14T18:33:00.000Z";
+  delete d["tasks:sentat"];
+  delete d["tasks:defs"];
+  fs.writeFileSync(KV, JSON.stringify(d, null, 2));
+  return () => {
+    if (backup) fs.writeFileSync(KV, backup);
+  };
+}
+
 /** Open a phone-sized (or desktop) page with the mocks installed, loaded and settled. */
 export async function open({ w = 390, h = 844, mobile = true, dsf = 1, path = "/", wait = 5500, flags = [], init, ...mock } = {}) {
   const c = await launch({ port: port++, w, h, flags });
@@ -151,7 +170,7 @@ export const tappable = (page, hrefTest, { barPx = 65, includeHeader = false } =
   })()`);
 
 /** Feature routes and the host switch behind each (mirrors lib/sections.ts). */
-export const ROUTES = { camera: "/camera", voice: "/voice", video: "/video", live: "/live", later: "/for-later", gallery: "/gallery", capsule: "/capsule", tasks: "/tasks" };
+export const ROUTES = { camera: "/camera", voice: "/voice", video: "/video", live: "/live", later: "/for-later", gallery: "/gallery", capsule: "/capsule", tasks: "/moments" };
 export const routeModule = (href) => {
   const p = href.replace(/^\/?#/, "/#").split("?")[0];
   const legacy = { "/#voice": "voice", "/#video": "video", "/#later": "later", "/#gallery": "gallery", "/#live": "live", "/#camera": "camera", "/#tasks": "tasks", "/#capsule": "capsule" }[p];
@@ -160,10 +179,10 @@ export const routeModule = (href) => {
 
 export const FEATURES = {
   Camera: (h) => h.startsWith("/camera"),
-  Voice: (h) => h === "/voice",
-  Video: (h) => h === "/video",
+  Voice: (h) => h.split("?")[0] === "/voice",
+  Video: (h) => h.split("?")[0] === "/video",
   Gallery: (h) => h === "/gallery",
-  Tasks: (h) => h === "/tasks",
+  Tasks: (h) => h === "/moments",
 };
 
 export const text = (page, sel) => page.ev(`(document.querySelector(${JSON.stringify(sel)}) || {}).textContent || ''`);

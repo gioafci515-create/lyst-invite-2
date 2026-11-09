@@ -3,7 +3,9 @@
 // server-side gating is covered at the end with the real config (data/kv.json, restored afterwards).
 // Usage: start the app (npm run build && npx next start -p 3100), then: node tests/e2e/lifecycle.e2e.mjs
 import fs from "node:fs";
-import { open, sleep, AT, tappable, FEATURES, ROUTES, text, reporter, launch, ORIGIN } from "./helpers.mjs";
+import { open, sleep, AT, tappable, FEATURES, ROUTES, text, reporter, launch, ORIGIN, pinTaskSchedule } from "./helpers.mjs";
+
+const restoreTasks = pinTaskSchedule();
 
 const R = reporter();
 const { ok } = R;
@@ -68,7 +70,7 @@ for (const [scn, label] of [["duringVoiceTask", "voice task live"], ["duringPhot
 console.log("\n--- three phases");
 for (const [name, scn, status, h1, tabs] of [
   ["before", "rsvpOpen", /days to go|tomorrow|today/i, /UN\/\s*FOLD\s*2026/, "Home|RSVP|Open camera|Programme|Menu"],
-  ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Tasks\|Open camera\|Live\|Menu$/],
+  ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Moments\|Open camera(, a photo moment is open)?\|Live\|Menu$/],
   ["after", "after", /memories open/i, /memories/i, "Home|Gallery|Open camera|For later|Menu"],
 ]) {
   const c = await open({ now: AT[scn] });
@@ -196,7 +198,7 @@ const ROUTE_TITLES = [
   ["/for-later", /leave something for later/i],
   ["/gallery", /gallery/i],
   ["/details", /your details/i],
-  ["/tasks", /tasks/i],
+  ["/moments", /moments/i],
   ["/updates", /updates/i],
   ["/programme", /programme/i],
 ];
@@ -213,7 +215,7 @@ for (const [path, title] of ROUTE_TITLES) {
   }
   await c.close();
 }
-for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/for-later"], ["#gallery", "/gallery"], ["#capsule", "/for-later"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/tasks"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
+for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/for-later"], ["#gallery", "/gallery"], ["#capsule", "/for-later"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/moments"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
   const c = await open({ path: "/" + hash, now: AT.duringNoTask, wait: 4500 });
   const at = await c.page.ev("location.pathname + location.hash");
   ok(`old link /${hash} forwards to ${to}`, at === to, at);
@@ -252,7 +254,7 @@ for (const [scn, label] of [["duringVoiceTask", "during"], ["after", "after"], [
     await c.page.ev(`[...document.querySelectorAll('header nav button')].find(b => b.textContent.includes('Tonight')).click()`);
     await sleep(300);
     const items = await c.page.ev(`[...document.querySelectorAll('header nav ul:not([hidden]) a')].map(a => a.getAttribute('href'))`);
-    ok("desktop: the Tonight menu opens and lists every enabled feature of the night", ["/tasks", "/camera", "/voice", "/video", "/live"].every((h) => items.includes(h)), items.join(","));
+    ok("desktop: the Tonight menu opens and lists every enabled feature of the night", ["/moments", "/camera", "/voice", "/video", "/live"].every((h) => items.includes(h)), items.join(","));
     await c.page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await sleep(200);
     ok("desktop: Escape closes the Tonight menu", (await c.page.ev(`document.querySelectorAll('header nav ul:not([hidden])').length`)) === 0);
@@ -405,4 +407,5 @@ console.log("\n--- disabled modules are gated on the server (real config, cold c
   }
 }
 
+restoreTasks();
 process.exit(R.done() ? 1 : 0);

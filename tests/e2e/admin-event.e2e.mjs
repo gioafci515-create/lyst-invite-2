@@ -1,11 +1,12 @@
 // The host's control screen: log in, change the lifecycle, and see guests' view follow. Restores data/kv.json afterwards.
 import fs from "node:fs";
-import { launch, sleep, ORIGIN, reporter } from "./helpers.mjs";
+import { launch, sleep, ORIGIN, reporter, pinTaskSchedule } from "./helpers.mjs";
 
 const { ok, done } = reporter();
 const ROOT = new URL("../../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const KV = ROOT + "data/kv.json";
 const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
+pinTaskSchedule(); // the built-in timeline; the finally below restores the store as it was
 const env = Object.fromEntries(
   fs.readFileSync(ROOT + ".env.local", "utf8").split(/\r?\n/).filter((l) => l.includes("=") && !l.startsWith("#")).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).replace(/^"|"$/g, "")]),
 );
