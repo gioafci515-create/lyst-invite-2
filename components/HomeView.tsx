@@ -13,6 +13,8 @@ import NightIndex from "./NightIndex";
 import styles from "./site.module.css";
 
 export type GalleryItem = { id: string; kind: "photo" | "video"; w?: number; h?: number };
+/** counts for the after-the-event recap (only numbers above zero are ever shown) */
+export type Recap = { photos: number; clips: number; voices: number; letters: number };
 
 /**
  * Old in-page links (/#voice, /#later, /#camera, …) now have routes. Forward them before anything else happens.
@@ -110,14 +112,14 @@ function SiteFooter() {
 }
 
 /** The home page: the invitation before the event, tonight's actions during it, memories after it. */
-export default function HomeView({ gallery }: { gallery: GalleryItem[] | null }) {
+export default function HomeView({ gallery, recap = null }: { gallery: GalleryItem[] | null; recap?: Recap | null }) {
   const ev = useEvent();
   useHashForward();
   return (
     <>
       <SiteHeader />
       <div className={styles.page}>
-        <main id="main">{ev.phase === "before" ? <InviteScreen /> : <NightIndex gallery={gallery} />}</main>
+        <main id="main">{ev.phase === "before" ? <InviteScreen /> : <NightIndex gallery={gallery} recap={recap} />}</main>
         <SiteFooter />
       </div>
       <QuickBar />

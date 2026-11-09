@@ -8,7 +8,7 @@ import { untilLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { moduleOf, ROUTE, toRoute } from "@/lib/sections";
 import { useTasks } from "@/lib/useTasks";
-import type { GalleryItem } from "./HomeView";
+import type { GalleryItem, Recap } from "./HomeView";
 import { Icon, type IconName } from "./icons";
 import styles from "./nightindex.module.css";
 
@@ -126,7 +126,7 @@ function Tonight() {
   const more: [string, string, IconName][] = (
     [
       [ROUTE.live, "Live room", "live", "live"],
-      [ROUTE.later, "Letter", "note", "later"],
+      [ROUTE.later, "For later", "note", "later"],
       [ROUTE.updates, "Updates", "megaphone"],
       [ROUTE.programme, "Programme", "clock"],
     ] as [string, string, IconName, ModuleId?][]
@@ -228,33 +228,67 @@ function GalleryLead({ initial }: { initial: GalleryItem[] | null }) {
         </div>
       )}
       <div className={styles.leadBody}>
-        <p className={styles.tag}>{items === null ? "Gallery" : count ? `${count} in the gallery` : "Gallery"}</p>
-        <h3 className={styles.leadTitle}>Revisit the night</h3>
+        <p className={styles.tag}>{count ? `${count} in the gallery` : "Gallery"}</p>
+        <h3 className={styles.leadTitle}>{items !== null && !count ? "The hosts are choosing the photos." : "Revisit the night"}</h3>
         <p className={styles.leadLine}>
-          {items === null
-            ? "Photos and clips the hosts have approved."
-            : count
-              ? "Photos and clips from the room, approved by the hosts."
-              : "Nothing is up yet. The hosts approve every photo and clip before it appears here."}
+          {items === null ? "Photos and clips the hosts have approved." : count ? "Photos and clips from the room, approved by the hosts." : "Check back soon."}
         </p>
-        <div className={styles.leadActions}>
-          <Link href={ROUTE.gallery} className={styles.leadCta} data-btn>
-            Open the gallery
-          </Link>
-        </div>
+        {count > 0 && (
+          <div className={styles.leadActions}>
+            <Link href={ROUTE.gallery} className={styles.leadCta} data-btn>
+              Open the gallery
+            </Link>
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
-function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
+/** The night in numbers, from the server. Only what is above zero; nothing at all when everything is zero. */
+function RecapStrip({ initial }: { initial: Recap | null }) {
+  const [recap, setRecap] = useState<Recap | null>(initial);
+  useEffect(() => {
+    if (initial) return;
+    // the page was opened before the event ended: ask now
+    fetch("/api/stats", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) =>
+        c && setRecap({ photos: c.approvedPhotos ?? 0, clips: c.approvedClips ?? 0, voices: c.voice ?? 0, letters: (c.letter ?? 0) + (c.later ?? 0) + (c.forlater ?? 0) }),
+      )
+      .catch(() => {});
+  }, [initial]);
+  if (!recap) return null;
+  const items = (
+    [
+      [recap.photos, "photo", "photos"],
+      [recap.clips, "clip", "clips"],
+      [recap.voices, "voice", "voices"],
+      [recap.letters, "letter", "letters"],
+    ] as [number, string, string][]
+  ).filter(([n]) => n > 0);
+  if (!items.length) return null;
+  return (
+    <section className={styles.recap} aria-labelledby="recap-title">
+      <h3 id="recap-title" className={styles.moreLabel}>
+        What the night left
+      </h3>
+      <ul>
+        {items.map(([n, one, many]) => (
+          <li key={many}>
+            <b>{n}</b> {n === 1 ? one : many}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Recap | null }) {
   const ev = useEvent();
   const on = (m?: ModuleId) => !m || ev.enabled(m);
   const keep = (
-    [
-      { key: "capsule", title: "Time capsule", line: "Name the archive and pick the day it should open. The hosts keep both.", href: ROUTE.capsule, photo: "hall", module: "capsule" },
-      { key: "letter", title: "Write to the future", line: "Seal a note for a date you choose.", href: ROUTE.later, photo: "portrait", module: "later" },
-    ] as Row[]
+    [{ key: "forlater", title: "Leave something for later", line: "Sealed until the day you pick, even for the hosts.", href: ROUTE.later, photo: "portrait", module: "later" }] as Row[]
   ).filter((r) => on(r.module));
   // the server still accepts these after the event while the hosts keep them switched on
   const late = (
@@ -272,6 +306,15 @@ function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
         <h2 id="memories-title" className={styles.sectionLabel}>
           After the night
         </h2>
+        {ev.thankYou && (
+          <section className={styles.thanks} aria-labelledby="thanks-title">
+            <h3 id="thanks-title" className={styles.moreLabel}>
+              From the hosts
+            </h3>
+            <p className={styles.thanksText}>{ev.thankYou}</p>
+          </section>
+        )}
+        <RecapStrip initial={recap} />
         <div className={styles.layout}>
           {galleryOn && <GalleryLead initial={gallery} />}
           <Rows rows={galleryOn ? keep : [...keep, ...late]} />
@@ -292,7 +335,7 @@ function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
   );
 }
 
-export default function NightIndex({ gallery }: { gallery: GalleryItem[] | null }) {
+export default function NightIndex({ gallery, recap = null }: { gallery: GalleryItem[] | null; recap?: Recap | null }) {
   const ev = useEvent();
-  return ev.phase === "after" ? <Memories gallery={gallery} /> : <Tonight />;
+  return ev.phase === "after" ? <Memories gallery={gallery} recap={recap} /> : <Tonight />;
 }

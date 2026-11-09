@@ -278,6 +278,8 @@ export async function saveEventSettings(formData: FormData) {
   const modules = Object.fromEntries(MODULE_IDS.map((id) => [id, formData.get(`m_${id}`) === "on"]));
   const framesRaw = String(formData.get("cameraFrames") ?? "").trim();
   const cameraFrames = framesRaw === "" ? config.cameraFrames : Number(framesRaw);
+  const thankYouRaw = formData.get("thankYou");
+  const thankYou = thankYouRaw === null ? config.thankYou : String(thankYouRaw).trim();
   const candidate = {
     ...config,
     startsAt: startsAt.toISOString(),
@@ -286,6 +288,7 @@ export async function saveEventSettings(formData: FormData) {
     override: override === "before" || override === "during" || override === "after" ? override : null,
     modules,
     cameraFrames,
+    thankYou,
   };
   const problems = resolveConfig(candidate).issues.filter((i) => i.level === "error");
   if (problems.length) return eventBack("err", problems.map((p) => p.message).join(" "));

@@ -195,3 +195,12 @@ test("the next programme row is never one that already started", () => {
   assert.equal(nextProgrammeRow(c.startsAt, c.programme, Date.parse("2026-11-14T23:00:00Z")), null);
   assert.equal(nextProgrammeRow(c.startsAt, c.programme, 0), null);
 });
+
+test("the thank-you note is optional text, empty by default, never invented", () => {
+  assert.equal(resolveConfig(null).config.thankYou, "");
+  assert.equal(resolveConfig({ thankYou: "  Thank you for coming.  " }).config.thankYou, "Thank you for coming.");
+  const bad = resolveConfig({ thankYou: 42 });
+  assert.equal(bad.config.thankYou, "");
+  assert.ok(bad.issues.some((i) => i.level === "error"));
+  assert.equal(computeEventState(resolveConfig({ thankYou: "Merci" }).config, Date.now()).thankYou, "Merci");
+});

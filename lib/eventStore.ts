@@ -18,6 +18,8 @@ export type EventView = {
   modules: EventState["modules"];
   /** frames on each guest's camera roll, from the event settings */
   cameraFrames: number;
+  /** the hosts' thank-you note, "" when there is none */
+  thankYou: string;
   next: EventState["next"];
   countdown: string;
   /** server-corrected clock, epoch ms (0 until known) */
@@ -38,6 +40,7 @@ const SERVER_VIEW: EventView = {
   programme: DEFAULT_CONFIG.programme,
   modules: DEFAULT_CONFIG.modules,
   cameraFrames: DEFAULT_CONFIG.cameraFrames,
+  thankYou: "",
   next: null,
   countdown: "",
   now: 0,
@@ -51,7 +54,7 @@ const subs = new Set<() => void>();
 let timers: ReturnType<typeof setInterval>[] = [];
 
 function toConfig(w: Wire): EventConfig {
-  return { timezone: w.timezone, startsAt: w.startsAt, endsAt: w.endsAt, rsvpClosesAt: w.rsvp.closesAt, override: w.override, programme: w.programme, modules: w.modules, cameraFrames: w.cameraFrames ?? DEFAULT_CONFIG.cameraFrames };
+  return { timezone: w.timezone, startsAt: w.startsAt, endsAt: w.endsAt, rsvpClosesAt: w.rsvp.closesAt, override: w.override, programme: w.programme, modules: w.modules, cameraFrames: w.cameraFrames ?? DEFAULT_CONFIG.cameraFrames, thankYou: w.thankYou ?? "" };
 }
 
 /** The view of a server answer at a given (server-corrected) instant. Pure, so the server render and the browser agree. */
@@ -68,6 +71,7 @@ function viewFromWire(w: Wire, now: number): EventView {
     programme: s.programme,
     modules: s.modules,
     cameraFrames: s.cameraFrames,
+    thankYou: s.thankYou,
     next: s.next,
     countdown: countdownLabel(now, s.startsAt, s.timezone),
     now,
@@ -79,7 +83,7 @@ function recompute() {
   const now = Date.now() + offset;
   const next = viewFromWire(wire, now);
   // only publish a new snapshot when something a component renders actually changed
-  const key = JSON.stringify([next.phase, next.rsvpOpen, next.startsAt, next.endsAt, next.rsvpClosesAt, next.modules, next.programme, next.countdown, next.timezone, next.cameraFrames]);
+  const key = JSON.stringify([next.phase, next.rsvpOpen, next.startsAt, next.endsAt, next.rsvpClosesAt, next.modules, next.programme, next.countdown, next.timezone, next.cameraFrames, next.thankYou]);
   if (key !== sig) {
     sig = key;
     view = next;
@@ -119,7 +123,7 @@ function start() {
       offset = 0;
       // without a fresh server clock, do not trust the device clock to claim RSVPs are open or the event is live
       const s = computeEventState(toConfig(cached), 0);
-      view = { ...SERVER_VIEW, loaded: true, phase: s.phase, modules: s.modules, cameraFrames: s.cameraFrames, programme: s.programme, startsAt: s.startsAt, endsAt: s.endsAt, timezone: s.timezone, rsvpClosesAt: s.rsvp.closesAt };
+      view = { ...SERVER_VIEW, loaded: true, phase: s.phase, modules: s.modules, cameraFrames: s.cameraFrames, thankYou: s.thankYou, programme: s.programme, startsAt: s.startsAt, endsAt: s.endsAt, timezone: s.timezone, rsvpClosesAt: s.rsvp.closesAt };
       sig = "";
     }
   } catch {}
