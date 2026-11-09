@@ -122,6 +122,7 @@ export async function savePoll(formData: FormData) {
   await updateLive((l) => {
     const was = l.poll;
     const question = line(formData.get("question"), 160) || was.question;
+    if (!question) return; // a poll needs a question
     const open = formData.get("open") === "on";
     // newest first in the live room: a poll counts as new when it opens or its question changes
     const since = open && (!was.open || was.question !== question) ? new Date().toISOString() : was.since;
@@ -136,9 +137,11 @@ export async function saveChallenge(formData: FormData) {
   await updateLive((l) => {
     const was = l.challenge;
     const prompt = line(formData.get("prompt"), 240) || was.prompt;
+    const title = line(formData.get("title"), 60) || was.title;
+    if (!title || !prompt) return; // a challenge needs a title and a prompt
     const open = formData.get("open") === "on";
     l.challenge = {
-      title: line(formData.get("title"), 60) || was.title,
+      title,
       prompt,
       goal: Math.min(20, Math.max(1, Number(formData.get("goal")) || was.goal)),
       open,

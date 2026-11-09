@@ -23,44 +23,51 @@ export type Live = {
 
 const KEY = "live";
 
+/** Nothing exists until a host makes it in /admin/live: no announcement, no notices, no open poll or challenge. */
 function defaults(): Live {
-  const ago = (m: number) => new Date(Date.now() - m * 60000).toISOString();
   return {
-    announcement: { label: "Host announcement · priority", text: "Dinner begins in 18 minutes." },
-    notices: [
-      { id: randomUUID(), icon: "map-pin-18", title: "Priority · Location change", text: "Loading bay 4 after 18:45 · cycle racks inside the press hall", createdAt: ago(0), priority: true },
-      { id: randomUUID(), icon: "megaphone", title: "Host announcement", text: "The next moment begins in 18 minutes.", createdAt: ago(2), priority: true },
-      { id: randomUUID(), icon: "calendar-clock", title: "RSVP reminder", text: "Please confirm your meal choice before the deadline.", createdAt: ago(60), priority: true },
-      { id: randomUUID(), icon: "clock-3", title: "Schedule change", text: "Supper moved 15 minutes earlier.", createdAt: ago(60 * 26), priority: false },
-    ],
-    poll: {
-      question: "Which song should close the night?",
-      options: ["This Must Be the Place", "Lovers' Carvings", "Something else"],
-      open: true,
-      showResults: true,
-    },
-    challenge: {
-      title: "Hidden moments",
-      prompt: "Find the oldest friendship in the room and capture their hands.",
-      goal: 4,
-      open: true,
-    },
+    announcement: { label: "", text: "" },
+    notices: [],
+    poll: { question: "", options: [], open: false, showResults: false },
+    challenge: { title: "", prompt: "", goal: 4, open: false },
   };
 }
 
-/** First read stores the defaults so notice ids stay stable between requests. */
+/*
+ * Earlier versions seeded invented host posts into the store on first read. A stored live state that still carries
+ * those exact texts is treated as empty for that part; anything a host wrote stays.
+ */
+const SEEDED_NOTICES = new Set([
+  "Priority · Location change|Loading bay 4 after 18:45 · cycle racks inside the press hall",
+  "Host announcement|The next moment begins in 18 minutes.",
+  "RSVP reminder|Please confirm your meal choice before the deadline.",
+  "Schedule change|Supper moved 15 minutes earlier.",
+]);
+const SEEDED_POLL = "Which song should close the night?|This Must Be the Place,Lovers' Carvings,Something else";
+const SEEDED_CHALLENGE = "Hidden moments|Find the oldest friendship in the room and capture their hands.";
+
+function withoutSeed(l: Live): Live {
+  const empty = defaults();
+  return {
+    ...l,
+    announcement: l.announcement?.text === "Dinner begins in 18 minutes." ? empty.announcement : (l.announcement ?? empty.announcement),
+    notices: (l.notices ?? []).filter((n) => !SEEDED_NOTICES.has(`${n.title}|${n.text}`)),
+    poll: l.poll && `${l.poll.question}|${l.poll.options.join(",")}` === SEEDED_POLL ? empty.poll : (l.poll ?? empty.poll),
+    challenge: l.challenge && `${l.challenge.title}|${l.challenge.prompt}` === SEEDED_CHALLENGE ? empty.challenge : (l.challenge ?? empty.challenge),
+  };
+}
+
+/** What guests may see as real: a poll needs a question and two answers, a challenge a title and a prompt. */
+export const pollIsLive = (l: Live) => l.poll.open && !!l.poll.question && l.poll.options.length >= 2;
+export const challengeIsLive = (l: Live) => l.challenge.open && !!l.challenge.title && !!l.challenge.prompt;
+
 export async function getLive(): Promise<Live> {
-  const kv = getKV();
-  const stored = await kv.get<Live>(KEY);
-  if (stored) {
-    // the running order lives in the event settings (the programme); an old stored copy here is ignored
-    const { schedule: _old, ...rest } = stored as Live & { schedule?: unknown };
-    void _old;
-    return { ...defaults(), ...rest };
-  }
-  const d = defaults();
-  await kv.setnx(KEY, d);
-  return { ...d, ...((await kv.get<Live>(KEY)) ?? d) };
+  const stored = await getKV().get<Live & { schedule?: unknown }>(KEY);
+  if (!stored) return defaults();
+  // the running order lives in the event settings (the programme); an old stored copy here is ignored
+  const { schedule: _old, ...rest } = stored;
+  void _old;
+  return withoutSeed({ ...defaults(), ...rest });
 }
 
 export async function updateLive(fn: (live: Live) => void): Promise<Live> {
