@@ -15,7 +15,7 @@ const MOBILES = [
   ["412x915 (Pixel 7)", 412, 915],
 ];
 
-const STATUS = "header p[aria-live]";
+const STATUS = "header [data-status]";
 const BAR = 'nav[aria-label="Quick navigation"]';
 const barText = (page) => page.ev(`[...document.querySelectorAll('${BAR} a, ${BAR} button')].map(x=>x.textContent.trim()||x.getAttribute('aria-label')).join('|')`);
 const headerCta = (page) => page.ev(`(document.querySelector('header [class*=actionSlot] a') || {}).textContent || ''`);
@@ -106,15 +106,15 @@ const formPresent = (page) => page.ev(`!!document.querySelector('#rsvp form')`);
 {
   // the quick form and the details form share one stored reply: accept/decline must survive both and read correctly
   const c = await open({ now: AT.rsvpOpen });
-  for (const [val, re, label] of [["accept", /on the list/i, "accept"], ["decline", /replied no/i, "decline"]]) {
+  for (const [val, re, label] of [["accept", /You’re coming\./, "accept"], ["decline", /You’re not coming\./, "decline"]]) {
     await c.page.ev(`localStorage.setItem('lyst_rsvp', JSON.stringify({ attending: ${JSON.stringify(val)} })); window.dispatchEvent(new Event('lyst:rsvp'));`);
     await sleep(500);
     const t = await text(c.page, "#rsvp");
-    ok(`stored reply "${label}" is shown correctly (a decline is never shown as accepted)`, re.test(t) && (label !== "decline" || !/on the list/i.test(t)), t.slice(0, 90));
+    ok(`stored reply "${label}" is shown correctly (a decline is never shown as accepted)`, re.test(t) && (label !== "decline" || !/You’re coming/.test(t)), t.slice(0, 90));
   }
   await c.page.ev(`localStorage.removeItem('lyst_rsvp'); window.dispatchEvent(new Event('lyst:rsvp'));`);
   await sleep(500);
-  ok("clearing the reply removes the status line", !/on the list|replied no/i.test(await text(c.page, "#rsvp")));
+  ok("clearing the reply brings the form back", !/You’re coming|You’re not coming/.test(await text(c.page, "#rsvp")) && (await formPresent(c.page)));
   await c.close();
 }
 {
@@ -247,7 +247,8 @@ for (const [scn, label] of [["duringVoiceTask", "during"], ["after", "after"], [
   for (const [name, fn] of Object.entries(need)) if (!(await tappable(c.page, fn, { barPx: 0 })).length) miss.push(name);
   ok(`desktop ${label}: primary actions visible and unobstructed on the first screen`, miss.length === 0, miss.join(","));
   const nav = await c.page.ev(`[...document.querySelectorAll('header nav > a, header nav > div > button')].map(x => x.textContent.trim())`);
-  ok(`desktop ${label}: header has at most 5 items (Invitation, Programme, Tonight, Memories + context)`, nav.join("|") === "Invitation|Programme|Tonight|Memories" && (await c.page.ev(`getComputedStyle(document.querySelector('${BAR}')).display`)) === "none", nav.join("|"));
+  const night = label === "before" ? "On the night" : "Tonight"; // never "Tonight" before the event day
+  ok(`desktop ${label}: header has at most 5 items (Invitation, Programme, ${night}, Memories + context)`, nav.join("|") === `Invitation|Programme|${night}|Memories` && (await c.page.ev(`getComputedStyle(document.querySelector('${BAR}')).display`)) === "none", nav.join("|"));
   if (label === "during") {
     await c.page.ev(`[...document.querySelectorAll('header nav button')].find(b => b.textContent.includes('Tonight')).click()`);
     await sleep(300);
@@ -280,7 +281,7 @@ console.log("\n--- keyboard and accessibility (during, phone)");
   ok("a11y: no duplicate ids", dups.length === 0, dups.join(","));
   ok("a11y: landmarks (header, main, labelled navs)", await p.ev(`!!document.querySelector('header') && !!document.querySelector('main') && [...document.querySelectorAll('nav')].every(n => n.getAttribute('aria-label') || n.getAttribute('aria-labelledby'))`));
   ok("a11y: every image has an alt attribute", await p.ev(`[...document.querySelectorAll('img')].every(i => i.hasAttribute('alt'))`));
-  ok("a11y: phase status is a polite live region", await p.ev(`document.querySelector("${STATUS}").getAttribute('aria-live') === 'polite'`));
+  ok("a11y: the phase status is not a live region (a ticking countdown is not read out again and again)", await p.ev(`!document.querySelector("${STATUS}").hasAttribute('aria-live') && !document.querySelector("${STATUS}").closest('[aria-live]')`));
 
   // menu sheet: modal dialog, focus moves in and stays in, Escape closes, focus returns to the Menu button
   await p.ev(`(() => { const b = [...document.querySelectorAll('${BAR} button')].find(b=>b.textContent.includes('Menu')); b.focus(); b.click(); })()`);

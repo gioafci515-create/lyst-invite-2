@@ -14,6 +14,16 @@ const env = Object.fromEntries(
 );
 const body = (c) => c.page.ev("document.body.innerText");
 const ago = (m) => new Date(Date.now() - m * 60000).toISOString();
+// what a host would have created in /admin/live (the store itself starts empty)
+const POLL = { question: "Which song should close the night?", options: ["This Must Be the Place", "Lovers' Carvings", "Something else"] };
+const CHALLENGE = { title: "Hidden moments", prompt: "Find the oldest friendship in the room and capture their hands.", goal: 4 };
+/** the phase the LOCAL store forces (never production): the server only takes camera, voice, video and live-room posts during the event */
+const forcePhase = (override) => {
+  const db = fs.existsSync(KV) ? JSON.parse(fs.readFileSync(KV, "utf8")) : {};
+  const cfg = db["event:config"] && typeof db["event:config"] === "object" ? db["event:config"] : {};
+  db["event:config"] = { ...cfg, override };
+  fs.writeFileSync(KV, JSON.stringify(db, null, 2));
+};
 
 try {
   /* ------------------------------------------------------------------ live room */
@@ -39,11 +49,8 @@ try {
   {
     const busy = (j) => {
       j.announcement = { label: "From the hosts", text: "Supper is served in the press hall.", since: ago(1) };
-      j.poll.open = true;
-      j.poll.showResults = true;
-      j.poll.since = ago(2);
-      j.challenge.open = true;
-      j.challenge.since = ago(30);
+      Object.assign(j.poll, POLL, { open: true, showResults: true, since: ago(2) });
+      Object.assign(j.challenge, CHALLENGE, { open: true, since: ago(30) });
     };
     const c = await open({ path: "/live", now: AT.duringNoTask, livePatch: busy, wait: 4500 });
     const order = await c.page.ev(`[...document.querySelectorAll('[data-item]')].map(e => e.dataset.item).join(',')`);
@@ -60,11 +67,8 @@ try {
       now: AT.duringNoTask,
       wait: 4500,
       livePatch: (j) => {
-        j.poll.open = true;
-        j.poll.showResults = false;
-        j.poll.since = ago(40);
-        j.challenge.open = true;
-        j.challenge.since = ago(3);
+        Object.assign(j.poll, POLL, { open: true, showResults: false, since: ago(40) });
+        Object.assign(j.challenge, CHALLENGE, { open: true, since: ago(3) });
       },
     });
     const order = await c.page.ev(`[...document.querySelectorAll('[data-item]')].map(e => e.dataset.item).join(',')`);
@@ -86,6 +90,7 @@ try {
       const res = await fetch(ORIGIN + "/api/contribute", { method: "POST", body: fd });
       return res.json();
     };
+    forcePhase("during");
     const up = await send("photo");
     ok("an upload answers with its id and a private key", typeof up.id === "string" && /^[0-9a-f]{32}$/.test(up.key ?? ""), JSON.stringify(up).slice(0, 80));
     const later = await send("later");
@@ -130,6 +135,7 @@ try {
     await sleep(400);
     ok("Escape closes the viewer and focus returns to the photo", await a2.page.ev(`!document.querySelector('[role=dialog]') && (document.activeElement.getAttribute('aria-label')||'').includes('Open full screen')`));
     await a2.close();
+    forcePhase(null); // back to the schedule for the RSVP checks
   }
 
   /* ------------------------------------------------------------------ RSVP details */
@@ -187,7 +193,9 @@ try {
     // the quick form on the invitation writes the same reply and keeps what the details screen added
     const prev = JSON.stringify({ attending: "accept", guests: 3, companion: "Bo", meal: "Fish", dietary: "", requests: "Step-free" });
     const c = await open({ path: "/", now: AT.rsvpOpen, rsvp: ["ok"], init: seedStorage({ lyst_rsvp: prev, lyst_guest: guest }), wait: 5000 });
-    ok("the quick form shows the stored answer", /You're on the list/.test(await text(c.page, "#rsvp")));
+    ok("the home page shows the stored answer instead of the form", /You’re coming\./.test(await text(c.page, "#rsvp")) && !(await c.page.ev(`!!document.querySelector('#rsvp form')`)));
+    await c.page.ev(`[...document.querySelectorAll('#rsvp button')].find(b => b.textContent.trim() === 'Change').click()`);
+    await sleep(300);
     await c.page.ev(`document.querySelector('#rsvp form').requestSubmit()`);
     await sleep(800);
     const sent = c.mock.rsvpBodies[0] ?? {};
