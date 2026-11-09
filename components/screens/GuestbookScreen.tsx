@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import LiveWave from "@/components/LiveWave";
 import { clock, useRecorder } from "@/components/useRecorder";
+import TaskPrompt from "@/components/TaskPrompt";
 import { useEvent } from "@/lib/eventStore";
+import { useTaskFor } from "@/lib/useMoments";
 import { submitContribution } from "@/lib/submit";
 import { Player, Progress, type SendState } from "./CaptureBits";
 import c from "./capture.module.css";
@@ -39,6 +41,7 @@ const Cycle = () => (
 
 /** The voice guestbook: one optional prompt, one big record button, play back, send. Heard by the hosts only. */
 export default function GuestbookScreen() {
+  const task = useTaskFor("voice");
   const prompts = useEvent().phase === "after" ? PROMPTS.after : PROMPTS.during;
   const [prompt, setPrompt] = useState(0);
   const [mode, setMode] = useState<"voice" | "text">("voice");
@@ -72,12 +75,13 @@ export default function GuestbookScreen() {
       mode === "voice"
         ? await submitContribution({
             type: "voice",
+            task: task?.id,
             file: r.blob,
             filename: "voice-memory.webm",
             meta: { duration: clock(r.seconds) },
             onProgress: setProgress,
           })
-        : await submitContribution({ type: "voice", text, meta: { format: "written" } });
+        : await submitContribution({ type: "voice", text, meta: { format: "written" }, task: task?.id });
     if (res.ok) {
       setSend("sent");
       r.reset();
@@ -134,6 +138,7 @@ export default function GuestbookScreen() {
 
   return (
     <div className={c.screen}>
+      <TaskPrompt task={task} />
       <section className={c.promptCard} aria-labelledby="voice-prompt-label">
         <p id="voice-prompt-label" className="label-mono">
           A prompt, if you want one

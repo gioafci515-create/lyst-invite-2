@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Leave something for later — UN/FOL
 
 export default function ForLaterPage() {
   return (
-    <FeatureRoute module="later" title="Leave something for later" framed={false}>
+    <FeatureRoute liveCard={false} module="later" title="Leave something for later" framed={false}>
       <ForLaterScreen />
     </FeatureRoute>
   );

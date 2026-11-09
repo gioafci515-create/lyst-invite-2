@@ -25,6 +25,7 @@ export default function QuickBar() {
 
   const live = tasks.some((t) => t.inWindow);
   const openCount = tasks.filter((t) => t.open).length;
+  const photoOpen = ev.phase === "during" && tasks.some((t) => t.open && t.type === "photo");
   const photoTask = tasks.find((t) => t.type === "photo" && t.open);
   const cameraHref = photoTask ? `${ROUTE.camera}?task=${encodeURIComponent(photoTask.id)}` : ROUTE.camera;
 
@@ -70,7 +71,7 @@ export default function QuickBar() {
     rsvp: (reply ? { key: "rsvp", href: ROUTE.details, label: "Your reply", icon: "check" } : { key: "rsvp", href: `/#${SECTION.rsvp}`, label: "RSVP", icon: "check" }) as Tab,
     programme: { key: "programme", href: ev.phase === "before" ? `/#${SECTION.programme}` : ROUTE.programme, label: "Programme", icon: "clock" } as Tab,
     updates: { key: "updates", href: ROUTE.updates, label: "Updates", icon: "live" } as Tab,
-    tasks: ev.enabled("tasks") ? ({ key: "tasks", href: ROUTE.tasks, label: "Tasks", icon: "tasks", badge: openCount || undefined } as Tab) : null,
+    tasks: ev.enabled("tasks") ? ({ key: "tasks", href: ROUTE.tasks, label: "Moments", icon: "tasks", badge: openCount || undefined } as Tab) : null,
     live: ev.enabled("live") ? ({ key: "live", href: ROUTE.live, label: "Live", icon: "live" } as Tab) : null,
     voice: ev.enabled("voice") ? ({ key: "voice", href: ROUTE.voice, label: "Voice", icon: "mic" } as Tab) : null,
     gallery: ev.enabled("gallery") ? ({ key: "gallery", href: ROUTE.gallery, label: "Gallery", icon: "image" } as Tab) : null,
@@ -129,8 +130,9 @@ export default function QuickBar() {
         </Link>
         {left && tab(left)}
         {cameraOn && (
-          <Link href={cameraHref} className={styles.cam} aria-label="Open camera" data-btn>
+          <Link href={cameraHref} className={styles.cam} aria-label={photoOpen ? "Open camera, a photo moment is open" : "Open camera"} data-btn data-moment={photoOpen || undefined}>
             <Icon name="camera" />
+            {photoOpen && <span className={styles.camDot} aria-hidden />}
           </Link>
         )}
         {right && tab(right)}

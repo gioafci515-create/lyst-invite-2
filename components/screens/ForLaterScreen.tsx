@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { forLaterBounds } from "@/lib/eventState";
+import TaskPrompt from "@/components/TaskPrompt";
 import { useEvent } from "@/lib/eventStore";
+import { useTaskFor } from "@/lib/useMoments";
 import { getGuest, submitContribution } from "@/lib/submit";
 import { useHydrated } from "@/lib/useClient";
 import { Progress } from "./CaptureBits";
@@ -17,6 +19,7 @@ const MAX = 2000;
  * and nothing about it can be changed after sealing.
  */
 export default function ForLaterScreen() {
+  const task = useTaskFor("text");
   const ev = useEvent();
   const { first: FIRST_DAY, byDefault: DEFAULT_DAY, last: LAST_DAY } = forLaterBounds(ev);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -55,7 +58,7 @@ export default function ForLaterScreen() {
     setError("");
     setProgress(null);
     const from = sign.trim() || "Anonymous";
-    const res = await submitContribution({ type: "forlater", name: from, text: message, file, meta: { openAt: day }, onProgress: file ? setProgress : undefined });
+    const res = await submitContribution({ type: "forlater", name: from, text: message, file, meta: { openAt: day }, onProgress: file ? setProgress : undefined, task: task?.id });
     if (res.ok) {
       setSealedAs({ day, from });
       setSend("sealed");
@@ -97,6 +100,7 @@ export default function ForLaterScreen() {
   const sending = send === "sending";
   return (
     <div className={r.screen}>
+      <TaskPrompt task={task} />
       <Facts>
         Only the hosts get it, and not even they can read it before {longDate(day)}. It can&rsquo;t be changed once sealed.
       </Facts>

@@ -1,5 +1,6 @@
 "use client";
 
+import { COPY } from "@/lib/copy";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -139,7 +140,7 @@ function CameraApp() {
   const router = useRouter();
   const params = useSearchParams();
   const taskId = params.get("task");
-  const { tasks, now } = useTasks();
+  const { tasks } = useTasks();
   const ev = useEvent();
   const activeTask = tasks.find((t) => t.id === taskId) ?? tasks.find((t) => t.type === "photo" && t.open) ?? null;
 
@@ -561,8 +562,7 @@ function CameraApp() {
   };
 
   const flashLabel = flash === "off" ? "Off" : flash === "auto" ? "Auto" : "On";
-  const taskWindow = activeTask?.inWindow && activeTask.windowEnd ? Math.max(0, Math.ceil((activeTask.windowEnd - now) / 1000)) : null;
-  const leftLabel = activeTask ? "left for task" : "left";
+  const leftLabel = activeTask ? "left for this moment" : "left";
   const galleryOn = ev.enabled("gallery");
 
   const thumb = <RollThumb shots={shots} onRetry={retry} canRetry={left > 0} />;
@@ -639,14 +639,13 @@ function CameraApp() {
 
           {activeTask && !full && (
             <div className={css.task}>
-              <p className={css.taskTitle}>{activeTask.title}</p>
-              <p className={css.taskText}>
-                {taskWindow !== null
-                  ? `Capture it now · ${taskWindow}s left`
-                  : activeTask.late
-                    ? "Still open: late, but it counts"
-                    : `${activeTask.progress} of ${activeTask.count} saved`}
+              <p className={css.taskTitle}>
+                <span>{activeTask.title}</span>
+                <span className={css.taskCount} aria-label={`${activeTask.progress} of ${activeTask.count} saved`}>
+                  {COPY.prompt.progress(activeTask.progress, activeTask.count)}
+                </span>
               </p>
+              <p className={css.taskText}>{activeTask.text}</p>
             </div>
           )}
 
@@ -699,9 +698,9 @@ function CameraApp() {
               {activeTask ? (
                 <>
                   <h1 id="roll-full" ref={fullHeading} className={css.fullTitle} tabIndex={-1}>
-                    Task done: {activeTask.count} of {activeTask.count}.
+                    Moment collected: {activeTask.count} of {activeTask.count}.
                   </h1>
-                  <p className={css.text}>{uploading ? "Your last photo is still saving." : "Every photo for this task is saved. The hosts see them first."}</p>
+                  <p className={css.text}>{uploading ? "Your last photo is still saving." : "Every photo for this moment is saved. The hosts see them first."}</p>
                   <div className={css.actions}>
                     {rollLeft > 0 && (
                       <Link className={css.primary} href="/camera">
@@ -748,7 +747,7 @@ function CameraApp() {
               <Counter left={left} size="big" />
               <span className={css.introLine}>
                 {left === 1 ? "frame" : "frames"}
-                {activeTask ? " for this task." : "."}
+                {activeTask ? " for this moment." : "."}
               </span>
               <span className={css.introLine}>What others might miss.</span>
             </h1>

@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Voice guestbook — UN/FOLD 2026" };
 
 export default function VoicePage() {
   return (
-    <FeatureRoute module="voice" capture="voice" title="Voice guestbook" framed={false}>
+    <FeatureRoute liveCard={false} module="voice" capture="voice" title="Voice guestbook" framed={false}>
       <GuestbookScreen />
     </FeatureRoute>
   );

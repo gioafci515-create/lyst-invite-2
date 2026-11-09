@@ -1,5 +1,7 @@
 "use client";
 
+import TaskPrompt from "@/components/TaskPrompt";
+import { useTaskFor } from "@/lib/useMoments";
 import { useEffect, useRef, useState } from "react";
 import { clock, useRecorder } from "@/components/useRecorder";
 import { submitContribution } from "@/lib/submit";
@@ -34,6 +36,7 @@ const STEPS = ["Record", "Review", "Send"] as const;
 
 /** Video message in three steps: record (front camera, 3-2-1, up to 45 s), review, send. The hosts see it first. */
 export default function VideoScreen() {
+  const task = useTaskFor("video");
   const r = useRecorder("video", MAX);
   const live = useRef<HTMLVideoElement>(null);
   const review = useRef<HTMLVideoElement>(null);
@@ -169,6 +172,7 @@ export default function VideoScreen() {
     setError("");
     const res = await submitContribution({
       type: "video",
+      task: task?.id,
       file: clip,
       filename: picked?.file.name ?? "video-message.webm",
       meta: picked ? {} : { duration: clock(r.seconds) },
@@ -195,6 +199,7 @@ export default function VideoScreen() {
 
   return (
     <div className={`${c.screen} ${c.videoScreen}`}>
+      <TaskPrompt task={task} />
       <ol className={c.steps} aria-label="Steps">
         {STEPS.map((s, i) => (
           <li key={s} aria-current={i === step ? "step" : undefined} data-done={i < step}>

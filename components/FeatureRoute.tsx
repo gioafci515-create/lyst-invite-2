@@ -7,6 +7,7 @@ import { EventSeed } from "@/lib/eventStore";
 import { EmbedProvider } from "./Embed";
 import ModuleGate from "./ModuleGate";
 import PhaseGate from "./PhaseGate";
+import LiveCard from "./LiveCard";
 import styles from "./route.module.css";
 
 type Props = {
@@ -19,6 +20,8 @@ type Props = {
   framed?: boolean;
   /** only open during the event (and, for voice and video, after it): otherwise an "opens on" / "closed" screen */
   capture?: CaptureKind;
+  /** the live moment card at the bottom (default on); off where the moment already lives inside the screen */
+  liveCard?: boolean;
   children: ReactNode;
 };
 
@@ -37,7 +40,7 @@ function Header({ title }: { title: string }) {
 }
 
 /** Server check (the proxy already redirects; this is the backup), then the screen with the state the server read. */
-async function Gated({ module, intro, framed = true, capture, children }: Omit<Props, "title">) {
+async function Gated({ module, intro, framed = true, capture, liveCard = true, children }: Omit<Props, "title">) {
   const wire = await getWire();
   if (module && !wire.modules[module]) notFound();
   return (
@@ -64,6 +67,7 @@ async function Gated({ module, intro, framed = true, capture, children }: Omit<P
               {children}
             </>
           )}
+          {liveCard && <LiveCard />}
         </EmbedProvider>
       </div>
     </EventSeed>

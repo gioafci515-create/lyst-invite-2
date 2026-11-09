@@ -171,3 +171,18 @@
     line-height: 1.2;
   }
 }
+
+/* a photo moment is open: a small acid dot on the camera button */
+.cam {
+  position: relative;
+}
+.camDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--acid);
+  border: 2px solid var(--ink);
+}
