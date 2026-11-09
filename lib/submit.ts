@@ -52,7 +52,7 @@ function nameFor(filename: string, mime: string) {
  * Sends the file straight from the phone to Vercel Blob (no 4.5 MB serverless limit).
  * Returns null when file storage isn't available, so the caller can fall back to the server path.
  */
-async function uploadToBlob(file: Blob, filename: string): Promise<Uploaded | null> {
+async function uploadToBlob(file: Blob, filename: string, onProgress?: (fraction: number) => void): Promise<Uploaded | null> {
   if (directUnavailable) return null;
   try {
     const mime = (file.type || "application/octet-stream").split(";")[0];
@@ -61,12 +61,34 @@ async function uploadToBlob(file: Blob, filename: string): Promise<Uploaded | nu
       access: "private",
       handleUploadUrl: "/api/blob/upload",
       contentType: mime,
+      ...(onProgress ? { onUploadProgress: (p: { percentage: number }) => onProgress(Math.min(1, p.percentage / 100)) } : {}),
     });
     return { url: blob.url, name: filename, mime, size: file.size };
   } catch {
     directUnavailable = true;
     return null;
   }
+}
+
+type Answer = { ok: boolean; status: number; json: () => Promise<Record<string, unknown>> };
+
+/** POST a form to our own API. With a progress callback it goes through XMLHttpRequest, the only browser API that reports upload progress. */
+function postForm(fd: FormData, onProgress?: (fraction: number) => void): Promise<Answer> {
+  if (!onProgress) return fetch("/api/contribute", { method: "POST", body: fd });
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("POST", "/api/contribute");
+    x.upload.onprogress = (e) => e.lengthComputable && e.total > 0 && onProgress(Math.min(1, e.loaded / e.total));
+    x.onload = () =>
+      resolve({
+        ok: x.status >= 200 && x.status < 300,
+        status: x.status,
+        json: async () => JSON.parse(x.responseText || "{}"),
+      });
+    x.onerror = () => reject(new Error("network"));
+    x.onabort = () => reject(new Error("aborted"));
+    x.send(fd);
+  });
 }
 
 export async function submitContribution(input: {
@@ -78,6 +100,11 @@ export async function submitContribution(input: {
   filename?: string;
   /** credit this task explicitly (otherwise the first matching open task is credited) */
   task?: string;
+  /**
+   * Upload progress of the file, 0..1, when the browser can measure it. Reaching 1 only means the bytes left the phone:
+   * the submission is saved only when this function resolves with ok.
+   */
+  onProgress?: (fraction: number) => void;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const task = (input.task ? findTask(input.task) : null) ?? activeTaskFor(input.type);
   const late = task ? lateMinutes(task) : 0;
@@ -89,8 +116,8 @@ export async function submitContribution(input: {
   const filename = file ? nameFor(shrunk?.name ?? originalName, file.type) : originalName;
 
   try {
-    let res: Response;
-    const uploaded = file ? await uploadToBlob(file, filename) : null;
+    let res: Answer;
+    const uploaded = file ? await uploadToBlob(file, filename, input.onProgress) : null;
 
     if (uploaded) {
       res = await fetch("/api/contribute", {
@@ -109,18 +136,18 @@ export async function submitContribution(input: {
       if (input.text) fd.set("text", input.text);
       if (Object.keys(meta).length) fd.set("meta", JSON.stringify(meta));
       if (file) fd.set("file", file, filename);
-      res = await fetch("/api/contribute", { method: "POST", body: fd });
+      res = await postForm(fd, file ? input.onProgress : undefined);
     }
 
     if (res.status === 413) {
       return { ok: false, error: "That file is too large to upload. Try a shorter clip or a smaller file (about 4 MB max)." };
     }
-    const data = await res.json().catch(() => ({}));
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
     if (res.ok) {
       if (task) creditTask(task);
       return { ok: true };
     }
-    return { ok: false, error: data.error ?? "Something went wrong. Try again." };
+    return { ok: false, error: typeof data.error === "string" ? data.error : "Something went wrong. Try again." };
   } catch {
     return { ok: false, error: "Network error. Try again." };
   }

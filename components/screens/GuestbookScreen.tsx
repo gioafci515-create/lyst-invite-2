@@ -1,12 +1,11 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LiveWave from "@/components/LiveWave";
-import AppShell from "@/components/AppShell";
-import styles from "@/components/app.module.css";
 import { clock, useRecorder } from "@/components/useRecorder";
 import { submitContribution } from "@/lib/submit";
+import { Player, Progress, type SendState } from "./CaptureBits";
+import c from "./capture.module.css";
 
 /** Optional prompts, written for UN/FOLD (type, sound, performance) rather than a generic ceremony. */
 const PROMPTS = [
@@ -17,118 +16,227 @@ const PROMPTS = [
 ];
 const MAX_SECONDS = 180;
 
+const Lock = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="5" y="11" width="14" height="10" rx="1" />
+    <path d="M8 11V7a4 4 0 018 0v4" />
+  </svg>
+);
+const Cycle = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M20 8a8 8 0 00-14-2L4 8m0-4v4h4M4 16a8 8 0 0014 2l2-2m0 4v-4h-4" />
+  </svg>
+);
+
+/** The voice guestbook: one optional prompt, one big record button, play back, send. Heard by the hosts only. */
 export default function GuestbookScreen() {
   const [prompt, setPrompt] = useState(0);
+  const [mode, setMode] = useState<"voice" | "text">("voice");
   const r = useRecorder("audio", MAX_SECONDS);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [note, setNote] = useState("");
+  const [send, setSend] = useState<SendState>("idle");
+  const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const recordBtn = useRef<HTMLButtonElement>(null);
+  const doneHeading = useRef<HTMLHeadingElement>(null);
+  const reviewRef = useRef<HTMLButtonElement>(null);
 
-  async function send() {
-    if (!r.blob) return;
-    setSending(true);
+  const recording = r.state === "recording";
+  const opening = r.state === "opening";
+
+  // when a recording finishes, the player is the next thing to use; after sending, the confirmation
+  useEffect(() => {
+    if (r.state === "done") reviewRef.current?.focus();
+  }, [r.state]);
+  useEffect(() => {
+    if (send === "sent") doneHeading.current?.focus();
+  }, [send]);
+
+  async function submit() {
+    const text = note.trim();
+    if (mode === "voice" ? !r.blob : !text) return;
+    setSend("sending");
+    setProgress(null);
     setError("");
-    const res = await submitContribution({
-      type: "voice",
-      file: r.blob,
-      filename: "voice-memory.webm",
-      meta: { duration: clock(r.seconds) },
-    });
-    setSending(false);
+    const res =
+      mode === "voice"
+        ? await submitContribution({
+            type: "voice",
+            file: r.blob,
+            filename: "voice-memory.webm",
+            meta: { duration: clock(r.seconds) },
+            onProgress: setProgress,
+          })
+        : await submitContribution({ type: "voice", text, meta: { format: "written" } });
     if (res.ok) {
-      setSent(true);
+      setSend("sent");
       r.reset();
-    } else setError(res.error);
+      setNote("");
+    } else {
+      setSend("failed");
+      setError(res.error);
+    }
   }
 
-  const recording = r.state === "recording" || r.state === "paused";
+  function again() {
+    setSend("idle");
+    setError("");
+    r.reset();
+    requestAnimationFrame(() => recordBtn.current?.focus());
+  }
+
+  const switchMode = () => {
+    r.reset();
+    setSend("idle");
+    setError("");
+    setMode((m) => (m === "voice" ? "text" : "voice"));
+  };
+
+  const hostsOnly = (
+    <p className={c.private}>
+      <Lock />
+      {mode === "voice" ? "Only the hosts will hear this." : "Only the hosts will read this."}
+    </p>
+  );
+
+  if (send === "sent") {
+    return (
+      <div className={c.screen}>
+        <section className={c.done} aria-labelledby="voice-done">
+          <h2 id="voice-done" ref={doneHeading} tabIndex={-1} className={c.doneTitle}>
+            Sent to the hosts.
+          </h2>
+          <p className={c.body}>
+            {mode === "voice"
+              ? "Your voice memory is with them. It never appears in the public gallery."
+              : "Your message is with them. It never appears in the public gallery."}
+          </p>
+          <div className={c.actions}>
+            <button type="button" className={c.primary} onClick={again}>
+              {mode === "voice" ? "Record another" : "Write another"}
+            </button>
+          </div>
+        </section>
+        {hostsOnly}
+      </div>
+    );
+  }
 
   return (
-    <AppShell
-      title="Voice Guestbook"
-      header={{ src: "/images/app/header-guestbook.svg", width: 44 }}
-      step={3}
-      action={
-        r.state === "done"
-          ? { label: sending ? "Sending…" : "Submit memory", onClick: send, disabled: sending }
-          : { label: recording ? "Stop recording" : "Start recording", onClick: recording ? r.stop : r.start }
-      }
-    >
-      <div className={styles.between} style={{ alignItems: "center", minHeight: 44 }}>
-        <span className={styles.choice} style={{ background: "var(--red)", display: "flex", alignItems: "center", gap: 6, minHeight: 0 }}>
-          <Image src="/images/app/record-icon.svg" alt="" width={12} height={12} />
-          {recording ? (r.state === "paused" ? "Paused" : "Recording") : r.state === "done" ? "Recorded" : "Ready"}
-        </span>
-        <span style={{ fontWeight: 700, fontSize: 24 }} aria-live="off">
-          {clock(r.seconds)}
-        </span>
-      </div>
-
-      <div className={styles.card} style={{ padding: 18 }}>
-        <p className="label-mono" style={{ color: "var(--muted)" }}>
-          Optional prompt · up to {clock(MAX_SECONDS)}
+    <div className={c.screen}>
+      <section className={c.promptCard} aria-labelledby="voice-prompt-label">
+        <p id="voice-prompt-label" className="label-mono">
+          A prompt, if you want one
         </p>
-        <p style={{ fontFamily: "var(--f-display)", fontSize: 20 }} aria-live="polite">
+        <p className={c.prompt} aria-live="polite">
           “{PROMPTS[prompt]}”
         </p>
-        {r.state === "idle" && (
-          <button className={styles.choice} onClick={() => setPrompt((p) => (p + 1) % PROMPTS.length)}>
-            Different prompt
+        <button type="button" className={c.ghost} onClick={() => setPrompt((p) => (p + 1) % PROMPTS.length)} disabled={recording}>
+          <Cycle />
+          Another prompt
+        </button>
+      </section>
+
+      {mode === "voice" ? (
+        <section className={c.recorder} aria-label="Recorder">
+          {r.state === "done" && r.url ? (
+            <>
+              <Player src={r.url} seconds={r.seconds} label="Your recording" playRef={reviewRef} />
+              {send === "sending" ? (
+                <Progress fraction={progress} label="Sending your voice memory" />
+              ) : (
+                <div className={c.actions}>
+                  <button type="button" className={c.secondary} onClick={again}>
+                    Re-record
+                  </button>
+                  <button type="button" className={c.primary} onClick={submit}>
+                    {send === "failed" ? "Try sending again" : "Send to the hosts"}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {!r.error && (
+                <>
+                  <div className={c.wave} data-live={recording}>
+                    <LiveWave stream={r.liveStream} active={recording} height={56} />
+                  </div>
+                  <p className={c.time} aria-live="off">
+                    {clock(r.seconds)} <span className={c.timeMax}>/ {clock(MAX_SECONDS)}</span>
+                  </p>
+                </>
+              )}
+              <button
+                ref={recordBtn}
+                type="button"
+                className={c.record}
+                data-recording={recording}
+                onClick={() => (recording ? r.stop() : void r.start())}
+                disabled={opening}
+                aria-label={recording ? "Stop recording" : r.error ? "Try the microphone again" : "Start recording"}
+              >
+                <span className={c.recordIcon} aria-hidden />
+              </button>
+              {!r.error && (
+                <p className={c.hint} role="status">
+                  {recording
+                    ? "Recording. Tap stop when you're done."
+                    : opening
+                      ? "Waiting for the microphone…"
+                      : "Your browser will ask for the microphone. Nothing is sent until you press Send."}
+                </p>
+              )}
+            </>
+          )}
+          {r.error && (
+            <div className={c.problem} role="alert">
+              <p className={c.problemTitle}>
+                {r.error.kind === "denied" ? "Microphone blocked" : r.error.kind === "missing" ? "No microphone found" : "Recording didn't start"}
+              </p>
+              <p className={c.body}>{r.error.message}</p>
+              <button type="button" className={c.secondary} onClick={switchMode}>
+                Write it instead
+              </button>
+            </div>
+          )}
+          {error && (
+            <p className={c.error} role="alert">
+              {error} Your recording is still here.
+            </p>
+          )}
+        </section>
+      ) : (
+        <section className={c.recorder} aria-label="Written message">
+          <label className={c.field}>
+            <span className="label-mono">Your message</span>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={6} maxLength={2000} className={c.textarea} disabled={send === "sending"} />
+          </label>
+          {send === "sending" ? (
+            <Progress fraction={null} label="Sending your message" />
+          ) : (
+            <div className={c.actions}>
+              <button type="button" className={c.primary} onClick={submit} disabled={!note.trim()}>
+                {send === "failed" ? "Try sending again" : "Send to the hosts"}
+              </button>
+            </div>
+          )}
+          {error && (
+            <p className={c.error} role="alert">
+              {error} Your message is still here.
+            </p>
+          )}
+        </section>
+      )}
+
+      <div className={c.foot}>
+        {hostsOnly}
+        {!recording && send !== "sending" && !(mode === "voice" && r.error) && (
+          <button type="button" className={c.link} onClick={switchMode}>
+            {mode === "voice" ? "Write it instead" : "Record your voice instead"}
           </button>
         )}
-        <LiveWave stream={r.liveStream} active={r.state === "recording"} />
-        <div className={styles.row} style={{ minHeight: 44 }}>
-          <button className={styles.choice} onClick={r.pause} disabled={!recording}>
-            {r.state === "paused" ? "Resume" : "Pause"}
-          </button>
-          <button className={styles.choice} aria-pressed onClick={r.stop} disabled={!recording}>
-            <Image src="/images/app/stop-icon.svg" alt="" width={12} height={12} style={{ marginRight: 6 }} />
-            Stop
-          </button>
-          <button className={styles.choice} onClick={r.reset} disabled={r.state === "idle"}>
-            Cancel
-          </button>
-        </div>
       </div>
-
-      {r.url ? (
-        <div className={styles.card}>
-          <p className={styles.body}>Listen back before you send it.</p>
-          <audio controls src={r.url} style={{ width: "100%" }} />
-        </div>
-      ) : (
-        <p className={styles.body} style={{ lineHeight: 1.4 }}>
-          Your browser will ask to use the microphone when you start. Nothing is recorded or sent until you press Send.
-        </p>
-      )}
-      <p className={styles.body} style={{ lineHeight: 1.4, opacity: 0.75 }}>
-        Voice memories are heard by the hosts only. They are never shown in the public gallery.
-      </p>
-
-      <div className={styles.row}>
-        <button className={styles.secondary} style={{ flex: 1 }} onClick={r.reset} disabled={r.state === "idle"}>
-          <Image src="/images/app/refresh-cw.svg" alt="" width={16} height={16} />
-          Re-record
-        </button>
-        <button className={styles.primary} style={{ flex: 1 }} onClick={send} disabled={r.state !== "done" || sending}>
-          <Image src="/images/app/send.svg" alt="" width={16} height={16} />
-          Send recording
-        </button>
-      </div>
-
-      {(r.error || error) && (
-        <p role="alert" className={styles.error}>
-          {r.error || error}
-        </p>
-      )}
-      {sent && (
-        <div className={styles.cardRed} role="status">
-          <div className={styles.row}>
-            <Image src="/images/app/check-light.svg" alt="" width={16} height={16} />
-            <b className="label-mono">Voice memory submitted · thank you</b>
-          </div>
-        </div>
-      )}
-    </AppShell>
+    </div>
   );
 }
