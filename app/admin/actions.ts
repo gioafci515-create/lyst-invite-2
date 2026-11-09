@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { checkPassword, createSession, destroySession, isAdmin } from "@/lib/auth";
 import { deleteRsvp } from "@/lib/store";
+import type { EventConfig, ProgrammeItem } from "@/lib/eventState";
 
 export async function login(_prev: { error?: string } | undefined, formData: FormData) {
   if (!checkPassword(String(formData.get("password") ?? ""))) {
@@ -48,27 +49,12 @@ export async function saveAnnouncement(formData: FormData) {
   await requireAdmin();
   const { updateLive } = await import("@/lib/live");
   await updateLive((l) => {
-    l.announcement = { label: line(formData.get("label"), 80) || "Host announcement", text: line(formData.get("text"), 200) };
+    const text = line(formData.get("text"), 200);
+    l.announcement = { label: line(formData.get("label"), 80) || "Host announcement", text, since: text && text !== l.announcement.text ? new Date().toISOString() : l.announcement.since };
   });
   if (formData.get("notify") === "on") {
     const text = line(formData.get("text"), 200);
     if (text) await (await import("@/lib/scheduler")).notifyGuests({ title: line(formData.get("label"), 80) || "Host announcement", body: text });
-  }
-  revalidatePath("/admin/live");
-}
-
-export async function saveSchedule(formData: FormData) {
-  await requireAdmin();
-  const { updateLive } = await import("@/lib/live");
-  await updateLive((l) => {
-    l.schedule = String(formData.get("schedule") ?? "")
-      .split("\n")
-      .map((s) => s.trim().slice(0, 120))
-      .filter(Boolean)
-      .slice(0, 20);
-  });
-  if (formData.get("notify") === "on") {
-    await (await import("@/lib/scheduler")).notifyGuests({ title: "Schedule updated", body: "The running order changed. Tap to see the new times." });
   }
   revalidatePath("/admin/live");
 }
@@ -134,12 +120,12 @@ export async function savePoll(formData: FormData) {
     .slice(0, 8);
   if (options.length < 2) return;
   await updateLive((l) => {
-    l.poll = {
-      question: line(formData.get("question"), 160) || l.poll.question,
-      options,
-      open: formData.get("open") === "on",
-      showResults: formData.get("showResults") === "on",
-    };
+    const was = l.poll;
+    const question = line(formData.get("question"), 160) || was.question;
+    const open = formData.get("open") === "on";
+    // newest first in the live room: a poll counts as new when it opens or its question changes
+    const since = open && (!was.open || was.question !== question) ? new Date().toISOString() : was.since;
+    l.poll = { question, options, open, showResults: formData.get("showResults") === "on", since };
   });
   revalidatePath("/admin/live");
 }
@@ -148,11 +134,15 @@ export async function saveChallenge(formData: FormData) {
   await requireAdmin();
   const { updateLive } = await import("@/lib/live");
   await updateLive((l) => {
+    const was = l.challenge;
+    const prompt = line(formData.get("prompt"), 240) || was.prompt;
+    const open = formData.get("open") === "on";
     l.challenge = {
-      title: line(formData.get("title"), 60) || l.challenge.title,
-      prompt: line(formData.get("prompt"), 240) || l.challenge.prompt,
-      goal: Math.min(20, Math.max(1, Number(formData.get("goal")) || l.challenge.goal)),
-      open: formData.get("open") === "on",
+      title: line(formData.get("title"), 60) || was.title,
+      prompt,
+      goal: Math.min(20, Math.max(1, Number(formData.get("goal")) || was.goal)),
+      open,
+      since: open && (!was.open || was.prompt !== prompt) ? new Date().toISOString() : was.since,
     };
   });
   revalidatePath("/admin/live");
@@ -329,4 +319,104 @@ export async function resetEventSettings() {
   await resetEventConfig();
   revalidatePath("/admin/event");
   eventBack("ok", "Event settings reset to the built-in defaults.");
+}
+
+/* ------------------------------------------------------------- the programme ------------------------------------------------------------- */
+
+const programmeBack = (kind: "ok" | "err", msg: string) => redirect(`/admin/event?${kind}=${encodeURIComponent(msg)}#programme`);
+const PROGRAMME_MAX = 20;
+
+/**
+ * Rows are stored in time order, so a row is addressed by its position plus what it said when the page was rendered
+ * (`was`): if someone else changed the programme in between, nothing is saved.
+ */
+async function programmeContext(formData: FormData) {
+  const { getEventConfig } = await import("@/lib/eventConfig");
+  const { config } = await getEventConfig();
+  const index = Number(formData.get("index"));
+  const was = String(formData.get("was") ?? "");
+  const row = Number.isInteger(index) ? config.programme[index] : undefined;
+  const current = row && `${row.at}|${row.label}` === was ? row : undefined;
+  return { config, index, current };
+}
+
+/** One row from a form, checked against the event's times: it must fall after the opening and no later than the end. */
+async function readProgrammeRow(formData: FormData, config: EventConfig): Promise<{ row: ProgrammeItem; error?: undefined } | { row?: undefined; error: string }> {
+  const { zonedToUtc } = await import("@/lib/tasks");
+  const { timeLabel } = await import("@/lib/eventState");
+  const label = line(formData.get("label"), 80);
+  const at = zonedToUtc(String(formData.get("at") ?? ""), config.timezone);
+  if (!label) return { error: "Give the programme row a name. Nothing was saved." };
+  if (!at) return { error: "Give the programme row a date and time. Nothing was saved." };
+  const t = at.getTime();
+  if (t <= Date.parse(config.startsAt) || t > Date.parse(config.endsAt)) {
+    return {
+      error: `Programme rows must be after the opening (${timeLabel(config.startsAt, config.timezone)}) and no later than the end (${timeLabel(config.endsAt, config.timezone)}). Nothing was saved.`,
+    };
+  }
+  return { row: { at: at.toISOString(), label } };
+}
+
+async function saveProgramme(config: EventConfig, programme: ProgrammeItem[], ok: string) {
+  const { saveEventConfig } = await import("@/lib/eventConfig");
+  const { resolveConfig } = await import("@/lib/eventState");
+  const candidate = { ...config, programme };
+  const problems = resolveConfig(candidate).issues.filter((i) => i.level === "error");
+  if (problems.length) return programmeBack("err", problems.map((p) => p.message).join(" "));
+  await saveEventConfig(candidate);
+  revalidatePath("/admin/event");
+  programmeBack("ok", ok);
+}
+
+const changedElsewhere = () => programmeBack("err", "The programme changed since this page was loaded. Nothing was saved; check the rows and try again.");
+
+export async function addProgrammeRow(formData: FormData) {
+  await requireAdmin();
+  const { getEventConfig } = await import("@/lib/eventConfig");
+  const { config } = await getEventConfig();
+  if (config.programme.length >= PROGRAMME_MAX) return programmeBack("err", `The programme holds at most ${PROGRAMME_MAX} rows.`);
+  const r = await readProgrammeRow(formData, config);
+  if (!r.row) return programmeBack("err", r.error);
+  await saveProgramme(config, [...config.programme, r.row], `Added "${r.row.label}".`);
+}
+
+export async function updateProgrammeRow(formData: FormData) {
+  await requireAdmin();
+  const { config, index, current } = await programmeContext(formData);
+  if (!current) return changedElsewhere();
+  const r = await readProgrammeRow(formData, config);
+  if (!r.row) return programmeBack("err", r.error);
+  const row = r.row;
+  await saveProgramme(config, config.programme.map((p, i) => (i === index ? row : p)), `Saved "${row.label}".`);
+}
+
+export async function deleteProgrammeRow(formData: FormData) {
+  await requireAdmin();
+  const { config, index, current } = await programmeContext(formData);
+  if (!current) return changedElsewhere();
+  await saveProgramme(config, config.programme.filter((_, i) => i !== index), `Removed "${current.label}".`);
+}
+
+/** Move a row earlier or later in the running order: it swaps names with its neighbour, the time slots stay put. */
+export async function moveProgrammeEarlier(formData: FormData) {
+  await moveProgrammeRow(formData, -1);
+}
+export async function moveProgrammeLater(formData: FormData) {
+  await moveProgrammeRow(formData, 1);
+}
+async function moveProgrammeRow(formData: FormData, dir: -1 | 1) {
+  await requireAdmin();
+  const { config, index, current } = await programmeContext(formData);
+  if (!current) return changedElsewhere();
+  const other = index + dir;
+  if (other < 0 || other >= config.programme.length) return programmeBack("err", "That row is already at the end of the programme.");
+  const next = config.programme.map((p) => ({ ...p }));
+  [next[index].label, next[other].label] = [next[other].label, next[index].label];
+  await saveProgramme(config, next, `Moved "${current.label}" ${other < index ? "earlier" : "later"}.`);
+}
+
+export async function notifyProgrammeChanged() {
+  await requireAdmin();
+  await (await import("@/lib/scheduler")).notifyGuests({ title: "Programme updated", body: "The running order changed. Tap to see the new times.", url: "/programme" });
+  programmeBack("ok", "Guests' phones were told that the programme changed.");
 }

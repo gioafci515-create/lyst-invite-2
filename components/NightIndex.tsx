@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { TonightEssentials } from "./Essentials";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ModuleId } from "@/lib/eventState";
@@ -191,6 +192,7 @@ function Tonight() {
             </ul>
           </nav>
           )}
+          <TonightEssentials />
         </div>
       </div>
     </section>

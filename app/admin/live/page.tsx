@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { getLive, ICONS } from "@/lib/live";
 import { pollTally } from "@/lib/contrib";
-import { addNotice, editNotice, removeNotice, saveAnnouncement, saveChallenge, savePoll, saveSchedule } from "../actions";
+import { addNotice, editNotice, removeNotice, saveAnnouncement, saveChallenge, savePoll } from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Live room — LYST admin", robots: { index: false } };
@@ -53,17 +53,12 @@ async function Editor() {
           <button className={styles.btn}>Publish</button>
         </form>
 
-        <form action={saveSchedule} className={styles.panel}>
-          <h2>Schedule</h2>
-          <label className={styles.label}>
-            One item per line
-            <textarea name="schedule" defaultValue={live.schedule.join("\n")} rows={7} className={styles.input} />
-          </label>
-          <label className={styles.check}>
-            <input type="checkbox" name="notify" /> Notify guests’ phones that it changed
-          </label>
-          <button className={styles.btn}>Save schedule</button>
-        </form>
+        <section className={styles.panel}>
+          <h2>Programme</h2>
+          <p className={styles.note}>
+            The running order guests see is edited in one place: <Link href="/admin/event#programme">Event &amp; lifecycle, Programme</Link>.
+          </p>
+        </section>
 
         <form action={savePoll} className={styles.panel}>
           <h2>Live poll</h2>

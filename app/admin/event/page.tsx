@@ -6,7 +6,18 @@ import { isAdmin } from "@/lib/auth";
 import { getEventConfig } from "@/lib/eventConfig";
 import { computeEventState, FRAMES_MAX, FRAMES_MIN, MODULE_IDS, timeLabel, dateLabel, type ModuleId } from "@/lib/eventState";
 import { buildRows, getTaskState, utcToZonedLocal } from "@/lib/tasks";
-import { extendEventEnd, resetEventSettings, saveEventSettings, setEventOverride } from "../actions";
+import {
+  addProgrammeRow,
+  deleteProgrammeRow,
+  extendEventEnd,
+  moveProgrammeEarlier,
+  moveProgrammeLater,
+  notifyProgrammeChanged,
+  resetEventSettings,
+  saveEventSettings,
+  setEventOverride,
+  updateProgrammeRow,
+} from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Event — LYST admin", robots: { index: false } };
@@ -179,6 +190,74 @@ async function Panel({ searchParams }: { searchParams: Promise<{ ok?: string; er
           </form>
         </div>
       </div>
+
+      <section id="programme" className={styles.panel} aria-labelledby="programme-title">
+        <h2 id="programme-title">Programme</h2>
+        <p className={styles.note}>
+          What guests see on the invitation, the programme page and the home screen during the night. Times are Rotterdam time and must fall
+          between the opening and the end. Moving a row swaps it with its neighbour; the times stay where they are.
+        </p>
+        <ol className={styles.programme}>
+          <li className={styles.programmeFixed}>
+            <span className={styles.programmeTime}>{timeLabel(config.startsAt, tz)}</span>
+            <span>Page opens</span>
+            <span className={styles.note}>Always the start time. Change it under Times.</span>
+          </li>
+          {config.programme.map((p, i) => (
+            <li key={`${p.at}|${p.label}`}>
+              <form action={updateProgrammeRow} className={styles.programmeRow} aria-label={`Programme row ${i + 1}: ${p.label}`}>
+                <input type="hidden" name="index" value={i} />
+                <input type="hidden" name="was" value={`${p.at}|${p.label}`} />
+                <label className={styles.label}>
+                  Time
+                  <input type="datetime-local" name="at" required defaultValue={utcToZonedLocal(p.at, tz)} className={styles.input} />
+                </label>
+                <label className={styles.label}>
+                  What happens
+                  <input name="label" required maxLength={80} defaultValue={p.label} className={styles.input} />
+                </label>
+                <div className={styles.programmeButtons}>
+                  <button className={styles.btn}>Save</button>
+                  <button className={styles.btnGhost} data-btn formAction={moveProgrammeEarlier} formNoValidate disabled={i === 0} aria-label={`Move ${p.label} earlier`}>
+                    Earlier
+                  </button>
+                  <button
+                    className={styles.btnGhost}
+                    data-btn
+                    formAction={moveProgrammeLater}
+                    formNoValidate
+                    disabled={i === config.programme.length - 1}
+                    aria-label={`Move ${p.label} later`}
+                  >
+                    Later
+                  </button>
+                  <button className={styles.del} formAction={deleteProgrammeRow} formNoValidate aria-label={`Delete ${p.label}`}>
+                    Delete
+                  </button>
+                </div>
+              </form>
+            </li>
+          ))}
+        </ol>
+        <form action={addProgrammeRow} className={styles.programmeRow} aria-label="Add a programme row">
+          <label className={styles.label}>
+            Time
+            <input type="datetime-local" name="at" required className={styles.input} min={utcToZonedLocal(config.startsAt, tz)} max={utcToZonedLocal(config.endsAt, tz)} />
+          </label>
+          <label className={styles.label}>
+            What happens
+            <input name="label" required maxLength={80} className={styles.input} placeholder="e.g. Supper" />
+          </label>
+          <div className={styles.programmeButtons}>
+            <button className={styles.btn}>Add to the programme</button>
+          </div>
+        </form>
+        <form action={notifyProgrammeChanged}>
+          <button className={styles.btnGhost} data-btn>
+            Tell guests&apos; phones the programme changed
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

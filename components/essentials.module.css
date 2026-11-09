@@ -140,3 +140,48 @@
     border-bottom: 0;
   }
 }
+
+/* during the night, on the home screen: four lines, nothing more */
+.tonight {
+  border: 1px solid var(--ink);
+  background: var(--cream);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tonightList {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.tonightList > div {
+  display: contents;
+}
+.tonightList dt {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 22px;
+}
+.tonightList time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.tonightLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 24px;
+  margin-bottom: -6px;
+}

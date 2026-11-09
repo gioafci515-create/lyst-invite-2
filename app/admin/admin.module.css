@@ -278,3 +278,48 @@
 .pending {
   background: var(--red);
 }
+
+/* the programme editor: one row per line, wraps on a phone */
+.programme {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.programme > li {
+  border-top: 1px solid rgba(10, 10, 10, 0.2);
+  padding-top: 10px;
+}
+.programmeFixed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+.programmeTime {
+  font-family: var(--f-mono);
+  font-weight: 700;
+}
+.programmeRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(200px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.programmeButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.programmeButtons button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (max-width: 760px) {
+  .programmeRow {
+    grid-template-columns: 1fr;
+  }
+}
