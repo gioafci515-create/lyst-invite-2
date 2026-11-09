@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { approvedMedia } from "@/lib/contrib";
+import { approvedMedia, galleryItem } from "@/lib/contrib";
 import { EventSeed } from "@/lib/eventStore";
 import { getWire } from "@/lib/serverEvent";
 import HomeView, { type GalleryItem } from "@/components/HomeView";
@@ -9,7 +9,7 @@ import styles from "@/components/site.module.css";
 async function galleryPreview(): Promise<GalleryItem[]> {
   try {
     const rows = await approvedMedia();
-    return rows.map((r) => ({ id: r.id, kind: r.file!.mime.startsWith("video/") ? ("video" as const) : ("photo" as const) }));
+    return rows.map(galleryItem);
   } catch {
     return [];
   }

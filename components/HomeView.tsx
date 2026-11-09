@@ -11,7 +11,7 @@ import InviteScreen from "./screens/InviteScreen";
 import NightIndex from "./NightIndex";
 import styles from "./site.module.css";
 
-export type GalleryItem = { id: string; kind: "photo" | "video" };
+export type GalleryItem = { id: string; kind: "photo" | "video"; w?: number; h?: number };
 
 /**
  * Old in-page links (/#voice, /#later, /#camera, …) now have routes. Forward them before anything else happens.

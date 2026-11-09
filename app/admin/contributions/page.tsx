@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
-import { countByType, listContributions, TYPES } from "@/lib/contrib";
+import { countByType, isGalleryMedia, listContributions, TYPES } from "@/lib/contrib";
 import { removeContribution, setMediaApproval } from "../actions";
 import styles from "../admin.module.css";
 
@@ -91,7 +91,7 @@ async function List({ type }: { type?: string }) {
                       .join(" · ") || "—"}
                   </td>
                   <td>
-                    {r.file && /^(image|video)\//.test(r.file.mime) && (
+                    {isGalleryMedia(r) && (
                       <form action={setMediaApproval} style={{ marginBottom: 4 }}>
                         <input type="hidden" name="id" value={r.id} />
                         <input type="hidden" name="approve" value={r.approved ? "0" : "1"} />

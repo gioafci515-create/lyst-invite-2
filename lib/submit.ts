@@ -1,4 +1,5 @@
 import { upload } from "@vercel/blob/client";
+import { addMine } from "./mine";
 import { activeTaskFor, creditTask, findTask, lateMinutes } from "./taskProgress";
 
 export type Guest = { name: string; email: string };
@@ -32,6 +33,44 @@ async function shrinkImage(file: Blob, filename: string): Promise<{ blob: Blob; 
   }
   return { blob: file, name: filename };
 }
+
+/** The real pixel size of a photo or clip, so the gallery can lay it out at its true shape before it loads. */
+async function measure(file: Blob): Promise<{ w: number; h: number } | null> {
+  try {
+    if (file.type.startsWith("image/")) {
+      const bmp = await createImageBitmap(file);
+      const size = { w: bmp.width, h: bmp.height };
+      bmp.close?.();
+      return size;
+    }
+    if (file.type.startsWith("video/")) {
+      const url = URL.createObjectURL(file);
+      try {
+        return await new Promise((resolve) => {
+          const v = document.createElement("video");
+          const done = (r: { w: number; h: number } | null) => {
+            clearTimeout(t);
+            resolve(r);
+          };
+          const t = setTimeout(() => done(null), 3000);
+          v.preload = "metadata";
+          v.muted = true;
+          v.onloadedmetadata = () => done(v.videoWidth && v.videoHeight ? { w: v.videoWidth, h: v.videoHeight } : null);
+          v.onerror = () => done(null);
+          v.src = url;
+        });
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+  } catch {
+    /* unknown size: the gallery measures it when it loads */
+  }
+  return null;
+}
+
+/** the submission types whose media can reach the gallery (after approval) */
+const GALLERY = new Set(["photo", "video", "challenge"]);
 
 type Uploaded = { url: string; name: string; mime: string; size: number };
 
@@ -105,14 +144,20 @@ export async function submitContribution(input: {
    * the submission is saved only when this function resolves with ok.
    */
   onProgress?: (fraction: number) => void;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true; id?: string; key?: string } | { ok: false; error: string }> {
   const task = (input.task ? findTask(input.task) : null) ?? activeTaskFor(input.type);
   const late = task ? lateMinutes(task) : 0;
-  const meta = { ...input.meta, ...(task ? { task: task.id } : {}), ...(late ? { late: `${late} min late` } : {}) };
   const name = input.name || getGuest().name || "Anonymous";
   const originalName = input.filename ?? (input.file instanceof File ? input.file.name : "recording");
   const shrunk = input.file ? await shrinkImage(input.file, originalName) : null;
   const file = shrunk?.blob ?? null;
+  const size = file && GALLERY.has(input.type) ? await measure(file) : null;
+  const meta: Record<string, string> = {
+    ...input.meta,
+    ...(task ? { task: task.id } : {}),
+    ...(late ? { late: `${late} min late` } : {}),
+    ...(size ? { w: String(size.w), h: String(size.h) } : {}),
+  };
   const filename = file ? nameFor(shrunk?.name ?? originalName, file.type) : originalName;
 
   try {
@@ -145,7 +190,10 @@ export async function submitContribution(input: {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     if (res.ok) {
       if (task) creditTask(task);
-      return { ok: true };
+      const id = typeof data.id === "string" ? data.id : undefined;
+      const key = typeof data.key === "string" ? data.key : undefined;
+      if (id && key && file) addMine({ id, key, kind: file.type.startsWith("video/") ? "video" : "photo", at: new Date().toISOString(), ...(size ?? {}) });
+      return { ok: true, id, key };
     }
     return { ok: false, error: typeof data.error === "string" ? data.error : "Something went wrong. Try again." };
   } catch {

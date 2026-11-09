@@ -1,4 +1,4 @@
-import { addContribution, castVote, TYPES, type ContribType } from "@/lib/contrib";
+import { addContribution, castVote, GALLERY_TYPES, newOwnerKey, TYPES, type ContribType } from "@/lib/contrib";
 import { isBlobUrl, MAX_FILE, MEDIA_MIME, storeBuffer, type MediaFile } from "@/lib/media";
 
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -92,8 +92,10 @@ export async function POST(req: Request) {
       if (!(await castVote(meta.question, meta.voter, meta.choice))) return fail("You have already voted.", 409);
     }
 
-    await addContribution({ type: type as ContribType, name, text, meta }, file);
-    return Response.json({ ok: true });
+    // gallery media: the uploader's phone gets a key so it (and nobody else) can see its own upload while it waits for approval
+    const key = file && GALLERY_TYPES.includes(type as ContribType) && !file.mime.startsWith("audio/") ? newOwnerKey() : undefined;
+    const row = await addContribution({ type: type as ContribType, name, text, meta }, file, key);
+    return Response.json({ ok: true, id: row.id, ...(key ? { key } : {}) });
   } catch (e) {
     console.error("[contribute]", e);
     return fail("We couldn't save that right now. Please try again.", 500);
