@@ -3,17 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import LiveWave from "@/components/LiveWave";
 import { clock, useRecorder } from "@/components/useRecorder";
+import { useEvent } from "@/lib/eventStore";
 import { submitContribution } from "@/lib/submit";
 import { Player, Progress, type SendState } from "./CaptureBits";
 import c from "./capture.module.css";
 
 /** Optional prompts, written for UN/FOLD (type, sound, performance) rather than a generic ceremony. */
-const PROMPTS = [
-  "What did you notice tonight that most people might miss?",
-  "Describe the sound of this evening in your own words.",
-  "What would you tell this room in a year's time?",
-  "Say something about tonight that deserves to be remembered.",
-];
+const PROMPTS = {
+  during: [
+    "What did you notice tonight that most people might miss?",
+    "Describe the sound of this evening in your own words.",
+    "What would you tell this room in a year's time?",
+    "Say something about tonight that deserves to be remembered.",
+  ],
+  after: [
+    "What did you notice that night that most people might have missed?",
+    "Describe the sound of that evening in your own words.",
+    "What would you tell that room in a year's time?",
+    "Say something about that night that deserves to be remembered.",
+  ],
+};
 const MAX_SECONDS = 180;
 
 const Lock = () => (
@@ -30,6 +39,7 @@ const Cycle = () => (
 
 /** The voice guestbook: one optional prompt, one big record button, play back, send. Heard by the hosts only. */
 export default function GuestbookScreen() {
+  const prompts = useEvent().phase === "after" ? PROMPTS.after : PROMPTS.during;
   const [prompt, setPrompt] = useState(0);
   const [mode, setMode] = useState<"voice" | "text">("voice");
   const r = useRecorder("audio", MAX_SECONDS);
@@ -129,9 +139,9 @@ export default function GuestbookScreen() {
           A prompt, if you want one
         </p>
         <p className={c.prompt} aria-live="polite">
-          “{PROMPTS[prompt]}”
+          “{prompts[prompt % prompts.length]}”
         </p>
-        <button type="button" className={c.ghost} onClick={() => setPrompt((p) => (p + 1) % PROMPTS.length)} disabled={recording}>
+        <button type="button" className={c.ghost} onClick={() => setPrompt((p) => (p + 1) % prompts.length)} disabled={recording}>
           <Cycle />
           Another prompt
         </button>

@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { dateLabel, timeLabel } from "@/lib/eventState";
+import { dateLabel, nextProgrammeRow, timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
-import { useNow } from "@/lib/useClient";
 import { ROUTE } from "@/lib/sections";
 import styles from "./essentials.module.css";
 
-const MAP = "https://maps.google.com/?q=Former+Print+Works+4B+Rotterdam";
-const VENUE = "Former Print Works 4B";
-const DRESS = "Come as a visual interruption.";
+import { ARRIVAL, CITY, DRESS, MAP, VENUE } from "@/lib/venue";
 
 /** "Rotterdam time" for the event's own timezone, otherwise the timezone's name */
 const zoneName = (tz: string) => (tz === "Europe/Amsterdam" ? "Rotterdam time" : tz.replace(/_/g, " "));
@@ -17,10 +14,9 @@ const zoneName = (tz: string) => (tz === "Europe/Amsterdam" ? "Rotterdam time" :
 /** The essentials during the night, on the home screen: what's next on the stored programme, the end, where, what to wear. */
 export function TonightEssentials() {
   const ev = useEvent();
-  const now = useNow(30_000);
   const tz = ev.timezone;
-  const rows = [{ at: ev.startsAt, label: "Page opens" }, ...ev.programme];
-  const next = now ? rows.find((p) => Date.parse(p.at) > now) : undefined;
+  // the server-corrected clock, so "Next" never names something that already started
+  const next = nextProgrammeRow(ev.startsAt, ev.programme, ev.now);
   return (
     <section className={styles.tonight} aria-labelledby="tonight-essentials">
       <h3 id="tonight-essentials" className="sr-only">
@@ -43,7 +39,9 @@ export function TonightEssentials() {
         </div>
         <div>
           <dt>Where</dt>
-          <dd>{VENUE}, Rotterdam</dd>
+          <dd>
+            {VENUE}, {CITY}
+          </dd>
         </div>
         <div>
           <dt>Wear</dt>
@@ -112,7 +110,9 @@ export default function Essentials({ standalone = false }: { standalone?: boolea
         <div className={styles.block}>
           <h3 className={styles.label}>Where</h3>
           <p className={styles.big}>{VENUE}</p>
-          <p>Rotterdam. Enter behind loading bay 4. Water taxi to Rijnhaven; cycle racks inside the press hall.</p>
+          <p>
+            {CITY}. {ARRIVAL}
+          </p>
           <a className={styles.mapLink} href={MAP} target="_blank" rel="noreferrer">
             Open in maps
             <span className="sr-only"> (opens in a new tab)</span>

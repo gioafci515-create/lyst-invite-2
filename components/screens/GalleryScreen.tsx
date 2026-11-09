@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { captureState } from "@/lib/eventState";
+import { useEvent } from "@/lib/eventStore";
 import { keepMine, readMine } from "@/lib/mine";
 import { submitContribution } from "@/lib/submit";
 import { Progress } from "./CaptureBits";
@@ -149,6 +151,7 @@ function Viewer({ tiles, index, setIndex, onClose }: { tiles: Tile[]; index: num
  * it switched on (there is no "locked until after the event" rule).
  */
 export default function GalleryScreen() {
+  const canUpload = captureState("camera", useEvent().phase) === "open";
   const fileInput = useRef<HTMLInputElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const [approved, setApproved] = useState<Tile[] | null>(null);
@@ -273,10 +276,14 @@ export default function GalleryScreen() {
     <div className={`${r.screen} ${r.wide}`}>
       <div className={g.top}>
         <p className={`${r.body} ${g.lead}`}>Photos and clips from the night, once the hosts approve them. Yours show here for you while they wait.</p>
-        <input ref={fileInput} type="file" accept="image/*,video/*" multiple hidden onChange={pick} />
-        <button type="button" className={r.secondary} onClick={() => fileInput.current?.click()}>
-          Add photos or clips
-        </button>
+        {canUpload && (
+          <>
+            <input ref={fileInput} type="file" accept="image/*,video/*" multiple hidden onChange={pick} />
+            <button type="button" className={r.secondary} onClick={() => fileInput.current?.click()}>
+              Add photos or clips
+            </button>
+          </>
+        )}
       </div>
 
       {count("photo") > 0 && count("video") > 0 && (

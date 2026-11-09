@@ -119,7 +119,7 @@ export default function LaterScreen() {
         label="Your message"
         value={message}
         onChange={setMessage}
-        placeholder="Something for a future day: what tonight felt like, what you hope is still true."
+        placeholder="Something for a future day: what the night felt like, what you hope is still true."
         maxLength={MAX}
         disabled={sending}
         sign={{ value: sign, onChange: setSign }}

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeEventState, countdownLabel, DEFAULT_CONFIG, resolveConfig, shortDateLabel, timeLabel } from "./eventState.ts";
+import { captureRefusal, captureState, computeEventState, countdownLabel, DEFAULT_CONFIG, nextProgrammeRow, resolveConfig, shortDateLabel, timeLabel, TYPE_CAPTURE, untilLabel } from "./eventState.ts";
 
 const H = 3600_000;
 const start = Date.parse(DEFAULT_CONFIG.startsAt);
@@ -166,4 +166,32 @@ test("camera roll: an invalid frame count falls back to the default and is repor
     assert.equal(r.config.cameraFrames, 24, String(bad));
     assert.ok(r.issues.some((i) => i.level === "error" && /frames/i.test(i.message)), String(bad));
   }
+});
+
+test("capture windows: everything opens during; after, only voice and video stay open", () => {
+  for (const k of ["camera", "voice", "video", "live", "tasks"] as const) {
+    assert.equal(captureState(k, "before"), "not-yet");
+    assert.equal(captureState(k, "during"), "open");
+  }
+  assert.equal(captureState("voice", "after"), "open");
+  assert.equal(captureState("video", "after"), "open");
+  for (const k of ["camera", "live", "tasks"] as const) assert.equal(captureState(k, "after"), "closed");
+  assert.equal(TYPE_CAPTURE.later, undefined);
+  assert.equal(TYPE_CAPTURE.capsule, undefined);
+  assert.match(captureRefusal("not-yet", DEFAULT_CONFIG), /opens on Saturday 14 November at 19:13/);
+});
+
+test("countdowns over a day read as a day and a time, never 122:06:40", () => {
+  const now = Date.parse("2026-11-09T15:00:00Z");
+  assert.equal(untilLabel(Date.parse("2026-11-14T21:33:00Z"), now, "Europe/Amsterdam"), "Sat 22:33");
+  assert.equal(untilLabel(now + 2 * 3600_000 + 5000, now, "Europe/Amsterdam"), "2:00:05");
+  assert.equal(untilLabel(now + 65_000, now, "Europe/Amsterdam"), "01:05");
+});
+
+test("the next programme row is never one that already started", () => {
+  const c = DEFAULT_CONFIG;
+  assert.equal(nextProgrammeRow(c.startsAt, c.programme, Date.parse("2026-11-14T21:00:00Z"))?.label, "Edition zero leaves press");
+  assert.equal(nextProgrammeRow(c.startsAt, c.programme, Date.parse("2026-11-14T19:02:00Z"))?.label, "Audience edit");
+  assert.equal(nextProgrammeRow(c.startsAt, c.programme, Date.parse("2026-11-14T23:00:00Z")), null);
+  assert.equal(nextProgrammeRow(c.startsAt, c.programme, 0), null);
 });

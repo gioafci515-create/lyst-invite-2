@@ -29,7 +29,7 @@ function Inside({ counts, failed }: { counts: Counts | null; failed: boolean }) 
   return (
     <section aria-labelledby="inside-title" className={r.field}>
       <h2 id="inside-title" className={r.fieldLabel}>
-        Shared tonight so far
+        Shared so far
       </h2>
       <div className={r.inside} aria-busy={!counts}>
         {rows.map(([v, one, many]) => (
@@ -122,7 +122,13 @@ export default function CapsuleScreen() {
   const sending = send === "sending";
   return (
     <div className={r.screen}>
-      <Facts>Only the hosts get your capsule&rsquo;s name and the day it opens, {longDate(day)}. It can&rsquo;t be changed once sealed.</Facts>
+      <p className={r.body}>
+        Name the archive of everything shared at UN/FOLD and pick the day it should open. You add nothing else: the photos, voices and
+        letters are already with the hosts, and nothing opens on its own.
+      </p>
+      <Facts>
+        Only the hosts get your capsule&rsquo;s name and the day it opens, {longDate(day)}. It can&rsquo;t be changed once sealed.
+      </Facts>
       <WritingSheet
         id="capsule-name"
         single

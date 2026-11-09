@@ -3,6 +3,8 @@
 import Image from "next/image";
 import AppShell from "@/components/AppShell";
 import styles from "@/components/app.module.css";
+import { untilLabel } from "@/lib/eventState";
+import { useEvent } from "@/lib/eventStore";
 import { useTasks } from "@/lib/useTasks";
 import { usePush } from "@/lib/usePush";
 import t from "./tasks.module.css";
@@ -25,6 +27,7 @@ const dayTime = (ms: number) =>
 
 export default function TasksScreen() {
   const { tasks, now, loaded, started, failed } = useTasks();
+  const tz = useEvent().timezone;
   const push = usePush();
 
   const done = tasks.filter((x) => x.done).length;
@@ -66,7 +69,7 @@ export default function TasksScreen() {
         </span>
         {next && now > 0 && (
           <span className={t.next}>
-            Next in <span className={t.count}>{clock(next.at! - now)}</span>
+            {next.at! - now > 86400_000 ? "Next" : "Next in"} <span className={t.count}>{untilLabel(next.at!, now, tz)}</span>
           </span>
         )}
       </div>
@@ -166,7 +169,7 @@ export default function TasksScreen() {
               )}
               {state === "locked" && now > 0 && task.at && (
                 <span className={t.meta}>
-                  Unlocks in <span className={t.count}>{clock(task.at - now)}</span>
+                  {task.at - now > 86400_000 ? "Unlocks" : "Unlocks in"} <span className={t.count}>{untilLabel(task.at, now, tz)}</span>
                 </span>
               )}
             </li>

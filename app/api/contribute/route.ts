@@ -84,6 +84,17 @@ export async function POST(req: Request) {
       };
       if (needs[type] === false) return fail("This part of the event is switched off.", 403);
     }
+    {
+      // the camera, voice, video and the live room take submissions during the event; voice and video stay open after it
+      const { TYPE_CAPTURE, captureState, captureRefusal } = await import("@/lib/eventState");
+      const kind = TYPE_CAPTURE[type];
+      if (kind) {
+        const { getEventState } = await import("@/lib/eventConfig");
+        const { state } = await getEventState();
+        const slot = captureState(kind, state.phase);
+        if (slot !== "open") return fail(captureRefusal(slot, state), 403);
+      }
+    }
     if (!text && !file && !Object.keys(meta).length) return fail("Nothing to submit.", 400);
 
     // one poll vote per voter per question — claimed atomically

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { TonightEssentials } from "./Essentials";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { ModuleId } from "@/lib/eventState";
+import { untilLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { moduleOf, ROUTE, toRoute } from "@/lib/sections";
 import { useTasks } from "@/lib/useTasks";
@@ -139,7 +139,9 @@ function Tonight() {
     task && openCount > 1
       ? `All tasks (${openCount})`
       : !task && next && now > 0
-        ? `Next task in ${clock(next.at! - now)}`
+        ? next.at! - now > 86400_000
+          ? `Next task ${untilLabel(next.at!, now, ev.timezone)}`
+          : `Next task in ${untilLabel(next.at!, now, ev.timezone)}`
         : tasksOn && openCount
           ? `All tasks (${openCount})`
           : null;
@@ -250,7 +252,7 @@ function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
   const on = (m?: ModuleId) => !m || ev.enabled(m);
   const keep = (
     [
-      { key: "capsule", title: "Time capsule", line: "Sealed, to open a year from now.", href: ROUTE.capsule, photo: "hall", module: "capsule" },
+      { key: "capsule", title: "Time capsule", line: "Name the archive and pick the day it should open. The hosts keep both.", href: ROUTE.capsule, photo: "hall", module: "capsule" },
       { key: "letter", title: "Write to the future", line: "Seal a note for a date you choose.", href: ROUTE.later, photo: "portrait", module: "later" },
     ] as Row[]
   ).filter((r) => on(r.module));
