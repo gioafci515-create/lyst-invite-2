@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Carousel from "@/components/Carousel";
 import Essentials, { ScheduleList } from "@/components/Essentials";
 import TechText from "@/components/TechText";
 import { dateLabel, shortDateLabel, timeLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
+import { EMPTY_REPLY, readReply, sendReply, useReply } from "@/lib/rsvp";
+import { getGuest } from "@/lib/submit";
+import { useHydrated } from "@/lib/useClient";
 import { ROUTE, SECTION } from "@/lib/sections";
 import styles from "./invite.module.css";
 
@@ -41,35 +44,10 @@ function Arrow() {
   );
 }
 
-function subscribeReply(cb: () => void) {
-  window.addEventListener("storage", cb);
-  window.addEventListener("lyst:rsvp", cb);
-  return () => {
-    window.removeEventListener("storage", cb);
-    window.removeEventListener("lyst:rsvp", cb);
-  };
-}
-function readReply(): string | null {
-  try {
-    return localStorage.getItem("lyst_rsvp");
-  } catch {
-    return null;
-  }
-}
-/** The reply stored on this device: "yes", "no" or null. A decline is never read as an acceptance. */
-function useStoredReply(): "yes" | "no" | null {
-  const raw = useSyncExternalStore(subscribeReply, readReply, () => null);
-  try {
-    const r = raw ? JSON.parse(raw) : null;
-    if (r?.attending === "accept" || r?.attending === true) return "yes";
-    if (r?.attending === "decline" || r?.attending === false) return "no";
-  } catch {}
-  return null;
-}
-
 function Rsvp() {
   const ev = useEvent();
-  const replied = useStoredReply();
+  const stored = useReply();
+  const replied = stored ? (stored.attending === "accept" ? "yes" : "no") : null;
   const [attending, setAttending] = useState<"accept" | "decline">("accept");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -79,32 +57,32 @@ function Rsvp() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
+  // start from this phone's answer, so changing it never wipes the details given on the details screen
+  const hydrated = useHydrated();
+  const [restored, setRestored] = useState(false);
+  if (hydrated && !restored) {
+    setRestored(true);
+    const prev = readReply();
+    const g = getGuest();
+    setName(prev?.name || g.name);
+    setEmail(prev?.email || g.email);
+    if (prev) {
+      setAttending(prev.attending);
+      setGuest(prev.companion);
+      setDiet(prev.dietary);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
     setError("");
-    try {
-      const res = await fetch("/api/rsvp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, attending, companion: guest, dietary: diet }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) setError(res.status === 403 && data.closed ? "Replies have just closed, so this reply was not saved." : (data.error ?? "Something went wrong. Try again."));
-      else {
-        setConfirmed(true);
-        try {
-          localStorage.setItem("lyst_guest", JSON.stringify({ name, email }));
-          const prev = JSON.parse(localStorage.getItem("lyst_rsvp") ?? "null") ?? {};
-          localStorage.setItem("lyst_rsvp", JSON.stringify({ ...prev, attending })); // same format the details form uses: "accept" | "decline"
-          window.dispatchEvent(new Event("lyst:rsvp"));
-        } catch {}
-      }
-    } catch {
-      setError("Network error. Try again.");
-    } finally {
-      setSending(false);
-    }
+    // the same reply the details screen edits: party size, meal and requests given there are kept
+    const base = readReply() ?? EMPTY_REPLY;
+    const res = await sendReply({ ...base, attending, name, email, companion: guest, dietary: diet, guests: guest.trim() ? Math.max(2, base.guests) : base.guests });
+    setSending(false);
+    if (res.ok) setConfirmed(true);
+    else setError(res.error);
   }
 
   const closed = ev.rsvpOpen === false;
