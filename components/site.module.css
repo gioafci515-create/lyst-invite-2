@@ -239,3 +239,45 @@
     gap: 16px;
   }
 }
+
+/* phones: the sitemap folds into its three group names */
+.footerCompact {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+}
+.footerCompact > div {
+  border-top: 1px solid rgba(245, 240, 227, 0.25);
+}
+.footerCompact h2 {
+  margin-bottom: 0;
+}
+.footerToggle {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--cream);
+}
+.footerToggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 160ms ease;
+}
+.footerToggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.footerCompact ul {
+  padding-bottom: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .footerToggle svg {
+    transition: none;
+  }
+}
