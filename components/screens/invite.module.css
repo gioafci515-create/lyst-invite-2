@@ -249,7 +249,7 @@
   color: var(--muted);
 }
 .field input {
-  min-height: 32px;
+  min-height: 44px;
   background: none;
   border: 0;
   color: var(--ink);
@@ -410,5 +410,134 @@
   }
   .night {
     padding: 48px 56px 56px;
+  }
+}
+
+/* inline validation in the event's voice: the message sits under its field and is tied to it */
+.fieldError {
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--red-text);
+  padding-bottom: 4px;
+}
+.field:has(input[aria-invalid="true"]) {
+  border-bottom: 3px solid var(--red-text);
+}
+.keep {
+  min-height: 44px;
+  margin-top: 6px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* the answer this phone gave, in place of the form */
+.summary {
+  max-width: 640px;
+}
+.summaryNote {
+  font-size: 16px;
+  line-height: 1.45;
+}
+.summaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+.summaryButton {
+  min-height: 48px;
+  padding: 0 22px;
+  background: transparent;
+  border: 1px solid var(--ink);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* a fresh yes: the whole section turns into the confirmation */
+.confirmed {
+  background: var(--ink);
+  color: var(--cream);
+  gap: 18px;
+}
+.confirmed .label {
+  color: var(--acid);
+}
+.confirmedTitle {
+  font-family: var(--f-grotesk);
+  font-weight: 700;
+  font-size: 64px;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+}
+.confirmedWhen {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.confirmedActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+}
+.calendar {
+  min-height: 52px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--acid);
+  border: 1px solid var(--acid);
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.confirmedLink {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 16px;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.confirmed :focus-visible {
+  outline-color: var(--acid);
+}
+
+/* the wordmark hint names what the device can actually do */
+.hintTouch {
+  display: none;
+}
+@media (hover: none), (pointer: coarse) {
+  .hintPointer {
+    display: none;
+  }
+  .hintTouch {
+    display: inline;
+  }
+}
+@media (min-width: 901px) {
+  .confirmed {
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+  .confirmedTitle {
+    font-size: 96px;
   }
 }

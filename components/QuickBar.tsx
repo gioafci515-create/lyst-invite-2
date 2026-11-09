@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useEvent } from "@/lib/eventStore";
-import { NAV, ROUTE, SECTION, type NavGroup } from "@/lib/sections";
+import { useReply } from "@/lib/rsvp";
+import { groupLabel, NAV, ROUTE, SECTION, type NavGroup } from "@/lib/sections";
 import { useTasks } from "@/lib/useTasks";
 import { Icon, type IconName } from "./icons";
 import styles from "./quick.module.css";
@@ -63,8 +64,10 @@ export default function QuickBar() {
 
   // first enabled candidate wins, so a switched-off module never leaves a dead tab or an empty slot
   const pick = (...c: (Tab | null)[]): Tab | null => c.find((x) => x !== null) ?? null;
+  const reply = useReply();
   const T = {
-    rsvp: { key: "rsvp", href: `/#${SECTION.rsvp}`, label: "RSVP", icon: "check" } as Tab,
+    // once this phone has replied, the tab shows the reply instead of asking again
+    rsvp: (reply ? { key: "rsvp", href: ROUTE.details, label: "Your reply", icon: "check" } : { key: "rsvp", href: `/#${SECTION.rsvp}`, label: "RSVP", icon: "check" }) as Tab,
     programme: { key: "programme", href: ev.phase === "before" ? `/#${SECTION.programme}` : ROUTE.programme, label: "Programme", icon: "clock" } as Tab,
     updates: { key: "updates", href: ROUTE.updates, label: "Updates", icon: "live" } as Tab,
     tasks: ev.enabled("tasks") ? ({ key: "tasks", href: ROUTE.tasks, label: "Tasks", icon: "tasks", badge: openCount || undefined } as Tab) : null,
@@ -78,8 +81,9 @@ export default function QuickBar() {
   let left: Tab | null;
   let right: Tab | null;
   if (ev.phase === "before") {
-    left = ev.rsvpOpen === true ? T.rsvp : T.programme;
-    right = ev.rsvpOpen === true ? T.programme : T.updates;
+    const asks = ev.rsvpOpen === true || !!reply;
+    left = asks ? T.rsvp : T.programme;
+    right = asks ? T.programme : T.updates;
   } else if (ev.phase === "during") {
     left = pick(T.tasks, T.voice, T.programme);
     right = pick(T.live, T.gallery, T.updates);
@@ -155,7 +159,7 @@ export default function QuickBar() {
               return (
                 <section key={g} aria-labelledby={`sheet-${g}`}>
                   <h3 id={`sheet-${g}`} className={styles.group}>
-                    {g}
+                    {groupLabel(g, ev.phase)}
                   </h3>
                   <ul className={styles.grid}>
                     {items.map((n) => (

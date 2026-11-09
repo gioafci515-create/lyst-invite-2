@@ -754,3 +754,30 @@ button.option:focus-visible {
     grid-column: 1 / -1;
   }
 }
+
+/* an error under its field, tied to it with aria-describedby */
+.fieldError {
+  display: block;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--red-text);
+  font-weight: 700;
+}
+.input[aria-invalid="true"] {
+  border-color: var(--red-text);
+  border-width: 2px;
+}
+.notChosen {
+  color: var(--muted);
+}
+.inlineAction {
+  min-height: 44px;
+  padding: 0 2px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

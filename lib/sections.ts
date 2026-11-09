@@ -55,6 +55,9 @@ export function moduleOf(href: string): ModuleId | undefined {
 const MODULE_KEYS: Record<ModuleId, true> = { camera: true, voice: true, video: true, live: true, later: true, gallery: true, capsule: true, tasks: true };
 
 export type NavGroup = "Invitation" | "Tonight" | "Memories";
+
+/** A group's name as guests read it: before the event day it is "On the night", never "Tonight". */
+export const groupLabel = (g: NavGroup, phase: "before" | "during" | "after") => (g === "Tonight" && phase === "before" ? "On the night" : g);
 export type NavItem = { href: string; label: string; group: NavGroup; module?: ModuleId; note?: string };
 
 /** One navigation model for the desktop header menus and the phone menu sheet. */

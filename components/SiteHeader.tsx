@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
-import { NAV, ROUTE, SECTION, type NavItem } from "@/lib/sections";
+import { useReply } from "@/lib/rsvp";
+import { groupLabel, NAV, ROUTE, SECTION, type NavItem } from "@/lib/sections";
 import styles from "./site.module.css";
 
 /** Phase status, written for a glance: "4 days to go" / "Live · ends 00:30" / "Memories open". */
@@ -73,10 +74,12 @@ export default function SiteHeader() {
   const ev = useEvent();
   const status = usePhaseStatus();
   const on = (n: NavItem) => !n.module || ev.enabled(n.module);
+  const reply = useReply();
 
-  // One context action, and only when it works right now: RSVP while open, nothing during, the gallery after.
-  let action: { label: string; href: string } | null = null;
-  if (ev.phase === "before" && ev.rsvpOpen === true) action = { label: "RSVP", href: `/#${SECTION.rsvp}` };
+  // One context action, and only when it works right now: your reply (or RSVP while open) before, nothing during, the gallery after.
+  let action: { label: string; href: string; check?: boolean } | null = null;
+  if (ev.phase === "before" && reply) action = reply.attending === "accept" ? { label: "You’re in", href: ROUTE.details, check: true } : { label: "Not coming", href: ROUTE.details };
+  else if (ev.phase === "before" && ev.rsvpOpen === true) action = { label: "RSVP", href: `/#${SECTION.rsvp}` };
   else if (ev.phase === "after" && ev.enabled("gallery")) action = { label: "Gallery", href: ROUTE.gallery };
 
   // before the event the programme is part of the invitation itself
@@ -94,16 +97,22 @@ export default function SiteHeader() {
         <Link href={programme} className={styles.navLink}>
           Programme
         </Link>
-        <Dropdown label="Tonight" items={NAV.filter((n) => n.group === "Tonight" && on(n))} />
+        <Dropdown label={groupLabel("Tonight", ev.phase)} items={NAV.filter((n) => n.group === "Tonight" && on(n))} />
         <Dropdown label="Memories" items={NAV.filter((n) => n.group === "Memories" && on(n))} />
       </nav>
-      <p className={styles.status} data-live={status.live || undefined} aria-live="polite">
+      {/* not a live region: a countdown that ticks would be read out again and again */}
+      <p className={styles.status} data-live={status.live || undefined} data-status>
         {status.live && <span className={styles.dot} aria-hidden />}
         {status.text}
       </p>
       <div className={styles.actionSlot}>
         {action && (
-          <Link href={action.href} className={styles.cta} data-btn>
+          <Link href={action.href} className={styles.cta} data-btn data-reply={action.href === ROUTE.details || undefined}>
+            {action.check && (
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M5 12l5 5 9-10" />
+              </svg>
+            )}
             {action.label}
           </Link>
         )}

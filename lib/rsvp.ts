@@ -23,7 +23,7 @@ export type Reply = {
 export const MEALS = ["Garden menu", "Fish", "Children's"];
 export const GUESTS_MAX = 10;
 
-export const EMPTY_REPLY: Reply = { attending: "accept", name: "", email: "", guests: 1, companion: "", meal: MEALS[0], dietary: "", requests: "" };
+export const EMPTY_REPLY: Reply = { attending: "accept", name: "", email: "", guests: 1, companion: "", meal: "", dietary: "", requests: "" };
 
 const str = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max) : "");
 
@@ -42,7 +42,7 @@ export function parseReply(rsvpRaw: string | null, guestRaw: string | null): Rep
       email: str(g?.email, 200),
       guests,
       companion: str(r.companion, 100),
-      meal: MEALS.includes(r.meal) ? r.meal : MEALS[0],
+      meal: MEALS.includes(r.meal) ? r.meal : "",
       dietary: str(r.dietary),
       requests: str(r.requests),
     };
@@ -94,6 +94,17 @@ export function toPayload(r: Reply) {
     dietary: going ? r.dietary.trim() : "",
     requests: going ? r.requests.trim() : "",
   };
+}
+
+export type ReplyErrors = { name?: string; email?: string; form?: string };
+
+/** The checks the server makes, in words a guest can act on. Only name and email are required. */
+export function validateReply(r: Pick<Reply, "name" | "email">): ReplyErrors {
+  const out: ReplyErrors = {};
+  if (!r.name.trim()) out.name = "Add your name, so the hosts know who is replying.";
+  if (!r.email.trim()) out.email = "Add your email address.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email.trim())) out.email = "That email address looks incomplete, for example name@example.com.";
+  return out;
 }
 
 export type SendResult = { ok: true; reply: Reply } | { ok: false; error: string; closed?: boolean };
