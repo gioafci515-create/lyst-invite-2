@@ -96,15 +96,25 @@ export default function LaterScreen() {
   const sending = send === "sending";
   return (
     <div className={r.screen}>
-      <Facts>
-        Only the hosts read it, marked to open on {longDate(day)}. It can&rsquo;t be changed once sealed.
-      </Facts>
+      <Facts>Only the hosts read it, marked to open on {longDate(day)}. It can&rsquo;t be changed once sealed.</Facts>
 
       <WritingSheet
         id="later-text"
         head={[
           ["To", "The hosts"],
-          ["Open on", longDate(day)],
+          [
+            "Open on",
+            <input
+              key="day"
+              type="date"
+              className={r.headDate}
+              aria-label="Open on"
+              value={day}
+              min={FIRST_DAY}
+              onChange={(e) => e.target.value && setDay(e.target.value)}
+              disabled={sending}
+            />,
+          ],
         ]}
         label="Your message"
         value={message}
@@ -116,23 +126,22 @@ export default function LaterScreen() {
       />
 
       <div className={r.attach}>
-        <label className={r.field} style={{ flex: "1 1 180px" }}>
-          <span className={r.fieldLabel}>Open on</span>
-          <input type="date" className={r.input} value={day} min={FIRST_DAY} onChange={(e) => e.target.value && setDay(e.target.value)} disabled={sending} />
-        </label>
-        <div className={r.field} style={{ flex: "1 1 180px" }}>
-          <span className={r.fieldLabel} id="later-photo">
-            A photo, if you like
-          </span>
+        <div className={r.attach}>
           <div className={r.attach}>
-            <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => {
+            <input
+              ref={photoInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
                 choose(e.target.files?.[0] ?? null);
                 e.target.value = "";
-              }} />
+              }}
+            />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {file && preview && <img src={preview} alt="The photo you added" className={r.attachThumb} />}
-            <button type="button" className={r.secondary} aria-describedby="later-photo" onClick={() => photoInput.current?.click()} disabled={sending}>
-              {file ? "Change photo" : "Add a photo"}
+            <button type="button" className={r.secondary} onClick={() => photoInput.current?.click()} disabled={sending}>
+              {file ? "Change photo" : "Add a photo (optional)"}
             </button>
             {file && (
               <button type="button" className={r.textLink} onClick={() => choose(null)} disabled={sending}>

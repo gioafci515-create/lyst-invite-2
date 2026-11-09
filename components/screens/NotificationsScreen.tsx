@@ -115,9 +115,6 @@ export default function NotificationsScreen() {
       </ul>
 
       <div className={styles.row} style={{ alignItems: "stretch" }}>
-        <button className={styles.primary} style={{ flex: 1 }} onClick={() => markRead(notices.map((n) => n.id))}>
-          Mark all read
-        </button>
         <button className={styles.secondary} style={{ flex: 1 }} onClick={() => setSettings((s) => !s)} aria-expanded={settings}>
           <Image src="/images/app/settings-2.svg" alt="" width={16} height={16} />
           Reminder settings

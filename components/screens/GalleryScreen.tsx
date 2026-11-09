@@ -128,7 +128,10 @@ function Viewer({ tiles, index, setIndex, onClose }: { tiles: Tile[]; index: num
               <path d="M15 5l-7 7 7 7" />
             </svg>
           </button>
-          <span className={g.viewerHint}>Swipe or use the arrow keys</span>
+          <span className={g.viewerHint}>
+            <span className={g.touchOnly}>Swipe for the next one</span>
+            <span className={g.pointerOnly}>Arrow keys work too</span>
+          </span>
           <button type="button" className={g.viewerBtn} onClick={() => step(1)} aria-label="Next">
             <svg viewBox="0 0 24 24" aria-hidden>
               <path d="M9 5l7 7-7 7" />
@@ -164,12 +167,18 @@ export default function GalleryScreen() {
     const list = readMine();
     if (!list.length) return setMine([]);
     try {
-      const res = await fetch("/api/gallery/mine", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: list.map(({ id, key }) => ({ id, key })) }) });
+      const res = await fetch("/api/gallery/mine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: list.map(({ id, key }) => ({ id, key })) }),
+      });
       if (!res.ok) return;
       const rows: { id: string; kind: Kind; w?: number; h?: number; approved: boolean }[] = await res.json();
       keepMine(new Set(rows.map((x) => x.id)));
       const keys = new Map(list.map((e) => [e.id, e.key]));
-      setMine(rows.filter((x) => !x.approved).map((x) => ({ id: x.id, kind: x.kind, w: x.w, h: x.h, src: `/api/media/${x.id}?k=${keys.get(x.id)}`, pending: true })));
+      setMine(
+        rows.filter((x) => !x.approved).map((x) => ({ id: x.id, kind: x.kind, w: x.w, h: x.h, src: `/api/media/${x.id}?k=${keys.get(x.id)}`, pending: true })),
+      );
     } catch {
       /* keep what we have */
     }
@@ -265,12 +274,12 @@ export default function GalleryScreen() {
       <div className={g.top}>
         <p className={`${r.body} ${g.lead}`}>Photos and clips from the night, once the hosts approve them. Yours show here for you while they wait.</p>
         <input ref={fileInput} type="file" accept="image/*,video/*" multiple hidden onChange={pick} />
-        <button type="button" className={r.primary} onClick={() => fileInput.current?.click()}>
+        <button type="button" className={r.secondary} onClick={() => fileInput.current?.click()}>
           Add photos or clips
         </button>
       </div>
 
-      {all.length > 0 && (
+      {count("photo") > 0 && count("video") > 0 && (
         <div className={g.filters} role="group" aria-label="Show">
           {FILTERS.map(([id, label]) => (
             <button key={id} type="button" className={g.filter} aria-pressed={filter === id} onClick={() => setFilter(id)}>
@@ -295,10 +304,14 @@ export default function GalleryScreen() {
                     {u.error} It wasn&rsquo;t sent.
                   </p>
                   <div className={r.actions}>
-                    <button type="button" className={r.primary} onClick={() => {
+                    <button
+                      type="button"
+                      className={r.primary}
+                      onClick={() => {
                         update((q) => q.map((x) => (x.qid === u.qid ? { ...x, state: "waiting" } : x)));
                         void run();
-                      }}>
+                      }}
+                    >
                       Try again
                     </button>
                     <button type="button" className={r.secondary} onClick={() => update((q) => q.filter((x) => x.qid !== u.qid))}>

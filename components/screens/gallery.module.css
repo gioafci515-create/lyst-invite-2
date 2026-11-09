@@ -255,3 +255,15 @@
     margin: 0 28px;
   }
 }
+
+.pointerOnly {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .touchOnly {
+    display: none;
+  }
+  .pointerOnly {
+    display: inline;
+  }
+}

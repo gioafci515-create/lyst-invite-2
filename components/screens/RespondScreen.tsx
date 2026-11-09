@@ -191,11 +191,27 @@ export default function RespondScreen() {
 
         <label className={r.field}>
           <span className={r.fieldLabel}>Your name</span>
-          <input ref={firstField} className={r.input} value={draft.name} onChange={(e) => set("name", e.target.value)} maxLength={100} autoComplete="name" required />
+          <input
+            ref={firstField}
+            className={r.input}
+            value={draft.name}
+            onChange={(e) => set("name", e.target.value)}
+            maxLength={100}
+            autoComplete="name"
+            required
+          />
         </label>
         <label className={r.field}>
           <span className={r.fieldLabel}>Email</span>
-          <input className={r.input} type="email" value={draft.email} onChange={(e) => set("email", e.target.value)} maxLength={200} autoComplete="email" required />
+          <input
+            className={r.input}
+            type="email"
+            value={draft.email}
+            onChange={(e) => set("email", e.target.value)}
+            maxLength={200}
+            autoComplete="email"
+            required
+          />
         </label>
 
         {going && (
@@ -209,7 +225,12 @@ export default function RespondScreen() {
                   −
                 </button>
                 <output aria-live="polite">{draft.guests}</output>
-                <button type="button" aria-label="One more" onClick={() => set("guests", Math.min(GUESTS_MAX, draft.guests + 1))} disabled={draft.guests >= GUESTS_MAX}>
+                <button
+                  type="button"
+                  aria-label="One more"
+                  onClick={() => set("guests", Math.min(GUESTS_MAX, draft.guests + 1))}
+                  disabled={draft.guests >= GUESTS_MAX}
+                >
                   +
                 </button>
               </div>
@@ -220,7 +241,7 @@ export default function RespondScreen() {
                 <input className={r.input} value={draft.companion} onChange={(e) => set("companion", e.target.value)} maxLength={100} placeholder="Optional" />
               </label>
             )}
-            <fieldset className={r.options}>
+            <fieldset className={`${r.options} ${r.three}`}>
               <legend className={r.fieldLabel}>Meal</legend>
               {MEALS.map((m) => (
                 <label key={m} className={r.option}>
@@ -231,11 +252,24 @@ export default function RespondScreen() {
             </fieldset>
             <label className={r.field}>
               <span className={r.fieldLabel}>Dietary needs</span>
-              <input className={r.input} value={draft.dietary} onChange={(e) => set("dietary", e.target.value)} maxLength={500} placeholder="Optional, e.g. nut allergy" />
+              <input
+                className={r.input}
+                value={draft.dietary}
+                onChange={(e) => set("dietary", e.target.value)}
+                maxLength={500}
+                placeholder="Optional, e.g. nut allergy"
+              />
             </label>
             <label className={r.field}>
               <span className={r.fieldLabel}>Access or other requests</span>
-              <textarea className={r.textarea} rows={3} value={draft.requests} onChange={(e) => set("requests", e.target.value)} maxLength={500} placeholder="Optional, e.g. step-free arrival" />
+              <textarea
+                className={r.textarea}
+                rows={3}
+                value={draft.requests}
+                onChange={(e) => set("requests", e.target.value)}
+                maxLength={500}
+                placeholder="Optional, e.g. step-free arrival"
+              />
             </label>
           </>
         )}

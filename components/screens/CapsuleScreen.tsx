@@ -34,8 +34,7 @@ function Inside({ counts, failed }: { counts: Counts | null; failed: boolean }) 
       <div className={r.inside} aria-busy={!counts}>
         {rows.map(([v, one, many]) => (
           <div key={many}>
-            <b>{v ?? "–"}</b>
-            <span className={r.body}>{v === 1 ? one : many}</span>
+            <b>{v ?? "–"}</b> <span className={r.body}>{v === 1 ? one : many}</span>
           </div>
         ))}
       </div>
@@ -123,15 +122,25 @@ export default function CapsuleScreen() {
   const sending = send === "sending";
   return (
     <div className={r.screen}>
-      <Facts>
-        Only the hosts get your capsule&rsquo;s name and the day it opens, {longDate(day)}. It can&rsquo;t be changed once sealed.
-      </Facts>
+      <Facts>Only the hosts get your capsule&rsquo;s name and the day it opens, {longDate(day)}. It can&rsquo;t be changed once sealed.</Facts>
       <WritingSheet
         id="capsule-name"
         single
         head={[
           ["For", "The hosts"],
-          ["Opens", longDate(day)],
+          [
+            "Opens",
+            <input
+              key="day"
+              type="date"
+              className={r.headDate}
+              aria-label="Opens on"
+              value={day}
+              min={FIRST_DAY}
+              onChange={(e) => e.target.value && setDay(e.target.value)}
+              disabled={sending}
+            />,
+          ],
         ]}
         label="Capsule name"
         value={name}
@@ -140,10 +149,6 @@ export default function CapsuleScreen() {
         maxLength={100}
         disabled={sending}
       />
-      <label className={r.field}>
-        <span className={r.fieldLabel}>Open on</span>
-        <input type="date" className={r.input} value={day} min={FIRST_DAY} onChange={(e) => e.target.value && setDay(e.target.value)} disabled={sending} />
-      </label>
       <Inside counts={counts} failed={countsFailed} />
       {error && (
         <p className={r.error} role="alert">

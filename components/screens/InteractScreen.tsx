@@ -7,7 +7,7 @@ import { getGuest, submitContribution } from "@/lib/submit";
 import { useHydrated } from "@/lib/useClient";
 import { useLive, voterId, type LiveData } from "@/lib/useLive";
 import { Progress } from "./CaptureBits";
-import { EyeIcon, Facts, LockIcon, SealedCard, WritingSheet } from "./Sealed";
+import { EyeIcon, LockIcon, SealedCard, WritingSheet } from "./Sealed";
 import r from "./room.module.css";
 
 const lsGet = (k: string) => {
@@ -26,7 +26,21 @@ const lsSet = (k: string, v: string) => {
 type Audience = "public" | "hosts";
 
 /** Every item says what it is, whether it is open (only what the server says), and who will see your answer. */
-function Item({ id, kind, open, who, whoText, children }: { id: string; kind: string; open: boolean | "always"; who: Audience; whoText: string; children: ReactNode }) {
+function Item({
+  id,
+  kind,
+  open,
+  who,
+  whoText,
+  children,
+}: {
+  id: string;
+  kind: string;
+  open: boolean | "always";
+  who: Audience;
+  whoText: string;
+  children: ReactNode;
+}) {
   return (
     <article className={r.card} aria-labelledby={`${id}-kind ${id}-title`} data-item={id}>
       <div className={r.cardHead}>
@@ -166,7 +180,13 @@ function Challenge({ live, from }: { live: LiveData; from: string }) {
   const complete = done >= challenge.goal;
   const pct = Math.round((done / challenge.goal) * 100);
   return (
-    <Item id="challenge" kind="Photo challenge" open={challenge.open} who="hosts" whoText="Your photos go to them first, and into the gallery only if they approve them.">
+    <Item
+      id="challenge"
+      kind="Photo challenge"
+      open={challenge.open}
+      who="hosts"
+      whoText="Your photos go to them first, and into the gallery only if they approve them."
+    >
       <h3 id="challenge-title" className={r.title}>
         {challenge.title}
       </h3>
@@ -175,7 +195,14 @@ function Challenge({ live, from }: { live: LiveData; from: string }) {
         <span className={r.kind}>
           {done} of {challenge.goal}
         </span>
-        <div className={r.bar} role="progressbar" aria-label="Your photos for this challenge" aria-valuemin={0} aria-valuemax={challenge.goal} aria-valuenow={done}>
+        <div
+          className={r.bar}
+          role="progressbar"
+          aria-label="Your photos for this challenge"
+          aria-valuemin={0}
+          aria-valuemax={challenge.goal}
+          aria-valuenow={done}
+        >
           <span style={{ width: `${pct}%` }} />
         </div>
       </div>
@@ -234,12 +261,12 @@ function Question({ from }: { from: string }) {
   }
 
   return (
-    <Item id="question" kind="Question for the hosts" open="always" who="hosts" whoText="They decide whether to answer it, and when.">
-      <h3 id="question-title" className="sr-only">
+    <Item id="question" kind="Question" open="always" who="hosts" whoText="They decide whether to answer it, and when.">
+      <h3 id="question-title" className={r.title}>
         Ask the hosts
       </h3>
       <label className={r.field}>
-        <span className={r.fieldLabel}>Your question</span>
+        <span className="sr-only">Your question</span>
         <textarea className={r.textarea} rows={3} value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} disabled={busy} />
       </label>
       <label className={r.check}>
@@ -264,7 +291,7 @@ function Question({ from }: { from: string }) {
   );
 }
 
-function Letter({ from, setFrom }: { from: string; setFrom: (v: string) => void }) {
+function Letter({ from }: { from: string }) {
   const [text, setText] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sealed" | "failed">("idle");
   const [error, setError] = useState("");
@@ -287,8 +314,8 @@ function Letter({ from, setFrom }: { from: string; setFrom: (v: string) => void 
 
   return (
     <Item id="letter" kind="Letter" open="always" who="hosts" whoText="They get it now, marked to open in a year. It can't be changed once sent.">
-      <h3 id="letter-title" className="sr-only">
-        A letter for the hosts
+      <h3 id="letter-title" className={r.title}>
+        Write to the hosts
       </h3>
       {state === "sealed" ? (
         <SealedCard
@@ -327,7 +354,7 @@ function Letter({ from, setFrom }: { from: string; setFrom: (v: string) => void 
             placeholder="A longer note to the hosts, for a year from now."
             maxLength={3000}
             disabled={state === "sending"}
-            sign={{ value: from, onChange: setFrom }}
+            signedAs={from.trim()}
           />
           {error && (
             <p className={r.error} role="alert">
@@ -384,16 +411,18 @@ export default function InteractScreen() {
   }
 
   const happening: { key: string; since: number; node: ReactNode }[] = [];
-  if (live.poll.open) happening.push({ key: "poll", since: Date.parse(live.poll.since ?? "") || 0, node: <Poll live={live} from={sender} refresh={refresh} /> });
-  if (live.challenge.open) happening.push({ key: "challenge", since: Date.parse(live.challenge.since ?? "") || 0, node: <Challenge live={live} from={sender} /> });
+  if (live.poll.open)
+    happening.push({ key: "poll", since: Date.parse(live.poll.since ?? "") || 0, node: <Poll live={live} from={sender} refresh={refresh} /> });
+  if (live.challenge.open)
+    happening.push({ key: "challenge", since: Date.parse(live.challenge.since ?? "") || 0, node: <Challenge live={live} from={sender} /> });
   happening.sort((a, b) => b.since - a.since);
   const said = live.announcement.since ? timeLabel(live.announcement.since, ev.timezone) : null;
 
   return (
-    <div className={r.screen}>
-      {failed && <p className={`${r.body} ${r.muted}`}>Couldn&rsquo;t check for news just now. Still trying.</p>}
+    <div className={`${r.screen} ${r.wide} ${r.liveGrid}`}>
+      {failed && <p className={`${r.body} ${r.muted} ${r.span}`}>Couldn&rsquo;t check for news just now. Still trying.</p>}
       {live.announcement.text && (
-        <section className={r.announce} aria-label="From the hosts">
+        <section className={`${r.announce} ${r.span}`} aria-label="From the hosts">
           <p className={r.kind}>
             {live.announcement.label || "From the hosts"}
             {said ? `, ${said}` : ""}
@@ -420,9 +449,19 @@ export default function InteractScreen() {
         <h2 id="any-title" className={r.h2}>
           Any time tonight
         </h2>
-        <Facts>What you send goes out as &ldquo;{sender}&rdquo;. Change the name on the letter below, or leave it empty to stay anonymous.</Facts>
+        <label className={r.field}>
+          <span className={r.fieldLabel}>Your name on what you send</span>
+          <input
+            className={r.input}
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            maxLength={100}
+            placeholder="Leave empty to stay anonymous"
+            autoComplete="name"
+          />
+        </label>
         <Question from={sender} />
-        <Letter from={from} setFrom={setFrom} />
+        <Letter from={from} />
       </section>
     </div>
   );

@@ -300,6 +300,7 @@
 .sheetHead {
   display: grid;
   grid-template-columns: auto 1fr;
+  align-items: center;
   gap: 4px 12px;
   padding: 14px 16px 12px;
   border-bottom: 1px solid var(--ink);
@@ -507,22 +508,36 @@
 }
 
 /* ---------- capsule: what's inside so far ---------- */
+/* a short list on a phone, one row of five on a wider screen */
 .inside {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: 0;
+  grid-template-columns: 1fr;
   border: 1px solid var(--ink);
   background: var(--cream);
 }
 .inside div {
-  padding: 12px;
+  padding: 10px 14px;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-right: 1px solid rgba(10, 10, 10, 0.2);
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px solid rgba(10, 10, 10, 0.2);
 }
 .inside div:last-child {
-  border-right: 0;
+  border-bottom: 0;
+}
+@media (min-width: 600px) {
+  .inside {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .inside div {
+    flex-direction: column;
+    gap: 4px;
+    border-bottom: 0;
+    border-right: 1px solid rgba(10, 10, 10, 0.2);
+  }
+  .inside div:last-child {
+    border-right: 0;
+  }
 }
 .inside b {
   font-family: var(--f-grotesk);
@@ -608,7 +623,7 @@
 }
 .answerList {
   display: grid;
-  grid-template-columns: minmax(96px, auto) 1fr;
+  grid-template-columns: max-content 1fr;
   gap: 8px 16px;
   font-size: 16px;
   line-height: 1.4;
@@ -689,4 +704,53 @@ button.option:disabled:not([aria-pressed="true"]) {
 button.option:focus-visible {
   outline: 3px solid var(--red);
   outline-offset: 2px;
+}
+
+/* the open-on date sits in the sheet's head, written like the rest of the address */
+.headDate {
+  min-height: 44px;
+  margin: -10px 0;
+  padding: 0 6px;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+}
+.headDate:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+.sheetHead dd:has(.headDate) {
+  padding: 6px 0;
+}
+/* a sheet inside a live-room card: no desk shadow, the card is the desk */
+.card .sheet,
+.card .sealed {
+  box-shadow: none;
+  margin-right: 0;
+}
+.three {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) {
+  .three {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+/* the live room: what's open now on the left, what's open all night on the right */
+.liveGrid > section {
+  min-width: 0;
+}
+@media (min-width: 1000px) {
+  .liveGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px 28px;
+  }
+  .span {
+    grid-column: 1 / -1;
+  }
 }

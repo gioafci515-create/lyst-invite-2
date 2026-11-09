@@ -50,9 +50,9 @@ export default function TasksScreen() {
     >
       {live && now > 0 && (
         <div className={t.alarm} role="alert">
-          <b>⚠️ Time to UN/FOLD. ⚠️</b>
+          <b>Time to UN/FOLD.</b>
           <span>
-            {live.title} · <span className={t.count}>{clock(live.windowEnd! - now)}</span> left to capture it
+            {live.title}: <span className={t.count}>{clock(live.windowEnd! - now)}</span> left to capture it
           </span>
           <a href={live.action.href} className={styles.primary} data-btn>
             {live.action.label}
@@ -97,7 +97,7 @@ export default function TasksScreen() {
         <div className={styles.card} role="status">
           <div className={styles.row}>
             <Image src="/images/app/check-dark.svg" alt="" width={16} height={16} />
-            <b>Reminders on · a new task every 20 minutes</b>
+            <b>Reminders on. A new task every 20 minutes.</b>
           </div>
           <button className={styles.secondary} onClick={push.disable}>
             Turn reminders off
@@ -134,16 +134,16 @@ export default function TasksScreen() {
                 </span>
                 <span>
                   {task.done
-                    ? "✓ Done"
+                    ? "Done"
                     : task.unlocked
                       ? task.inWindow && task.windowEnd
-                        ? `⚠️ ${clock(task.windowEnd - now)} left`
+                        ? `${clock(task.windowEnd - now)} left`
                         : task.windowEnd
-                          ? `Late · ${Math.max(1, Math.ceil((now - task.windowEnd) / 60000))} min`
+                          ? `${Math.max(1, Math.ceil((now - task.windowEnd) / 60000))} min late`
                           : "Open now"
                       : task.at
-                        ? `🔒 ${sameDay || !now ? hhmm(task.at) : dayTime(task.at)}`
-                        : "🔒 Locked"}
+                        ? `Opens ${sameDay || !now ? hhmm(task.at) : dayTime(task.at)}`
+                        : "Locked"}
                 </span>
               </div>
               <h3 className={t.title}>{task.title}</h3>

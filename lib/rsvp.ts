@@ -31,7 +31,8 @@ const str = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max) 
 export function parseReply(rsvpRaw: string | null, guestRaw: string | null): Reply | null {
   try {
     const r = rsvpRaw ? JSON.parse(rsvpRaw) : null;
-    const attending: Attending | null = r?.attending === "accept" || r?.attending === true ? "accept" : r?.attending === "decline" || r?.attending === false ? "decline" : null;
+    const attending: Attending | null =
+      r?.attending === "accept" || r?.attending === true ? "accept" : r?.attending === "decline" || r?.attending === false ? "decline" : null;
     if (!attending) return null;
     const g = guestRaw ? JSON.parse(guestRaw) : null;
     const guests = Math.min(GUESTS_MAX, Math.max(1, Math.floor(Number(r.guests)) || (r.companion ? 2 : 1)));

@@ -39,7 +39,9 @@ export function untilDay(day: string, now: number): { ms: number; text: string }
   const hours = Math.floor((ms % 864e5) / 36e5);
   const mins = Math.floor((ms % 36e5) / 6e4);
   const text =
-    days > 0 ? `${days} day${days === 1 ? "" : "s"}, ${hours} hour${hours === 1 ? "" : "s"}` : `${hours} hour${hours === 1 ? "" : "s"}, ${mins} minute${mins === 1 ? "" : "s"}`;
+    days > 0
+      ? `${days} day${days === 1 ? "" : "s"}, ${hours} hour${hours === 1 ? "" : "s"}`
+      : `${hours} hour${hours === 1 ? "" : "s"}, ${mins} minute${mins === 1 ? "" : "s"}`;
   return { ms, text };
 }
 
@@ -68,12 +70,14 @@ type SheetProps = {
   single?: boolean;
   /** the signature: the name it goes out under; empty means anonymous */
   sign?: { value: string; onChange: (v: string) => void };
+  /** the signature when it is set elsewhere on the screen */
+  signedAs?: string;
   id: string;
   children?: ReactNode;
 };
 
 /** The shared writing surface: a ruled cream sheet with who it's for at the top and who it's from at the bottom. */
-export function WritingSheet({ head, label, value, onChange, placeholder, maxLength, disabled, titleField, single, sign, id, children }: SheetProps) {
+export function WritingSheet({ head, label, value, onChange, placeholder, maxLength, disabled, titleField, single, sign, signedAs, id, children }: SheetProps) {
   return (
     <div className={r.sheet}>
       <dl className={r.sheetHead}>
@@ -89,7 +93,15 @@ export function WritingSheet({ head, label, value, onChange, placeholder, maxLen
         {label}
       </label>
       {single ? (
-        <input id={id} className={r.writingTitle} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} disabled={disabled} />
+        <input
+          id={id}
+          className={r.writingTitle}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          disabled={disabled}
+        />
       ) : (
         <textarea
           id={id}
@@ -102,19 +114,35 @@ export function WritingSheet({ head, label, value, onChange, placeholder, maxLen
           rows={7}
         />
       )}
-      <div className={r.sheetFoot}>
-        {sign ? (
-          <label className={r.sign}>
-            <span className={r.fieldLabel}>From</span>
-            <input value={sign.value} onChange={(e) => sign.onChange(e.target.value)} maxLength={100} placeholder="Anonymous" autoComplete="name" disabled={disabled} />
-          </label>
-        ) : (
-          <span />
-        )}
-        <span className={r.count} aria-hidden>
-          {value.length}/{maxLength}
-        </span>
-      </div>
+      {(sign || signedAs !== undefined || value.length > maxLength * 0.8) && (
+        <div className={r.sheetFoot}>
+          {sign ? (
+            <label className={r.sign}>
+              <span className={r.fieldLabel}>From</span>
+              <input
+                value={sign.value}
+                onChange={(e) => sign.onChange(e.target.value)}
+                maxLength={100}
+                placeholder="Anonymous"
+                autoComplete="name"
+                disabled={disabled}
+              />
+            </label>
+          ) : signedAs !== undefined ? (
+            <p className={r.sign}>
+              <span className={r.fieldLabel}>From</span>
+              <span className={r.body}>{signedAs || "Anonymous"}</span>
+            </p>
+          ) : (
+            <span />
+          )}
+          {value.length > maxLength * 0.8 && (
+            <span className={r.count} aria-live="polite">
+              {maxLength - value.length} characters left
+            </span>
+          )}
+        </div>
+      )}
       {children}
     </div>
   );
