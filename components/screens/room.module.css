@@ -1,0 +1,692 @@
+/*
+ * The live room, the three sealed things (letter, message for later, capsule), the gallery and the RSVP details.
+ * Three sizes per screen: 28 (headings, big numbers), 16-18 (sentences), 12 (mono labels). Hard 1px ink edges, no radius,
+ * colour only where it means something: red = open now / act, acid = saved, ink = sealed.
+ */
+.screen {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wide {
+  max-width: 1100px;
+}
+.h2 {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.body {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.muted {
+  color: var(--muted);
+}
+.mono {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- cards and their head line: what it is, open or not, who sees it ---------- */
+.card {
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.kind {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.state[data-open="true"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+.state[data-open="false"] {
+  color: var(--muted);
+}
+.who {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.who svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 1px;
+}
+.title {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.status {
+  font-size: 16px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-left: 4px solid var(--acid);
+  background: rgba(119, 255, 0, 0.12);
+}
+.error {
+  font-size: 16px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-left: 4px solid var(--red);
+  background: rgba(255, 59, 33, 0.08);
+}
+
+/* ---------- buttons (same family as the capture screens) ---------- */
+.primary,
+.secondary {
+  min-height: 52px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
+}
+.primary {
+  background: var(--red);
+  border: 1px solid var(--red);
+  color: var(--ink);
+}
+.secondary {
+  background: transparent;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.textLink {
+  min-height: 44px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: 0;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: inherit;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.actions > * {
+  flex: 1 1 140px;
+}
+
+/* ---------- form fields ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fieldLabel {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.input,
+.textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+}
+.textarea {
+  min-height: 112px;
+  line-height: 1.5;
+  resize: vertical;
+}
+/* a checkbox whose whole line is the target: the real input covers the label, the box is drawn */
+.check {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-left: 34px;
+  font-size: 16px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.check input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.check::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin-top: -11px;
+  border: 1px solid var(--ink);
+  background: #fff;
+}
+.check:has(input:checked)::before {
+  background: var(--ink)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5f0e3' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E")
+    center / 16px no-repeat;
+}
+.check:has(input:focus-visible) {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* a set of big answers (poll options, attending, meal): real radio inputs, styled as blocks */
+.options {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.options legend {
+  margin-bottom: 8px;
+}
+.option {
+  position: relative;
+  min-height: 52px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--ink);
+  font-size: 16px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.option input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.option:has(input:checked) {
+  background: var(--ink);
+  color: var(--cream);
+}
+.option:has(input:focus-visible) {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}
+.option:has(input:disabled) {
+  cursor: default;
+}
+.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ---------- the writing sheet: one surface for the letter, the message for later and the capsule ---------- */
+.sheet {
+  position: relative;
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  margin-right: 6px;
+  display: flex;
+  flex-direction: column;
+  transform-origin: top center;
+}
+.sheetHead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--ink);
+}
+.sheetHead dt {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 24px;
+}
+.sheetHead dd {
+  font-size: 16px;
+  line-height: 24px;
+  min-width: 0;
+}
+.writing {
+  width: 100%;
+  min-height: 228px;
+  padding: 4px 16px 0;
+  border: 0;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(10, 10, 10, 0.16) 31px, rgba(10, 10, 10, 0.16) 32px);
+  background-position: 0 4px;
+  background-attachment: local;
+  font: inherit;
+  font-size: 18px;
+  line-height: 32px;
+  color: var(--ink);
+  resize: vertical;
+}
+.writing:focus-visible {
+  outline: none;
+}
+.sheet:has(.writing:focus-visible) {
+  outline: 3px solid var(--red);
+  outline-offset: 3px;
+}
+.writingTitle {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border: 0;
+  border-bottom: 1px solid rgba(10, 10, 10, 0.16);
+  background: transparent;
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.writingTitle:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: -3px;
+}
+.sheetFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid rgba(10, 10, 10, 0.16);
+}
+.sign {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sign input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid rgba(10, 10, 10, 0.4);
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+}
+.count {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.facts {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.facts svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 2px;
+}
+.attach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.attachThumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 1px solid var(--ink);
+}
+
+/* sealed: the same sheet, closed. Ink paper, a red seal, what happens next. */
+.sealed {
+  position: relative;
+  background: var(--ink);
+  color: var(--cream);
+  border: 1px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--red);
+  margin-right: 6px;
+  padding: 22px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: sealIn 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.sealed:focus {
+  outline: none;
+}
+.sealed:focus-visible {
+  outline: 3px solid var(--acid);
+  outline-offset: 3px;
+}
+.seal {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  animation: stamp 360ms 220ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.sealedTitle {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.sealedFacts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.sealedFacts dt {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 22px;
+  color: rgba(245, 240, 227, 0.75);
+}
+.sealed .secondary {
+  border-color: rgba(245, 240, 227, 0.6);
+  color: var(--cream);
+}
+.sealed .secondary:focus-visible {
+  outline-color: var(--acid);
+}
+.countdown {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes sealIn {
+  from {
+    transform: scaleY(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes stamp {
+  from {
+    transform: rotate(-8deg) scale(1.6);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-8deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---------- capsule: what's inside so far ---------- */
+.inside {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 0;
+  border: 1px solid var(--ink);
+  background: var(--cream);
+}
+.inside div {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid rgba(10, 10, 10, 0.2);
+}
+.inside div:last-child {
+  border-right: 0;
+}
+.inside b {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- live room ---------- */
+.announce {
+  background: var(--red);
+  border: 1px solid var(--ink);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.announce p:last-child {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.listHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+}
+.quiet {
+  border: 1px dashed var(--ink);
+  padding: 28px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: repeating-linear-gradient(-45deg, transparent 0 14px, rgba(10, 10, 10, 0.04) 14px 15px);
+}
+.bar {
+  height: 8px;
+  background: rgba(10, 10, 10, 0.12);
+  position: relative;
+}
+.bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--red);
+}
+.result {
+  display: grid;
+  gap: 6px;
+}
+.resultRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 16px;
+}
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.progressRow .bar {
+  flex: 1;
+}
+
+/* ---------- RSVP details ---------- */
+.answer {
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  border-top: 8px solid var(--acid);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.answer[data-attending="decline"] {
+  border-top-color: var(--ink);
+}
+.answer:focus {
+  outline: none;
+}
+.answerList {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 8px 16px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.answerList dt {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 22px;
+}
+.deadline {
+  font-size: 16px;
+  line-height: 1.45;
+}
+.stepper {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--ink);
+  width: max-content;
+  background: #fff;
+}
+.stepper button {
+  width: 52px;
+  min-height: 52px;
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+}
+.stepper button:disabled {
+  opacity: 0.35;
+}
+.stepper output {
+  min-width: 56px;
+  display: grid;
+  place-items: center;
+  border-left: 1px solid var(--ink);
+  border-right: 1px solid var(--ink);
+  font-family: var(--f-grotesk);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (min-width: 901px) {
+  .screen {
+    padding-top: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sealed,
+  .seal {
+    animation: none;
+  }
+}
+
+/* poll answers are buttons (one tap votes) */
+button.option {
+  width: 100%;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+button.option[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--cream);
+}
+button.option:disabled:not([aria-pressed="true"]) {
+  opacity: 0.55;
+}
+button.option:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+}

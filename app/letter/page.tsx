@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Message for later — UN/FOLD 2026" 
 
 export default function LetterPage() {
   return (
-    <FeatureRoute module="later" title="Message for later" intro="Write a note to be sealed and revealed on a future date, with a photo if you like.">
+    <FeatureRoute module="later" title="Message for later" framed={false}>
       <LaterScreen />
     </FeatureRoute>
   );

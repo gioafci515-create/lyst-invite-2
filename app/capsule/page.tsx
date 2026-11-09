@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Time capsule — UN/FOLD 2026" };
 
 export default function CapsulePage() {
   return (
-    <FeatureRoute module="capsule" title="Time capsule" intro="Everything shared tonight is sealed into one archive that unlocks later.">
+    <FeatureRoute module="capsule" title="Time capsule" framed={false}>
       <CapsuleScreen />
     </FeatureRoute>
   );

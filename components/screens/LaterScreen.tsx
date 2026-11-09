@@ -1,141 +1,162 @@
 "use client";
 
-import Image from "next/image";
-import { useRef, useState } from "react";
-import AppShell from "@/components/AppShell";
-import styles from "@/components/app.module.css";
+import { useEffect, useRef, useState } from "react";
 import { getGuest, submitContribution } from "@/lib/submit";
-import { useHydrated, useNow } from "@/lib/useClient";
+import { useHydrated } from "@/lib/useClient";
+import { Progress } from "./CaptureBits";
+import { Facts, longDate, SealedCard, WritingSheet } from "./Sealed";
+import r from "./room.module.css";
 
-function countdown(to: Date, now: number) {
-  const ms = Math.max(0, to.getTime() - now);
-  const d = Math.floor(ms / 864e5);
-  const h = Math.floor((ms % 864e5) / 36e5);
-  const m = Math.floor((ms % 36e5) / 6e4);
-  return `${d}d : ${String(h).padStart(2, "0")}h : ${String(m).padStart(2, "0")}m`;
-}
+/** the first day a message may open: the day after the event */
+const FIRST_DAY = "2026-11-15";
+const DEFAULT_DAY = "2027-11-14";
+const MAX = 2000;
 
+/**
+ * Message for later: a note (and a photo if you like) for the hosts, marked with the day it should be opened.
+ * Rules from the code: type "later", only the hosts receive it (admin), the chosen day travels with it as meta.reveal,
+ * and nothing about it can be changed after sealing.
+ */
 export default function LaterScreen() {
-  const photo = useRef<HTMLInputElement>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  const sealedRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState("");
+  const [sign, setSign] = useState("");
+  const [day, setDay] = useState(DEFAULT_DAY);
   const [file, setFile] = useState<File | null>(null);
-  const [named, setNamed] = useState(true);
-  const [guestName, setGuestName] = useState("");
-  const [reveal, setReveal] = useState("2027-11-14");
-  const [editDate, setEditDate] = useState(false);
-  const [sealed, setSealed] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [send, setSend] = useState<"idle" | "sending" | "sealed" | "failed">("idle");
+  const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const [peek, setPeek] = useState(false);
-  const now = useNow(30_000);
+  const [sealedAs, setSealedAs] = useState({ day: DEFAULT_DAY, from: "" });
 
   // the name typed earlier on this device (once, as soon as the page runs in the browser)
   const hydrated = useHydrated();
   const [restored, setRestored] = useState(false);
   if (hydrated && !restored) {
     setRestored(true);
-    setGuestName(getGuest().name);
+    setSign(getGuest().name);
   }
+
+  const [preview, setPreview] = useState<string | null>(null);
+  const choose = (f: File | null) => {
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(f);
+    setPreview(f ? URL.createObjectURL(f) : null);
+  };
+  useEffect(() => {
+    if (send === "sealed") sealedRef.current?.focus();
+  }, [send]);
 
   async function seal() {
-    if (!message.trim()) return setError("Write a message first.");
-    setSending(true);
+    if (!message.trim()) return setError("Write your message first.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day < FIRST_DAY) return setError(`Pick a day from ${longDate(FIRST_DAY)} on.`);
+    setSend("sending");
     setError("");
-    const res = await submitContribution({
-      type: "later",
-      name: named ? guestName || "Guest" : "Anonymous",
-      text: message,
-      file,
-      meta: { reveal },
-    });
-    setSending(false);
-    if (res.ok) setSealed(true);
-    else setError(res.error);
+    setProgress(null);
+    const from = sign.trim() || "Anonymous";
+    const res = await submitContribution({ type: "later", name: from, text: message, file, meta: { reveal: day }, onProgress: file ? setProgress : undefined });
+    if (res.ok) {
+      setSealedAs({ day, from });
+      setSend("sealed");
+    } else {
+      setSend("failed");
+      setError(`${res.error} Your message is still here.`);
+    }
   }
 
-  const revealDate = new Date(`${reveal}T00:00:00`);
-  const pretty = revealDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  function again() {
+    setMessage("");
+    choose(null);
+    setSend("idle");
+  }
 
-  return (
-    <AppShell
-      title="Message for Later"
-      header={{ src: "/images/app/header-later.svg", width: 44 }}
-      step={4}
-      action={{ label: sealed ? "Sealed" : sending ? "Sealing…" : "Seal message", onClick: seal, disabled: sending || sealed }}
-    >
-      <h2 style={{ fontFamily: "var(--f-display)", fontWeight: 400, fontSize: 22 }}>A note for a future day</h2>
-
-      <label className={styles.field} style={{ minHeight: 74 }}>
-        <span>Your message</span>
-        <textarea
-          rows={3}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          readOnly={sealed}
-          maxLength={2000}
-          placeholder="Keep choosing the long table, the slow mornings, and each other—especially when the room is noisy."
-        />
-      </label>
-
-      <div className={styles.row} style={{ alignItems: "stretch" }}>
-        <input ref={photo} type="file" accept="image/*" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <button className={styles.secondary} style={{ flexShrink: 0 }} onClick={() => photo.current?.click()} disabled={sealed}>
-          <Image src="/images/app/image-plus.svg" alt="" width={16} height={16} />
-          {file ? "Photo added" : "Add photo"}
-        </button>
-        <button className={`${styles.choice} ${styles.small}`} style={{ minHeight: 44 }} aria-pressed={named} onClick={() => setNamed(true)} disabled={sealed}>
-          Named: {guestName || "You"}
-        </button>
-        <button className={`${styles.choice} ${styles.small}`} style={{ minHeight: 44 }} aria-pressed={!named} onClick={() => setNamed(false)} disabled={sealed}>
-          Anonymous
-        </button>
-      </div>
-
-      <div className={styles.field}>
-        <span>Reveal date</span>
-        <div className={styles.valueRow}>
-          {editDate ? (
-            <input type="date" value={reveal} min="2026-11-15" onChange={(e) => e.target.value && setReveal(e.target.value)} />
-          ) : (
-            <span>{pretty}</span>
-          )}
-          {!sealed && (
-            <button
-              onClick={() => setEditDate((v) => !v)}
-              style={{ background: "none", border: 0, color: "var(--red-text)", minHeight: 44, padding: "0 4px" }}
-            >
-              {editDate ? "Done" : "Change"}
+  if (send === "sealed") {
+    return (
+      <div className={r.screen}>
+        <SealedCard
+          headingRef={sealedRef}
+          title="Sealed for later."
+          facts={[
+            ["For", "The hosts, and no one else"],
+            ["Open on", longDate(sealedAs.day)],
+            ["From", sealedAs.from],
+          ]}
+        >
+          <p className={r.body}>It can&rsquo;t be changed now. The hosts already have it, marked with that day.</p>
+          <div className={r.actions}>
+            <button type="button" className={r.secondary} onClick={again}>
+              Write another
             </button>
-          )}
+          </div>
+        </SealedCard>
+      </div>
+    );
+  }
+
+  const sending = send === "sending";
+  return (
+    <div className={r.screen}>
+      <Facts>
+        Only the hosts read it, marked to open on {longDate(day)}. It can&rsquo;t be changed once sealed.
+      </Facts>
+
+      <WritingSheet
+        id="later-text"
+        head={[
+          ["To", "The hosts"],
+          ["Open on", longDate(day)],
+        ]}
+        label="Your message"
+        value={message}
+        onChange={setMessage}
+        placeholder="Something for a future day: what tonight felt like, what you hope is still true."
+        maxLength={MAX}
+        disabled={sending}
+        sign={{ value: sign, onChange: setSign }}
+      />
+
+      <div className={r.attach}>
+        <label className={r.field} style={{ flex: "1 1 180px" }}>
+          <span className={r.fieldLabel}>Open on</span>
+          <input type="date" className={r.input} value={day} min={FIRST_DAY} onChange={(e) => e.target.value && setDay(e.target.value)} disabled={sending} />
+        </label>
+        <div className={r.field} style={{ flex: "1 1 180px" }}>
+          <span className={r.fieldLabel} id="later-photo">
+            A photo, if you like
+          </span>
+          <div className={r.attach}>
+            <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => {
+                choose(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {file && preview && <img src={preview} alt="The photo you added" className={r.attachThumb} />}
+            <button type="button" className={r.secondary} aria-describedby="later-photo" onClick={() => photoInput.current?.click()} disabled={sending}>
+              {file ? "Change photo" : "Add a photo"}
+            </button>
+            {file && (
+              <button type="button" className={r.textLink} onClick={() => choose(null)} disabled={sending}>
+                Remove
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {error && (
-        <p role="alert" className={styles.error}>
+        <p className={r.error} role="alert">
           {error}
         </p>
       )}
-
-      {sealed && (
-        <div className={styles.card} role="status">
-          <div className={styles.between}>
-            <b>🔒 Submitted &amp; locked</b>
-            <span style={{ color: "var(--red-text)" }}>Sealed</span>
-          </div>
-          <p style={{ fontWeight: 700, fontSize: 28 }}>{now ? countdown(revealDate, now) : "—"}</p>
-          <p className={styles.body}>On reveal, the sealed page unfolds with your photograph and date.</p>
+      {sending ? (
+        <Progress fraction={file ? progress : null} label="Sealing your message" />
+      ) : (
+        <div className={r.actions}>
+          <button type="button" className={r.primary} onClick={seal}>
+            {send === "failed" ? "Try sealing again" : "Seal message"}
+          </button>
         </div>
       )}
-
-      <button
-        onClick={() => setPeek((v) => !v)}
-        style={{ background: "var(--acid)", border: "1px solid var(--ink)", padding: 12, textAlign: "left", display: "flex", flexDirection: "column", gap: 10 }}
-      >
-        <span className="label-mono">Reveal state preview</span>
-        <span style={{ fontFamily: "var(--f-display)", fontSize: 18 }}>
-          {peek ? (message ? `“${message}”` : "Your letter will appear here.") : "Open the letter →"}
-        </span>
-      </button>
-    </AppShell>
+    </div>
   );
 }
