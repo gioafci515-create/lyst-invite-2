@@ -12,7 +12,8 @@
     "test:server": "node tests/e2e/server.e2e.mjs",
     "test:admin": "node tests/e2e/admin-event.e2e.mjs",
     "test:media": "node tests/e2e/media.e2e.mjs",
-    "capture": "node tests/e2e/capture.mjs"
+    "capture": "node tests/e2e/capture.mjs",
+    "test:rooms": "node tests/e2e/rooms.e2e.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.39.0",

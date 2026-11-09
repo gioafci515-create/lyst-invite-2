@@ -71,6 +71,40 @@ try {
   e = await ev();
   ok("the camera roll size saves and guests get it from the server", e.cameraFrames === 12, String(e.cameraFrames));
 
+  console.log("\n--- programme editor");
+  const ADD = 'form[aria-label="Add a programme row"]';
+  const press = async (label) => { const r = await p.ev(`(() => { const b = document.querySelector('#programme button[aria-label=${JSON.stringify(label)}]'); if (!b || b.disabled) return false; b.form.requestSubmit(b); return true; })()`); await sleep(2500); return r; };
+  await go("/admin/event");
+  ok("the programme editor lists every stored row", (await p.ev(`document.querySelectorAll('#programme form[aria-label^="Programme row"]').length`)) === (await ev()).programme.length);
+  await setVal(`${ADD} input[name=at]`, "2026-11-14T22:15");
+  await setVal(`${ADD} input[name=label]`, "Supper");
+  await submit(ADD);
+  e = await ev();
+  ok("add: the row is saved in time order and guests get it", e.programme.map((r) => r.label).join(",") === "Type becomes sound,Audience edit,Supper,Edition zero leaves press" && e.programme[2].at === "2026-11-14T21:15:00.000Z", JSON.stringify(e.programme));
+  await go("/programme", 3500);
+  ok("add: the guests' programme page shows it at 22:15", /22:15\s*Supper/.test(await body()));
+  await go("/admin/event");
+  await setVal(`#programme form[aria-label$=": Supper"] input[name=label]`, "Late supper");
+  await submit(`#programme form[aria-label$=": Supper"]`);
+  e = await ev();
+  ok("edit: the new name is saved", e.programme[2].label === "Late supper", JSON.stringify(e.programme[2]));
+  await go("/admin/event");
+  await press("Move Late supper earlier");
+  e = await ev();
+  ok("move earlier: it swaps places with the row before, the times stay", e.programme[1].label === "Late supper" && e.programme[1].at === "2026-11-14T20:17:00.000Z" && e.programme[2].label === "Audience edit" && e.programme[2].at === "2026-11-14T21:15:00.000Z", JSON.stringify(e.programme));
+  await go("/admin/event");
+  await press("Delete Late supper");
+  e = await ev();
+  ok("delete: the row is gone and the rest is untouched", e.programme.length === 3 && !e.programme.some((r) => r.label === "Late supper"), JSON.stringify(e.programme));
+  await go("/admin/event");
+  await setVal(`${ADD} input[name=at]`, "2026-11-15T03:00");
+  await setVal(`${ADD} input[name=label]`, "After party");
+  await p.ev(`document.querySelector('${ADD} input[name=at]').removeAttribute('max')`); // what an old browser would send: the server must refuse it
+  await submit(ADD);
+  ok("a time after the end is refused with a reason and nothing is saved", /must be after the opening/i.test(await body()) && (await ev()).programme.length === 3);
+  await go("/admin/live");
+  ok("the live-room admin no longer keeps a second schedule; it points to the programme", !(await p.ev(`!!document.querySelector('textarea[name=schedule]')`)) && (await p.ev(`!!document.querySelector('a[href="/admin/event#programme"]')`)));
+
   await go("/admin/event");
   await clickBtn("Reset to built-in defaults");
   e = await ev();

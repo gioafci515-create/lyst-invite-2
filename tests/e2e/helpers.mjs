@@ -24,11 +24,15 @@ export const AT = {
  *  contribute  answers for /api/contribute, one per request, in order: "ok" (200), "error" (500), "fail" (network
  *              error) or "hold" (kept waiting until release()). Once used up, every request is answered "ok".
  *              Nothing reaches the real server, so tests never write submissions.
- * Returns { held, release(answer), contributions } to drive held requests and inspect what was sent.
+ *  livePatch   (json) => void, rewrites /api/live (what the hosts have opened)
+ *  rsvp        answers for /api/rsvp, in order: "ok" (200), "error" (500) or "closed" (403, closed). Nothing reaches the
+ *              server; the bodies the page sent are kept in ctl.rsvpBodies.
+ * Returns { held, release(answer), contributions, rsvpBodies } to drive held requests and inspect what was sent.
  */
-export async function installMocks(page, { now, modulesOff = [], eventPatch, failEvent = false, contribute } = {}) {
+export async function installMocks(page, { now, modulesOff = [], eventPatch, failEvent = false, contribute, livePatch, rsvp } = {}) {
   const plan = [...(contribute ?? [])];
-  const ctl = { held: [], contributions: 0 };
+  const rsvpPlan = [...(rsvp ?? [])];
+  const ctl = { held: [], contributions: 0, rsvpBodies: [] };
   const answer = async (id, a) => {
     if (a === "fail") return page.send("Fetch.failRequest", { requestId: id, errorReason: "InternetDisconnected" });
     const body = a === "error" ? { error: "We couldn't save that right now. Please try again." } : { ok: true };
@@ -46,6 +50,13 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
     (async () => {
       const id = d.params.requestId;
       const url = d.params.request.url;
+      if (url.includes("/api/rsvp")) {
+        try { ctl.rsvpBodies.push(JSON.parse(d.params.request.postData ?? "{}")); } catch { ctl.rsvpBodies.push(null); }
+        const a = rsvpPlan.length ? rsvpPlan.shift() : "ok";
+        const [code, body] = a === "error" ? [500, { error: "We couldn't save your response right now. Please try again." }] : a === "closed" ? [403, { error: "RSVPs are closed.", closed: true }] : [200, { ok: true }];
+        await page.send("Fetch.fulfillRequest", { requestId: id, responseCode: code, responseHeaders: [{ name: "content-type", value: "application/json" }], body: Buffer.from(JSON.stringify(body)).toString("base64") });
+        return;
+      }
       if (url.includes("/api/contribute")) {
         ctl.contributions++;
         const a = plan.length ? plan.shift() : "ok";
@@ -64,6 +75,8 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
           if (now) json.now = now;
           for (const m of modulesOff) json.modules[m] = false;
           if (eventPatch) eventPatch(json);
+        } else if (url.includes("/api/live")) {
+          if (livePatch) livePatch(json);
         } else if (url.includes("/api/tasks")) {
           if (now) json.now = now;
           json.tasks.forEach((t) => { t.unlocked = t.at <= json.now; });
@@ -83,6 +96,8 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
       { urlPattern: "*/api/event*", requestStage: failEvent ? "Request" : "Response" },
       { urlPattern: "*/api/tasks*", requestStage: "Response" },
       ...(contribute ? [{ urlPattern: "*/api/contribute*", requestStage: "Request" }] : []),
+      ...(livePatch ? [{ urlPattern: "*/api/live*", requestStage: "Response" }] : []),
+      ...(rsvp ? [{ urlPattern: "*/api/rsvp*", requestStage: "Request" }] : []),
     ],
   });
   return ctl;
@@ -100,7 +115,7 @@ export async function open({ w = 390, h = 844, mobile = true, dsf = 1, path = "/
   await c.page.send("Page.enable");
   await c.page.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: dsf, mobile });
   if (init) await c.page.send("Page.addScriptToEvaluateOnNewDocument", { source: init });
-  if (mock.now || mock.modulesOff || mock.failEvent || mock.eventPatch || mock.contribute) c.mock = await installMocks(c.page, mock);
+  if (mock.now || mock.modulesOff || mock.failEvent || mock.eventPatch || mock.contribute || mock.livePatch || mock.rsvp) c.mock = await installMocks(c.page, mock);
   await c.page.send("Page.navigate", { url: ORIGIN + path });
   await sleep(wait);
   c.errs = errs;
