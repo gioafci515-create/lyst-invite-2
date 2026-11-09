@@ -25,17 +25,49 @@ const SCENES = [
   { src: "/images/story-mobile.png", alt: "Performers in front of projected type" },
 ];
 
-/** What each enabled feature lets a guest do, in the order they would meet them. Not links: they open on the night. */
-const ON_THE_NIGHT: [ModuleId, string][] = [
-  ["camera", "take photos with a disposable camera"],
-  ["tasks", "follow short tasks through the night"],
-  ["voice", "leave a voice memory for the hosts"],
-  ["video", "record a short video"],
-  ["live", "join the live room"],
-  ["later", "write a letter to be opened later"],
+/**
+ * What opens on the night, in the order a guest would meet it: one approved photo crop, what it is, and a line of three
+ * to five words. Not links: nothing here works before the doors open.
+ */
+const TEASER: { module: ModuleId; what: string; line: (frames: number) => string; src: string; pos: string }[] = [
+  { module: "camera", what: "Disposable camera", line: (n) => `${n} frames. One night.`, src: "/images/gallery2.png", pos: "50% 30%" },
+  { module: "tasks", what: "Tasks", line: () => "Small missions, one by one.", src: "/images/gallery1.png", pos: "50% 40%" },
+  { module: "voice", what: "Voice guestbook", line: () => "Leave a voice.", src: "/images/story-mobile.png", pos: "50% 30%" },
+  { module: "video", what: "Video message", line: () => "Forty-five seconds on film.", src: "/images/shard.png", pos: "50% 35%" },
+  { module: "live", what: "Live room", line: () => "Rewrite the ending.", src: "/images/gallery3.png", pos: "50% 50%" },
 ];
-const AFTERWARDS: [ModuleId, string][] = [["gallery", "the gallery"]];
-const list = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+
+/** "Opens Sat 14 Nov, 19:13", in the event timezone, from the server's start time */
+const opensLabel = (iso: string, tz: string) =>
+  `Opens ${new Date(iso).toLocaleDateString("en-GB", { timeZone: tz, weekday: "short", day: "numeric", month: "short" })}, ${timeLabel(iso, tz)}`;
+
+function Teaser() {
+  const ev = useEvent();
+  const rows = TEASER.filter((t) => ev.enabled(t.module));
+  if (!rows.length) return null;
+  const opens = opensLabel(ev.startsAt, ev.timezone);
+  return (
+    <section className={styles.teaser} aria-labelledby="night-title">
+      <h2 id="night-title" className={styles.teaserTitle}>
+        On the night
+      </h2>
+      <ul className={styles.teaserList}>
+        {rows.map((t) => (
+          <li key={t.module} className={styles.teaserItem} data-teaser={t.module}>
+            <span className={styles.teaserPhoto}>
+              <Image src={t.src} alt="" fill sizes="(max-width: 900px) 96px, 260px" style={{ objectFit: "cover", objectPosition: t.pos }} />
+            </span>
+            <span className={styles.teaserText}>
+              <span className={styles.teaserWhat}>{t.what}</span>
+              <h3 className={styles.teaserLine}>{t.line(ev.cameraFrames)}</h3>
+              <span className={styles.teaserOpens}>{opens}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 function Arrow() {
   return (
@@ -152,7 +184,7 @@ function Rsvp() {
       <div className={styles.rsvpCopy}>
         <p className={styles.label}>Your response, private to the hosts</p>
         <h2 id="rsvp-title" className={styles.rsvpTitle}>
-          {showSummary ? "Your reply" : closed ? "Replies closed" : "Claim a position"}
+          {showSummary ? "Your reply" : closed ? "Replies closed" : "Are you coming?"}
         </h2>
         {!showSummary && (
           <p className={styles.rsvpBody}>
@@ -206,10 +238,10 @@ function Rsvp() {
         <form className={styles.form} onSubmit={submit} noValidate>
           <div className={styles.options} role="group" aria-label="Your answer">
             <button type="button" className={styles.option} aria-pressed={attending === "accept"} onClick={() => setAttending("accept")}>
-              Joyfully accept
+              I&rsquo;m coming
             </button>
             <button type="button" className={styles.option} aria-pressed={attending === "decline"} onClick={() => setAttending("decline")}>
-              Decline
+              Can&rsquo;t make it
             </button>
           </div>
           <label className={styles.field}>
@@ -262,7 +294,7 @@ function Rsvp() {
             </p>
           )}
           <button type="submit" disabled={sending} className={styles.submit}>
-            {sending ? "Sending…" : stored ? "Update response" : "Confirm response"} <Arrow />
+            {sending ? "Sending…" : stored ? "Update my reply" : "Send my reply"} <Arrow />
           </button>
           {stored && (
             <button type="button" className={styles.keep} onClick={() => setEditing(false)}>
@@ -279,8 +311,6 @@ function Rsvp() {
 export default function InviteScreen() {
   const ev = useEvent();
   const replied = !!useReply();
-  const tonight = ON_THE_NIGHT.filter(([m]) => ev.enabled(m)).map(([, t]) => t);
-  const after = AFTERWARDS.filter(([m]) => ev.enabled(m)).map(([, t]) => t);
 
   return (
     <div id={SECTION.invite}>
@@ -305,7 +335,7 @@ export default function InviteScreen() {
           </p>
           {ev.rsvpOpen === true && !replied ? (
             <a href={`#${SECTION.rsvp}`} className={styles.cta} data-btn>
-              Claim a position <Arrow />
+              Reply now <Arrow />
             </a>
           ) : ev.rsvpOpen !== null ? (
             <a href={`#${SECTION.programme}`} className={styles.cta} data-btn>
@@ -358,17 +388,7 @@ export default function InviteScreen() {
 
       <Essentials />
 
-      {(tonight.length > 0 || after.length > 0) && (
-        <section className={styles.night} aria-labelledby="night-title">
-          <h2 id="night-title" className={styles.label}>
-            On the night
-          </h2>
-          <p>
-            {tonight.length > 0 && <>On the night you&rsquo;ll be able to {list(tonight)}.</>}
-            {after.length > 0 && <> Afterwards, the photos the hosts approve fill {list(after)}.</>}
-          </p>
-        </section>
-      )}
+      <Teaser />
     </div>
   );
 }

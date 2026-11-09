@@ -87,8 +87,8 @@ export default function SiteHeader() {
 
   return (
     <header className={styles.header}>
-      <Link href="/" className={styles.mark} aria-label="LYST / 10, home">
-        LYST / 10
+      <Link href="/" className={styles.mark} aria-label="LYST, home">
+        LYST
       </Link>
       <nav className={styles.nav} aria-label="Main">
         <Link href="/" className={styles.navLink}>

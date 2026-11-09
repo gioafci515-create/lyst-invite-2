@@ -160,16 +160,16 @@ export default function RespondScreen() {
   return (
     <div className={r.screen}>
       <form className={r.form} onSubmit={submit} noValidate>
-        <h2 className={r.h2}>{stored ? "Change your answer" : "Will you be there?"}</h2>
+        <h2 className={r.h2}>{stored ? "Change your answer" : "Are you coming?"}</h2>
         <fieldset className={`${r.options} ${r.two}`}>
           <legend className={r.fieldLabel}>Your answer</legend>
           <label className={r.option}>
             <input type="radio" name="attending" checked={going} onChange={() => set("attending", "accept")} />
-            Yes, I&rsquo;ll be there
+            I&rsquo;m coming
           </label>
           <label className={r.option}>
             <input type="radio" name="attending" checked={!going} onChange={() => set("attending", "decline")} />
-            No, I can&rsquo;t come
+            Can&rsquo;t make it
           </label>
         </fieldset>
 
@@ -260,7 +260,7 @@ export default function RespondScreen() {
             </button>
           )}
           <button type="submit" className={r.primary} disabled={sending}>
-            {sending ? "Saving…" : stored ? "Update response" : "Confirm response"}
+            {sending ? "Saving…" : stored ? "Update my reply" : "Send my reply"}
           </button>
         </div>
         {hostsOnly}
