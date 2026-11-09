@@ -151,7 +151,7 @@ export const tappable = (page, hrefTest, { barPx = 65, includeHeader = false } =
   })()`);
 
 /** Feature routes and the host switch behind each (mirrors lib/sections.ts). */
-export const ROUTES = { camera: "/camera", voice: "/voice", video: "/video", live: "/live", later: "/letter", gallery: "/gallery", capsule: "/capsule", tasks: "/tasks" };
+export const ROUTES = { camera: "/camera", voice: "/voice", video: "/video", live: "/live", later: "/for-later", gallery: "/gallery", capsule: "/capsule", tasks: "/tasks" };
 export const routeModule = (href) => {
   const p = href.replace(/^\/?#/, "/#").split("?")[0];
   const legacy = { "/#voice": "voice", "/#video": "video", "/#later": "later", "/#gallery": "gallery", "/#live": "live", "/#camera": "camera", "/#tasks": "tasks", "/#capsule": "capsule" }[p];

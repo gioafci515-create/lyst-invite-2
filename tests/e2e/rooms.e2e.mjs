@@ -84,6 +84,7 @@ try {
     const send = async (type) => {
       const fd = new FormData();
       fd.set("type", type);
+      if (type === "forlater") fd.set("text", "Sealed words.");
       fd.set("name", "Test guest");
       fd.set("meta", JSON.stringify({ w: "390", h: "520" }));
       fd.set("file", new Blob([png], { type: "image/png" }), "test.png");
@@ -93,8 +94,8 @@ try {
     forcePhase("during");
     const up = await send("photo");
     ok("an upload answers with its id and a private key", typeof up.id === "string" && /^[0-9a-f]{32}$/.test(up.key ?? ""), JSON.stringify(up).slice(0, 80));
-    const later = await send("later");
-    ok("a letter's photo gets no key: it can never be shown in the gallery", later.ok === true && !later.key);
+    const later = await send("forlater");
+    ok("a photo left for later gets no key: it can never be shown in the gallery", later.ok === true && !later.key);
 
     const status = async (path) => (await fetch(ORIGIN + path)).status;
     ok("pending: the media is not public", (await status(`/api/media/${up.id}`)) === 404);
@@ -186,7 +187,7 @@ try {
   }
   {
     const c = await open({ path: "/details", now: AT.rsvpOpen, wait: 4500 });
-    ok("no answer on this phone yet: the form opens straight away", /Will you be there\?/.test(await text(c.page, "#details")) && (await c.page.ev(`!!document.querySelector('#details form')`)));
+    ok("no answer on this phone yet: the form opens straight away", /Are you coming\?/.test(await text(c.page, "#details")) && (await c.page.ev(`!!document.querySelector('#details form')`)));
     await c.close();
   }
   {

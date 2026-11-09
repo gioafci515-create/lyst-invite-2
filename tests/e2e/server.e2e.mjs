@@ -64,8 +64,8 @@ try {
   setCfg({ modules: { later: false, live: false, voice: false } });
   const q = await post("/api/contribute", { type: "question", name: "t", text: "hello?" });
   ok("live off: a question is refused (403)", q.status === 403, JSON.stringify(q.body));
-  const l = await post("/api/contribute", { type: "later", name: "t", text: "note", meta: { reveal: "2027-01-01" } });
-  ok("later off: a letter-for-later is refused (403)", l.status === 403, JSON.stringify(l.body));
+  const l = await post("/api/contribute", { type: "forlater", name: "t", text: "note", meta: { openAt: "2027-11-14" } });
+  ok("later off: something for later is refused (403)", l.status === 403, JSON.stringify(l.body));
   const v = await post("/api/contribute", { type: "voice", name: "t", text: "", meta: {} });
   ok("voice off: a voice submission is refused (403)", v.status === 403, JSON.stringify(v.body));
   setCfg({ modules: {}, override: "during" });

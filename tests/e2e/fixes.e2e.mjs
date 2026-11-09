@@ -104,13 +104,12 @@ try {
       ["challenge", {}],
       ["poll", { meta: { question: "q", choice: "a", voter: "v" } }],
       ["question", {}],
-      ["letter", {}],
     ]) {
       const r = await post({ type: kind, name: "t", text: "early", ...extra });
       ok(`before: a ${kind} submission is refused with when it opens`, r.status === 403 && /opens on Saturday 14 November at 19:13/.test(r.body.error ?? ""), `${r.status} ${r.body.error}`);
     }
-    const later = await post({ type: "later", name: "t", text: "for later", meta: { reveal: "2027-11-14" } });
-    ok("before: a message for later is still accepted (it has no window)", later.status === 200, JSON.stringify(later.body));
+    const later = await post({ type: "forlater", name: "t", text: "for later", meta: { openAt: "2027-11-14" } });
+    ok("before: something for later is still accepted (it has no window)", later.status === 200, JSON.stringify(later.body));
     for (const [path, name] of [["/camera", "camera"], ["/voice", "voice"], ["/video", "video"], ["/live", "live room"], ["/tasks", "tasks"]]) {
       const c = await open({ path, wait: 4500 });
       const t = await body(c);
@@ -119,7 +118,7 @@ try {
       ok(`before: ${path} never says "tonight"`, !/\btonight\b/i.test(t));
       await c.close();
     }
-    for (const path of ["/", "/letter", "/capsule", "/programme", "/details"]) {
+    for (const path of ["/", "/for-later", "/programme", "/details"]) {
       const c = await open({ path, init: seedStorage({ lyst_guest: guest }), wait: 4500 });
       ok(`before: ${path} never says "tonight"`, !/\btonight\b/i.test(await body(c)), ((await body(c)).match(/.{0,40}tonight.{0,20}/i) || [""])[0]);
       await c.close();
@@ -173,11 +172,10 @@ try {
   {
     const h = await open({ path: "/", now: AT.after, wait: 5000 });
     const t = await body(h);
-    ok("after: the home capsule row describes naming it and picking its day, not 'a year from now'", /pick the day it should open/i.test(t) && !/a year from now/i.test(t));
+    ok("after: home offers one 'for later' that says what really happens (sealed until the day you pick)", /Leave something for later/.test(t) && /Sealed until the day you pick/.test(t) && !/Time capsule|a year from now/i.test(t));
     await h.close();
-    const c = await open({ path: "/capsule", now: AT.after, wait: 4500 });
-    ok("/capsule says the same, and that you add nothing else", /pick the day it should open/i.test(await body(c)) && /You add nothing else/.test(await body(c)));
-    await c.close();
+    const r = await fetch(ORIGIN + "/capsule", { redirect: "manual" });
+    ok("/capsule now leads to the same screen", new URL(r.headers.get("location") ?? "/", ORIGIN).pathname === "/for-later");
   }
 
   /* ------------------------------------------------------------------ 7. countdowns and "next" */
@@ -238,12 +236,12 @@ try {
     const c = await open({ path: "/", now: AT.rsvpOpen, wait: 5000 });
     ok("the '… days to go' status is not a live region", await c.page.ev(`(() => { const s = document.querySelector('header [data-status]'); return !!s && !s.closest('[aria-live]'); })()`));
     const groups = await c.page.ev(`[...document.querySelectorAll('footer nav button[aria-expanded]')].map(b => b.textContent.trim() + ':' + b.getAttribute('aria-expanded'))`);
-    ok("phone footer: three disclosure buttons, closed, and 'On the night' before the event", groups.join(",") === "Invitation:false,On the night:false,Memories:false", groups.join(","));
+    ok("phone footer: disclosure buttons, closed; before the event nothing of the night is open, so that group is not offered", groups.join(",") === "Invitation:false,Memories:false", groups.join(","));
     ok("phone footer: the lists are hidden until opened", await c.page.ev(`[...document.querySelectorAll('footer nav ul')].every(u => u.hidden)`));
-    await c.page.ev(`[...document.querySelectorAll('footer nav button')].find(b => b.textContent.includes('On the night')).click()`);
+    await c.page.ev(`[...document.querySelectorAll('footer nav button')].find(b => b.textContent.includes('Memories')).click()`);
     await sleep(200);
-    const night = await c.page.ev(`(() => { const b = [...document.querySelectorAll('footer nav button')].find(b => b.textContent.includes('On the night')); const ul = document.getElementById(b.getAttribute('aria-controls')); return b.getAttribute('aria-expanded') + ':' + [...ul.querySelectorAll('a')].map(a => a.textContent.trim()).join('/') + ':' + ul.hidden; })()`);
-    ok("phone footer: opening 'On the night' shows only what is open now (the letter), not the camera or voice", night === "true:Letter:false", night);
+    const mem = await c.page.ev(`(() => { const b = [...document.querySelectorAll('footer nav button')].find(b => b.textContent.includes('Memories')); const ul = document.getElementById(b.getAttribute('aria-controls')); return b.getAttribute('aria-expanded') + ':' + [...ul.querySelectorAll('a')].map(a => a.textContent.trim()).join('/') + ':' + ul.hidden; })()`);
+    ok("phone footer: opening a group shows its links; nothing of the night is listed before it opens", mem === "true:Gallery/For later:false" && !/Camera|Voice|Video|Live room/.test(await text(c.page, 'footer nav')), mem);
     await c.close();
     const dsk = await open({ path: "/", now: AT.rsvpOpen, w: 1440, h: 900, mobile: false, wait: 5000 });
     ok("desktop footer: unchanged, lists visible, no disclosure buttons", await dsk.page.ev(`document.querySelectorAll('footer nav button').length === 0 && [...document.querySelectorAll('footer nav ul')].every(u => !u.hidden && u.offsetHeight > 0)`));

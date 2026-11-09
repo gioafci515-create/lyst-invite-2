@@ -69,7 +69,7 @@ console.log("\n--- three phases");
 for (const [name, scn, status, h1, tabs] of [
   ["before", "rsvpOpen", /days to go|tomorrow|today/i, /UN\/\s*FOLD\s*2026/, "Home|RSVP|Open camera|Programme|Menu"],
   ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Tasks\|Open camera\|Live\|Menu$/],
-  ["after", "after", /memories open/i, /memories/i, "Home|Gallery|Open camera|Capsule|Menu"],
+  ["after", "after", /memories open/i, /memories/i, "Home|Gallery|Open camera|For later|Menu"],
 ]) {
   const c = await open({ now: AT[scn] });
   const bar = await barText(c.page);
@@ -95,12 +95,12 @@ const formPresent = (page) => page.ev(`!!document.querySelector('#rsvp form')`);
 {
   const c = await open({ now: AT.rsvpOpen });
   ok("open: header offers RSVP", (await headerCta(c.page)).trim() === "RSVP");
-  ok("open: hero button says Claim a position", /claim a position/i.test(await text(c.page, "section[aria-labelledby=invite-title] a")));
+  ok("open: hero button asks for a reply in plain words", /reply now/i.test(await text(c.page, "section[aria-labelledby=invite-title] a")));
   ok("open: quick RSVP form is present", await formPresent(c.page));
   ok("open: the RSVP section names the deadline", /reply by 12 November/i.test(await text(c.page, "#rsvp")));
   ok("open: bottom bar has an RSVP tab", /RSVP/.test(await barText(c.page)));
   ok("open: no designer notes visible", !/default state|hover \/ open form|→\s*confirmed/i.test(await c.page.ev("document.body.innerText")));
-  ok("open: 'On the night' lists the enabled features without links", /on the night you.ll be able to/i.test(await text(c.page, "main")) && (await c.page.ev(`[...document.querySelectorAll('section[aria-labelledby=night-title] a')].length`)) === 0);
+  ok("open: 'On the night' teases every enabled feature, with no links", (await c.page.ev(`[...document.querySelectorAll('[data-teaser]')].map(e => e.dataset.teaser).join(',')`)) === "camera,tasks,voice,video,live" && (await c.page.ev(`[...document.querySelectorAll('section[aria-labelledby=night-title] a')].length`)) === 0);
   await c.close();
 }
 {
@@ -193,9 +193,8 @@ const ROUTE_TITLES = [
   ["/voice", /voice guestbook/i],
   ["/video", /video message/i],
   ["/live", /live room/i],
-  ["/letter", /message for later/i],
+  ["/for-later", /leave something for later/i],
   ["/gallery", /gallery/i],
-  ["/capsule", /time capsule/i],
   ["/details", /your details/i],
   ["/tasks", /tasks/i],
   ["/updates", /updates/i],
@@ -214,7 +213,7 @@ for (const [path, title] of ROUTE_TITLES) {
   }
   await c.close();
 }
-for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/letter"], ["#gallery", "/gallery"], ["#capsule", "/capsule"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/tasks"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
+for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/for-later"], ["#gallery", "/gallery"], ["#capsule", "/for-later"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/tasks"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
   const c = await open({ path: "/" + hash, now: AT.duringNoTask, wait: 4500 });
   const at = await c.page.ev("location.pathname + location.hash");
   ok(`old link /${hash} forwards to ${to}`, at === to, at);
@@ -228,7 +227,7 @@ for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", 
   ok("/#programme stays on the invitation before the event", (await b.page.ev("location.pathname === '/' && !!document.getElementById('programme')")) === true);
   await b.close();
 }
-for (const [from, to] of [["/guestbook", "/voice"], ["/later", "/letter"], ["/hub", "/programme"], ["/respond", "/details"], ["/notifications", "/updates"], ["/interact", "/live"]]) {
+for (const [from, to] of [["/guestbook", "/voice"], ["/later", "/for-later"], ["/letter", "/for-later"], ["/capsule", "/for-later"], ["/hub", "/programme"], ["/respond", "/details"], ["/notifications", "/updates"], ["/interact", "/live"]]) {
   const r = await fetch(ORIGIN + from, { redirect: "manual" });
   ok(`old address ${from} redirects to ${to}`, r.status >= 300 && r.status < 400 && new URL(r.headers.get("location"), ORIGIN).pathname === to, `${r.status} ${r.headers.get("location")}`);
 }
@@ -253,7 +252,7 @@ for (const [scn, label] of [["duringVoiceTask", "during"], ["after", "after"], [
     await c.page.ev(`[...document.querySelectorAll('header nav button')].find(b => b.textContent.includes('Tonight')).click()`);
     await sleep(300);
     const items = await c.page.ev(`[...document.querySelectorAll('header nav ul:not([hidden]) a')].map(a => a.getAttribute('href'))`);
-    ok("desktop: the Tonight menu opens and lists every enabled feature of the night", ["/tasks", "/camera", "/voice", "/video", "/live", "/letter"].every((h) => items.includes(h)), items.join(","));
+    ok("desktop: the Tonight menu opens and lists every enabled feature of the night", ["/tasks", "/camera", "/voice", "/video", "/live"].every((h) => items.includes(h)), items.join(","));
     await c.page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await sleep(200);
     ok("desktop: Escape closes the Tonight menu", (await c.page.ev(`document.querySelectorAll('header nav ul:not([hidden])').length`)) === 0);
@@ -370,7 +369,7 @@ console.log("\n--- disabled modules are gated on the server (real config, cold c
   const ROOT = new URL("../../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
   const KV = ROOT + "data/kv.json";
   const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
-  const OFF = ["voice", "video", "gallery", "capsule", "later"];
+  const OFF = ["voice", "video", "gallery", "later"]; // the capsule has no guest route any more: /capsule leads to /for-later
   try {
     const db = backup ? JSON.parse(backup.toString()) : {};
     db["event:config"] = { ...(db["event:config"] ?? {}), override: "during", modules: Object.fromEntries(OFF.map((m) => [m, false])) };
