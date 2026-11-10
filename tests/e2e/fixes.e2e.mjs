@@ -13,6 +13,13 @@ const env = Object.fromEntries(
 );
 const db = () => (fs.existsSync(KV) ? JSON.parse(fs.readFileSync(KV, "utf8")) : {});
 const saveDb = (d) => fs.writeFileSync(KV, JSON.stringify(d, null, 2));
+// the built-in event settings for this run: the test browser's clock decides the phase, whatever the admin forced or
+// moved in this LOCAL store (put back exactly as it was at the end)
+{
+  const d = db();
+  delete d["event:config"];
+  saveDb(d);
+}
 const forcePhase = (override) => {
   const d = db();
   d["event:config"] = { ...(d["event:config"] && typeof d["event:config"] === "object" ? d["event:config"] : {}), override };

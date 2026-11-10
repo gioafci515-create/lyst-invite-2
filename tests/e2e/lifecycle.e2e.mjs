@@ -70,7 +70,7 @@ for (const [scn, label] of [["duringVoiceTask", "voice task live"], ["duringPhot
 console.log("\n--- three phases");
 for (const [name, scn, status, h1, tabs] of [
   ["before", "rsvpOpen", /days to go|tomorrow|today/i, /UN\/\s*FOLD\s*2026/, "Home|RSVP|Open camera|Programme|Menu"],
-  ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Moments\|Open camera(, a photo moment is open)?\|Live\|Menu$/],
+  ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Tasks\|Open camera(, a photo task is open)?\|Live\|Menu$/],
   ["after", "after", /memories open/i, /memories/i, "Home|Gallery|Open camera|For later|Menu"],
 ]) {
   const c = await open({ now: AT[scn] });
@@ -198,7 +198,7 @@ const ROUTE_TITLES = [
   ["/for-later", /leave something for later/i],
   ["/gallery", /gallery/i],
   ["/details", /your details/i],
-  ["/moments", /moments/i],
+  ["/moments", /tasks/i],
   ["/updates", /updates/i],
   ["/programme", /programme/i],
 ];
@@ -249,12 +249,15 @@ for (const [scn, label] of [["duringVoiceTask", "during"], ["after", "after"], [
   ok(`desktop ${label}: primary actions visible and unobstructed on the first screen`, miss.length === 0, miss.join(","));
   const nav = await c.page.ev(`[...document.querySelectorAll('header nav > a, header nav > div > button')].map(x => x.textContent.trim())`);
   const night = label === "before" ? "On the night" : "Tonight"; // never "Tonight" before the event day
-  ok(`desktop ${label}: header has at most 5 items (Invitation, Programme, ${night}, Memories + context)`, nav.join("|") === `Invitation|Programme|${night}|Memories` && (await c.page.ev(`getComputedStyle(document.querySelector('${BAR}')).display`)) === "none", nav.join("|"));
+  // during the event Tasks sits in the header itself (with how many are open), never only inside a menu
+  const names = nav.map((x) => x.replace(/^Tasks.*/, "Tasks"));
+  const want = label === "during" ? `Invitation|Programme|Tasks|${night}|Memories` : `Invitation|Programme|${night}|Memories`;
+  ok(`desktop ${label}: header: Invitation, Programme, ${label === "during" ? "Tasks, " : ""}${night}, Memories + context`, names.join("|") === want && (await c.page.ev(`getComputedStyle(document.querySelector('${BAR}')).display`)) === "none", nav.join("|"));
   if (label === "during") {
     await c.page.ev(`[...document.querySelectorAll('header nav button')].find(b => b.textContent.includes('Tonight')).click()`);
     await sleep(300);
     const items = await c.page.ev(`[...document.querySelectorAll('header nav ul:not([hidden]) a')].map(a => a.getAttribute('href'))`);
-    ok("desktop: the Tonight menu opens and lists every enabled feature of the night", ["/moments", "/camera", "/voice", "/video", "/live"].every((h) => items.includes(h)), items.join(","));
+    ok("desktop: the Tonight menu opens and lists every other feature of the night (Tasks is in the header itself)", ["/camera", "/voice", "/video", "/live"].every((h) => items.includes(h)) && (await c.page.ev(`!!document.querySelector('header nav > a[href="/moments"]')`)), items.join(","));
     await c.page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await sleep(200);
     ok("desktop: Escape closes the Tonight menu", (await c.page.ev(`document.querySelectorAll('header nav ul:not([hidden])').length`)) === 0);
@@ -343,6 +346,9 @@ for (const [scn, w] of [["rsvpOpen", 390], ["duringVoiceTask", 390], ["after", 3
 console.log("\n--- contrast (WCAG AA 4.5:1 for normal text)");
 for (const scn of ["duringVoiceTask", "after"]) {
   const c = await open({ now: AT[scn] });
+  // read the text as a guest sees it once it is on screen (the scroll reveal has run for everything)
+  await c.page.ev(`document.querySelectorAll('[data-reveal]').forEach((e) => e.setAttribute('data-shown', ''))`);
+  await sleep(1000);
   const ratios = await c.page.ev(`(() => {
     const parse = (s) => { const m = s.match(/rgba?\\(([^)]+)\\)/); const p = m[1].split(',').map(Number); return { r: p[0], g: p[1], b: p[2], a: p[3] === undefined ? 1 : p[3] }; };
     const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };

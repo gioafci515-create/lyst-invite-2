@@ -59,7 +59,7 @@ try {
   }
   {
     const c = await media({ path: "/camera?task=frames", now: AT.duringPhotoTask });
-    ok("photo task: the count comes from the task (3), not the roll", /^3\s*frames for this moment/.test((await h1(c.page)).trim()), await h1(c.page));
+    ok("photo task: the count comes from the task (3), not the roll", /^3\s*frames for this task/.test((await h1(c.page)).trim()), await h1(c.page));
     await c.close();
   }
 

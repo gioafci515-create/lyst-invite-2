@@ -117,14 +117,24 @@ export function pinTaskSchedule() {
   d["tasks:start"] = "2026-11-14T18:33:00.000Z";
   delete d["tasks:sentat"];
   delete d["tasks:defs"];
+  // the built-in event settings: the test browser's clock decides the phase (whatever the admin forced or moved in
+  // this store is put back afterwards)
+  delete d["event:config"];
   fs.writeFileSync(KV, JSON.stringify(d, null, 2));
   return () => {
     if (backup) fs.writeFileSync(KV, backup);
   };
 }
 
-/** Open a phone-sized (or desktop) page with the mocks installed, loaded and settled. */
-export async function open({ w = 390, h = 844, mobile = true, dsf = 1, path = "/", wait = 5500, flags = [], init, ...mock } = {}) {
+/** the built-in tasks, already shown to this test phone, so the task pop-up doesn't cover what a test looks at */
+export const tasksSeen = () => seedStorage({ lyst_task_seen: JSON.stringify(["frames", "voice", "hands", "note", "hello"]) });
+
+/**
+ * Open a phone-sized (or desktop) page with the mocks installed, loaded and settled. The task pop-up is kept out of the
+ * way unless `popup: true` (tests of the pop-up itself).
+ */
+export async function open({ w = 390, h = 844, mobile = true, dsf = 1, path = "/", wait = 5500, flags = [], init: given, popup = false, ...mock } = {}) {
+  const init = popup ? given : `${tasksSeen()}\n${given ?? ""}`;
   const c = await launch({ port: port++, w, h, flags });
   const errs = [];
   c.page.on((d) => {

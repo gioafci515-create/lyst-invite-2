@@ -14,6 +14,9 @@ const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
   d["tasks:start"] = "2026-11-14T18:33:00.000Z";
   delete d["tasks:sentat"];
   delete d["tasks:defs"];
+  // the built-in event settings: the test browser's clock decides the phase (whatever the admin forced or moved in
+  // this store is put back afterwards)
+  delete d["event:config"];
   fs.writeFileSync(KV, JSON.stringify(d, null, 2));
 }
 
@@ -58,7 +61,7 @@ try {
     ok("375x667: scrolled to the end, the page's main button sits above the card, never under it", clear);
     await c.page.ev(`[...document.querySelectorAll('[data-live-card] button')].find(b => /hide/i.test(b.textContent)).click()`);
     await sleep(300);
-    ok("collapses to a pill: '1 moment open'", /^pill\|.*1 moment open/i.test(await card(c)), await card(c));
+    ok("collapses to a pill: '1 task open'", /^pill\|.*1 task open/i.test(await card(c)), await card(c));
     await c.page.send("Page.reload", {});
     await sleep(5500);
     ok("the pill is remembered for the session", /^pill\|/.test(await card(c)), await card(c));
@@ -67,7 +70,7 @@ try {
   {
     const c = await open({ path: "/details", now: AT.duringPhotoTask, init: seedStorage({ lyst_task_progress: JSON.stringify({ frames: 3 }) }), wait: 6000 });
     const t = await card(c);
-    ok("nothing open: 'Next moment at 19:53' from the server's schedule, in event time", /^next\|/.test(t) && /Next moment at 19:53/i.test(t), t);
+    ok("nothing open: 'Next task at 19:53' from the server's schedule, in event time", /^next\|/.test(t) && /Next task at 19:53/i.test(t), t);
     await c.close();
   }
 
@@ -132,10 +135,10 @@ try {
     const faces = await c.page.ev(`[...document.querySelectorAll('[data-card]')].map(e => e.dataset.card).join(',')`);
     ok("one card per moment in the real list: the open one highlighted, the rest face down", faces === "open,down,down,down,down", faces);
     ok("face-down cards keep what they ask a surprise", !/Say it out loud|Hidden hands|Say hello on film/.test(await c.page.ev(`document.querySelector('ol').textContent`)));
-    ok("progress reads '0 of 5 collected'", /0 of 5 collected/.test(await body(c)));
+    ok("progress reads '0 of 5 done'", /0 of 5 done/.test(await body(c)));
     await c.close();
     const b = await open({ path: "/moments", now: AT.rsvpOpen, wait: 5500 });
-    ok("before the event: the face-down deck and when moments open", /Moments open on Saturday 14 November at 19:13/.test(await body(b)) && (await b.page.ev(`[...document.querySelectorAll('[data-card]')].every(e => e.dataset.card === 'down')`)));
+    ok("before the event: the face-down deck and when moments open", /Tasks open on Saturday 14 November at 19:13/.test(await body(b)) && (await b.page.ev(`[...document.querySelectorAll('[data-card]')].every(e => e.dataset.card === 'down')`)));
     await b.close();
   }
   {
@@ -149,7 +152,7 @@ try {
     ok("/moments/<unknown id>: lands on the whole deck", (await unknown.page.ev("location.pathname")) === "/moments");
     await unknown.close();
     const before = await open({ path: "/moments/frames", now: AT.rsvpOpen, wait: 5500 });
-    ok("/moments/<id> before the event: face down, when moments open, no prompt", /Moments open on Saturday 14 November/.test(await body(before)) && !/Take 3 pictures/.test(await body(before)));
+    ok("/moments/<id> before the event: face down, when moments open, no prompt", /Tasks open on Saturday 14 November/.test(await body(before)) && !/Take 3 pictures/.test(await body(before)));
     await before.close();
   }
   for (const [from, to] of [["/tasks", "/moments"], ["/?card=frames", "/moments/frames"]]) {
