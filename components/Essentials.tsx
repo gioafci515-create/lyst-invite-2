@@ -18,7 +18,7 @@ export function TonightEssentials() {
   // the server-corrected clock, so "Next" never names something that already started
   const next = nextProgrammeRow(ev.startsAt, ev.programme, ev.now);
   return (
-    <section className={styles.tonight} aria-labelledby="tonight-essentials">
+    <section className={styles.tonight} aria-labelledby="tonight-essentials" data-reveal>
       <h3 id="tonight-essentials" className="sr-only">
         Tonight&rsquo;s essentials
       </h3>
@@ -84,7 +84,7 @@ export default function Essentials({ standalone = false }: { standalone?: boolea
   const ev = useEvent();
   const tz = ev.timezone;
   return (
-    <section id={standalone ? undefined : "essentials"} className={`${styles.wrap} ${standalone ? styles.standalone : ""}`} aria-labelledby="essentials-title">
+    <section id={standalone ? undefined : "essentials"} className={`${styles.wrap} ${standalone ? styles.standalone : ""}`} aria-labelledby="essentials-title" data-reveal>
       <div className={styles.head}>
         <p className={styles.label}>Practical</p>
         <h2 id="essentials-title" className={styles.h2}>

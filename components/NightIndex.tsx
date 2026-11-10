@@ -35,7 +35,7 @@ function Rows({ rows }: { rows: Row[] }) {
   return (
     <ul className={styles.rows}>
       {rows.map((r) => (
-        <li key={r.key} data-desktop-only={r.desktopOnly || undefined}>
+        <li key={r.key} data-desktop-only={r.desktopOnly || undefined} data-reveal>
           <Link href={r.href} className={styles.row}>
             <span className={styles.thumb}>
               <Photo k={r.photo} sizes="56px" />
@@ -59,7 +59,7 @@ function Band({ heading }: { heading: string }) {
   return (
     <>
       <h1 className="sr-only">{heading}</h1>
-      <div className={styles.band} aria-hidden>
+      <div className={styles.band} aria-hidden data-reveal>
         <Photo k="stage" sizes="100vw" priority />
         <p className={styles.bandMark}>
           UN/FOLD <span>2026</span>
@@ -149,7 +149,7 @@ function Tonight() {
         </h2>
         <div className={styles.layout}>
           {lead && (
-            <article className={styles.lead} data-urgent={lead.urgent || undefined}>
+            <article className={styles.lead} data-urgent={lead.urgent || undefined} data-reveal>
               <div className={styles.leadPhoto}>
                 <Photo k={lead.photo} sizes="(max-width: 900px) 100vw, 640px" />
               </div>
@@ -172,7 +172,7 @@ function Tonight() {
           )}
           <Rows rows={rows} />
           {more.length > 0 && (
-          <nav className={styles.more} aria-labelledby="more-tonight">
+          <nav className={styles.more} aria-labelledby="more-tonight" data-reveal>
             <h3 id="more-tonight" className={styles.moreLabel}>
               More tonight
             </h3>
@@ -211,7 +211,7 @@ function GalleryLead({ initial }: { initial: GalleryItem[] | null }) {
   const photos = (items ?? []).filter((i) => i.kind === "photo").slice(0, 3);
   const count = items?.length ?? 0;
   return (
-    <article className={`${styles.lead} ${styles.galleryLead}`}>
+    <article className={`${styles.lead} ${styles.galleryLead}`} data-reveal>
       {photos.length > 0 && (
         <div className={styles.mosaic} data-count={photos.length}>
           {photos.map((p) => (
@@ -263,7 +263,7 @@ function RecapStrip({ initial }: { initial: Recap | null }) {
   ).filter(([n]) => n > 0);
   if (!items.length) return null;
   return (
-    <section className={styles.recap} aria-labelledby="recap-title">
+    <section className={styles.recap} aria-labelledby="recap-title" data-reveal>
       <h3 id="recap-title" className={styles.moreLabel}>
         What the night left
       </h3>

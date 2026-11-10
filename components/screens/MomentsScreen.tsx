@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import PushAsk from "@/components/PushAsk";
 import { Icon, type IconName } from "@/components/icons";
 import { COPY } from "@/lib/copy";
@@ -30,7 +30,7 @@ function useThumbs(): Record<string, string> {
 }
 
 /** One card of the deck. Face down shows only its number and, during the event, when it opens: never what it asks. */
-function Card({ t, face, total, tz, thumb, link, asLink = true }: { t: TaskView; face: Face; total: number; tz: string; thumb?: string; link?: boolean; asLink?: boolean }) {
+function Card({ t, face, total, tz, thumb, link, asLink = true, i = 0 }: { t: TaskView; face: Face; total: number; tz: string; thumb?: string; link?: boolean; asLink?: boolean; i?: number }) {
   const number = `${t.index + 1} / ${total}`;
   const body =
     face === "down" || face === "missed" ? (
@@ -54,7 +54,7 @@ function Card({ t, face, total, tz, thumb, link, asLink = true }: { t: TaskView;
       </>
     );
   return (
-    <li className={m.card} data-card={face} data-task={t.id}>
+    <li className={m.card} data-card={face} data-task={t.id} style={{ "--i": i } as CSSProperties}>
       {face === "open" && asLink ? (
         <Link href={`/moments/${encodeURIComponent(t.id)}`} className={m.cardLink} aria-label={`${t.title}, ${COPY.moments.openNow}`}>
           {body}
@@ -105,8 +105,8 @@ export default function MomentsScreen() {
       )}
 
       <ol className={m.deck} aria-label={COPY.moments.title}>
-        {tasks.map((t) => (
-          <Card key={t.id} t={t} face={faceOf(t)} total={total} tz={ev.timezone} thumb={thumbs[t.id]} link={phase === "during"} />
+        {tasks.map((t, i) => (
+          <Card key={t.id} i={i} t={t} face={faceOf(t)} total={total} tz={ev.timezone} thumb={thumbs[t.id]} link={phase === "during"} />
         ))}
       </ol>
 
@@ -120,7 +120,7 @@ export default function MomentsScreen() {
             {open.length ? (
               <ul>
                 {open.map((t) => (
-                  <li key={t.id} className={m.item} data-open-item={t.id}>
+                  <li key={t.id} className={m.item} data-open-item={t.id} data-reveal>
                     <div>
                       <p className={m.itemTitle}>{t.title}</p>
                       <p className={m.itemText}>{t.text}</p>

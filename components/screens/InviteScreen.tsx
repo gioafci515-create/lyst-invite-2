@@ -47,13 +47,13 @@ function Teaser() {
   if (!rows.length) return null;
   const opens = opensLabel(ev.startsAt, ev.timezone);
   return (
-    <section className={styles.teaser} aria-labelledby="night-title">
+    <section className={styles.teaser} aria-labelledby="night-title" data-reveal>
       <h2 id="night-title" className={styles.teaserTitle}>
         On the night
       </h2>
       <ul className={styles.teaserList}>
         {rows.map((t) => (
-          <li key={t.module} className={styles.teaserItem} data-teaser={t.module}>
+          <li key={t.module} className={styles.teaserItem} data-teaser={t.module} data-reveal>
             <span className={styles.teaserPhoto}>
               <Image src={t.src} alt="" fill sizes="(max-width: 900px) 96px, 260px" style={{ objectFit: "cover", objectPosition: t.pos }} />
             </span>
@@ -180,7 +180,7 @@ function Rsvp() {
   }
 
   return (
-    <section id={SECTION.rsvp} className={styles.rsvp} aria-labelledby="rsvp-title">
+    <section id={SECTION.rsvp} className={styles.rsvp} aria-labelledby="rsvp-title" data-reveal>
       <div className={styles.rsvpCopy}>
         <p className={styles.label}>Your response, private to the hosts</p>
         <h2 id="rsvp-title" className={styles.rsvpTitle}>
@@ -345,7 +345,7 @@ export default function InviteScreen() {
         </div>
       </section>
 
-      <section id={SECTION.story} className={styles.story} aria-labelledby="story-title">
+      <section id={SECTION.story} className={styles.story} aria-labelledby="story-title" data-reveal>
         <div className={styles.sectionHead}>
           <p className={styles.label}>The invitation, in scenes</p>
           <h2 id="story-title" className={styles.h2}>
@@ -374,7 +374,7 @@ export default function InviteScreen() {
         </p>
       </section>
 
-      <section id={SECTION.programme} className={styles.programme} aria-labelledby="programme-title">
+      <section id={SECTION.programme} className={styles.programme} aria-labelledby="programme-title" data-reveal>
         <div className={styles.sectionHead}>
           <p className={styles.label}>Programme, {dateLabel(ev.startsAt, ev.timezone)}</p>
           <h2 id="programme-title" className={styles.h2}>

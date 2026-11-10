@@ -210,3 +210,30 @@
     gap: 14px;
   }
 }
+
+/* the deck is dealt onto the table, one card after another; a card that opens while you look turns face up */
+@media (prefers-reduced-motion: no-preference) {
+  .deck .card {
+    animation: deal 560ms var(--ease-arrive) backwards;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  .card[data-card="open"] .cardLink {
+    animation: turnUp 720ms var(--ease-arrive) backwards;
+    animation-delay: calc(160ms + var(--i, 0) * 60ms);
+  }
+  .card[data-card="open"] .cardLink:hover {
+    transform: translate(-2px, -2px);
+    transition: transform 160ms var(--ease-arrive);
+  }
+}
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(-4deg);
+  }
+}
+@keyframes turnUp {
+  from {
+    transform: perspective(700px) rotateY(-90deg);
+  }
+}
