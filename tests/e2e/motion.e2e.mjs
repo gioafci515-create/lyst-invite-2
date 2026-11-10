@@ -178,17 +178,26 @@ try {
 
   /* ------------------------------------------------------------------ 7. the scroll reveal */
   console.log("\n--- 7. the scroll reveal");
-  {
-    // the invitation: a long page, most of it below the first screen
-    const c = await open({ path: "/", now: AT.rsvpOpen, wait: 5500 });
-    const p = c.page;
-    const st = await p.ev(`(() => {
+  const reveal = (p) =>
+    p.ev(`(() => {
       const all = [...document.querySelectorAll('[data-reveal]')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
       const on = all.filter((e) => e.getBoundingClientRect().top < innerHeight);
       const below = all.filter((e) => e.getBoundingClientRect().top >= innerHeight);
       return { on: on.length, onShown: on.every((e) => e.hasAttribute('data-shown')), below: below.length, waiting: below.filter((e) => !e.hasAttribute('data-shown')).length };
     })()`);
+  {
+    // tonight's home: its first screen is full of sections
+    const t = await open({ path: "/", now: AT.duringNoTask, wait: 5500 });
+    const st = await reveal(t.page);
     ok("what is on screen when the page opens is shown at once", st.on > 0 && st.onShown, JSON.stringify(st));
+    await t.close();
+  }
+  {
+    // the invitation: a long page, most of it below the first screen (the countdown is there from the first paint, so
+    // nothing jumps into or out of view after the page opens)
+    const c = await open({ path: "/", now: AT.rsvpOpen, wait: 5500 });
+    const p = c.page;
+    const st = await reveal(p);
     ok("what is below the fold waits for the scroll", st.below > 0 && st.waiting === st.below, JSON.stringify(st));
     await p.ev(`scrollTo(0, document.documentElement.scrollHeight)`);
     await sleep(1600);
