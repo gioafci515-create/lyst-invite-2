@@ -122,6 +122,7 @@ export async function savePoll(formData: FormData) {
   await updateLive((l) => {
     const was = l.poll;
     const question = line(formData.get("question"), 160) || was.question;
+    if (!question) return; // a poll needs a question
     const open = formData.get("open") === "on";
     // newest first in the live room: a poll counts as new when it opens or its question changes
     const since = open && (!was.open || was.question !== question) ? new Date().toISOString() : was.since;
@@ -136,9 +137,11 @@ export async function saveChallenge(formData: FormData) {
   await updateLive((l) => {
     const was = l.challenge;
     const prompt = line(formData.get("prompt"), 240) || was.prompt;
+    const title = line(formData.get("title"), 60) || was.title;
+    if (!title || !prompt) return; // a challenge needs a title and a prompt
     const open = formData.get("open") === "on";
     l.challenge = {
-      title: line(formData.get("title"), 60) || was.title,
+      title,
       prompt,
       goal: Math.min(20, Math.max(1, Number(formData.get("goal")) || was.goal)),
       open,
@@ -275,6 +278,8 @@ export async function saveEventSettings(formData: FormData) {
   const modules = Object.fromEntries(MODULE_IDS.map((id) => [id, formData.get(`m_${id}`) === "on"]));
   const framesRaw = String(formData.get("cameraFrames") ?? "").trim();
   const cameraFrames = framesRaw === "" ? config.cameraFrames : Number(framesRaw);
+  const thankYouRaw = formData.get("thankYou");
+  const thankYou = thankYouRaw === null ? config.thankYou : String(thankYouRaw).trim();
   const candidate = {
     ...config,
     startsAt: startsAt.toISOString(),
@@ -283,6 +288,7 @@ export async function saveEventSettings(formData: FormData) {
     override: override === "before" || override === "during" || override === "after" ? override : null,
     modules,
     cameraFrames,
+    thankYou,
   };
   const problems = resolveConfig(candidate).issues.filter((i) => i.level === "error");
   if (problems.length) return eventBack("err", problems.map((p) => p.message).join(" "));

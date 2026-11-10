@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
@@ -95,6 +96,9 @@ async function Panel() {
     getKV().get<{ at: string; title: string; sent: number; failed: number; removed: number; targets: number; error?: string }>("push:last"),
   ]);
   const rows = buildRows(state);
+  // the full address each table card's QR code should point to (this deployment's own host)
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host") ?? "localhost"}`;
   const now = new Date().getTime();
   const configured = pushConfigured();
 
@@ -247,6 +251,19 @@ async function Panel() {
         <ul className={styles.list}>
           {rows.map((t) => (
             <TaskItem key={t.id} t={t} now={now} />
+          ))}
+        </ul>
+      </section>
+      <section className={styles.panel} id="qr-links" aria-labelledby="qr-title">
+        <h2 id="qr-title">QR links</h2>
+        <p className={styles.note}>
+          One address per task, for table cards. A guest who scans one before it opens sees when it opens, never what it asks.
+        </p>
+        <ul className={styles.list}>
+          {rows.map((r) => (
+            <li key={r.id}>
+              <span>{r.title}</span> <a href={`/moments/${encodeURIComponent(r.id)}`}>{`${origin}/moments/${encodeURIComponent(r.id)}`}</a>
+            </li>
           ))}
         </ul>
       </section>

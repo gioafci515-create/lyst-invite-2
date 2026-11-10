@@ -129,7 +129,7 @@ export default function Carousel({ slides, label }: { slides: Slide[]; label: st
               aria-label={`${i + 1} of ${slides.length}`}
               aria-current={i === active ? "true" : undefined}
             >
-              <Image src={s.src} alt={s.alt} fill sizes="(max-width: 760px) 85vw, 33vw" draggable={false} />
+              <Image src={s.src} alt={s.alt} fill quality={90} sizes="(max-width: 760px) 85vw, 33vw" draggable={false} />
             </figure>
           ))}
         </div>

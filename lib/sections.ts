@@ -16,10 +16,10 @@ export const ROUTE = {
   voice: "/voice",
   video: "/video",
   live: "/live",
-  later: "/letter",
+  later: "/for-later",
   gallery: "/gallery",
   capsule: "/capsule",
-  tasks: "/tasks",
+  tasks: "/moments",
   details: "/details",
   updates: "/updates",
   programme: "/programme",
@@ -55,6 +55,9 @@ export function moduleOf(href: string): ModuleId | undefined {
 const MODULE_KEYS: Record<ModuleId, true> = { camera: true, voice: true, video: true, live: true, later: true, gallery: true, capsule: true, tasks: true };
 
 export type NavGroup = "Invitation" | "Tonight" | "Memories";
+
+/** A group's name as guests read it: before the event day it is "On the night", never "Tonight". */
+export const groupLabel = (g: NavGroup, phase: "before" | "during" | "after") => (g === "Tonight" && phase === "before" ? "On the night" : g);
 export type NavItem = { href: string; label: string; group: NavGroup; module?: ModuleId; note?: string };
 
 /** One navigation model for the desktop header menus and the phone menu sheet. */
@@ -68,7 +71,6 @@ export const NAV: NavItem[] = [
   { href: ROUTE.voice, label: "Voice", group: "Tonight", module: "voice" },
   { href: ROUTE.video, label: "Video", group: "Tonight", module: "video" },
   { href: ROUTE.live, label: "Live room", group: "Tonight", module: "live" },
-  { href: ROUTE.later, label: "Letter", group: "Tonight", module: "later" },
   { href: ROUTE.gallery, label: "Gallery", group: "Memories", module: "gallery" },
-  { href: ROUTE.capsule, label: "Capsule", group: "Memories", module: "capsule" },
+  { href: ROUTE.later, label: "For later", group: "Memories", module: "later" },
 ];

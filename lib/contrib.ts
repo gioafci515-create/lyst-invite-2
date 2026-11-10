@@ -12,6 +12,7 @@ export const TYPES = [
   "poll",
   "question",
   "capsule",
+  "forlater",
 ] as const;
 export type ContribType = (typeof TYPES)[number];
 
@@ -30,7 +31,15 @@ export type Contribution = {
   approved?: boolean;
   /** gallery media only: hash of the key the uploader's phone keeps, so it alone can see its own pending upload */
   owner?: string;
+  /** "for later" only (ISO): nobody, hosts included, can read it before this moment */
+  openAt?: string;
 };
+
+/** Letters, messages for later and capsules from before "for later" existed: still stored and readable, no longer accepted. */
+export const LEGACY_LATER: readonly ContribType[] = ["letter", "later", "capsule"];
+
+/** A "for later" row whose moment hasn't come: its content stays sealed, even in the admin. */
+export const isSealed = (r: Pick<Contribution, "openAt">, now = Date.now()) => !!r.openAt && Date.parse(r.openAt) > now;
 
 const hashKey = (key: string) => createHash("sha256").update(key).digest("hex");
 /** a fresh owner key for an upload: returned once to the uploader's phone, only its hash is stored */

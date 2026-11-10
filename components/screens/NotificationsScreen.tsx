@@ -54,6 +54,7 @@ export default function NotificationsScreen() {
       step={2}
       action={{ label: "Mark all read", onClick: () => markRead(notices.map((n) => n.id)), disabled: !unreadIds.length }}
     >
+      {notices.length > 0 && (
       <div className={styles.between} style={{ alignItems: "center", fontSize: 18 }}>
         <span className={styles.row}>
           <Image src="/images/app/unread-status.svg" alt="" width={9} height={9} />
@@ -63,6 +64,7 @@ export default function NotificationsScreen() {
           Priority first
         </span>
       </div>
+      )}
 
       {!live && !failed && <p className={styles.body}>Loading…</p>}
       {failed && !live && (
@@ -72,8 +74,8 @@ export default function NotificationsScreen() {
       )}
       {live && notices.length === 0 && (
         <div className={styles.card}>
-          <b className="label-mono">All quiet</b>
-          <p className={styles.body}>No notifications yet. Updates from the hosts will appear here.</p>
+          <b className="label-mono">Nothing yet</b>
+          <p className={styles.body}>No updates from the hosts yet. When they post a change or an announcement, it appears here first.</p>
         </div>
       )}
 

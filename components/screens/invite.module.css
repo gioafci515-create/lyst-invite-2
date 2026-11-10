@@ -34,8 +34,18 @@
   display: flex;
   flex-direction: column;
 }
+/* the slow print-plasma behind the hero: ink on sand, faint, fading out under the words */
+.crt {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.15) 70%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.15) 70%, transparent 100%);
+}
 .media {
   position: relative;
+  z-index: 1;
   align-self: flex-end;
   width: min(56%, 240px);
   margin-right: 4px;
@@ -65,6 +75,8 @@
   transform: rotate(-5deg);
 }
 .heroCopy {
+  position: relative;
+  z-index: 1;
   margin-top: 28px;
   display: flex;
   flex-direction: column;
@@ -249,7 +261,7 @@
   color: var(--muted);
 }
 .field input {
-  min-height: 32px;
+  min-height: 44px;
   background: none;
   border: 0;
   color: var(--ink);
@@ -305,29 +317,120 @@
 }
 
 /* ---------- On the night ---------- */
-.night {
-  background: var(--cream);
-  border-top: 1px solid var(--ink);
-  padding: 32px 16px 40px;
+/* ---------- the night, teased: a contact sheet of what opens, full colour, nothing greyed out ---------- */
+.teaser {
+  background: var(--ink);
+  color: var(--cream);
+  padding: 28px 16px 32px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
 }
-.night p {
-  font-size: 18px;
-  line-height: 1.5;
-  max-width: 60ch;
+.teaserTitle {
+  font-family: var(--f-grotesk);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+.teaserList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.teaserItem {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(245, 240, 227, 0.22);
+}
+.teaserItem:last-child {
+  border-bottom: 1px solid rgba(245, 240, 227, 0.22);
+}
+.teaserPhoto {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  overflow: hidden;
+  background: #222;
+}
+.teaserText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.teaserWhat,
+.teaserOpens {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.teaserWhat {
+  color: rgba(245, 240, 227, 0.7);
+}
+.teaserLine {
+  font-family: var(--f-grotesk);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.teaserOpens {
+  color: var(--acid);
+}
+@media (min-width: 901px) {
+  .teaser {
+    padding: 56px 56px 64px;
+    gap: 28px;
+  }
+  .teaserTitle {
+    font-size: 64px;
+  }
+  .teaserList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    grid-auto-flow: column;
+    gap: 20px;
+  }
+  .teaserItem,
+  .teaserItem:last-child {
+    grid-template-columns: 1fr;
+    align-items: start;
+    align-content: start;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+  }
+  .teaserPhoto {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+  }
+  .teaserLine {
+    font-size: 24px;
+  }
 }
 
 /* ---------- Desktop ---------- */
 @media (min-width: 901px) {
   .hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
-    column-gap: 56px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 640px);
+    column-gap: 72px;
     align-items: end;
     min-height: max(720px, calc(100svh - var(--header-h)));
-    padding: 48px max(36px, 4vw) 56px;
+    padding: 56px max(40px, 5vw) 64px;
+  }
+  /* desktop: the plasma lives on the photo side and fades out under the title */
+  .crt {
+    -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.35) 38%, #000 72%);
+    mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.35) 38%, #000 72%);
   }
   .media {
     grid-column: 2;
@@ -359,16 +462,27 @@
     margin: 0;
   }
   .title {
-    font-size: clamp(120px, 11vw, 154px);
+    font-size: clamp(140px, 13vw, 260px);
     line-height: 0.74;
   }
   .year {
-    margin-top: 24px;
-    font-size: 64px;
+    margin-top: 28px;
+    font-size: clamp(64px, 5.6vw, 112px);
   }
   .lede {
-    margin-top: 24px;
-    max-width: 40ch;
+    margin-top: 28px;
+    max-width: 38ch;
+    font-size: clamp(19px, 1.35vw, 24px);
+  }
+  .when {
+    margin-top: 16px;
+    font-size: 14px;
+  }
+  .cta {
+    margin-top: 28px;
+    min-height: 60px;
+    padding: 0 28px;
+    font-size: 13px;
   }
   .story,
   .programme,
@@ -387,18 +501,33 @@
     gap: 56px;
     align-items: start;
   }
+  /* one centred composition: what the answer means on the left, the card or the form on the right */
   .rsvp {
     flex-direction: row;
     align-items: center;
-    gap: 56px;
+    justify-content: center;
+    gap: clamp(56px, 6vw, 112px);
     min-height: 520px;
   }
   .rsvpCopy {
-    flex: 1;
+    flex: 0 1 600px;
     min-width: 0;
   }
   .rsvpTitle {
-    font-size: 72px;
+    font-size: clamp(72px, 6vw, 112px);
+  }
+  .summary {
+    flex: 0 0 520px;
+    max-width: 520px;
+  }
+  .summary > section {
+    padding: 28px 30px 26px;
+    gap: 18px;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+  .summary h2 {
+    font-size: 40px;
+    line-height: 1;
   }
   .rsvpBody {
     font-size: 18px;
@@ -410,5 +539,140 @@
   }
   .night {
     padding: 48px 56px 56px;
+  }
+}
+
+/* inline validation in the event's voice: the message sits under its field and is tied to it */
+.fieldError {
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--red-text);
+  padding-bottom: 4px;
+}
+.field:has(input[aria-invalid="true"]) {
+  border-bottom: 3px solid var(--red-text);
+}
+.keep {
+  min-height: 44px;
+  margin-top: 6px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* the answer this phone gave, in place of the form */
+.summary {
+  max-width: 640px;
+}
+.rsvpExtras {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.summaryNote {
+  font-size: 16px;
+  line-height: 1.45;
+}
+.summaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+.summaryButton {
+  min-height: 48px;
+  padding: 0 22px;
+  background: transparent;
+  border: 1px solid var(--ink);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* a fresh yes: the whole section turns into the confirmation */
+.confirmed {
+  background: var(--ink);
+  color: var(--cream);
+  gap: 18px;
+}
+.confirmed .label {
+  color: var(--acid);
+}
+.confirmedTitle {
+  font-family: var(--f-grotesk);
+  font-weight: 700;
+  font-size: 64px;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+}
+.confirmedWhen {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.confirmedActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+}
+.calendar {
+  min-height: 52px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--acid);
+  border: 1px solid var(--acid);
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.confirmedLink {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 16px;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.confirmed :focus-visible {
+  outline-color: var(--acid);
+}
+
+/* the wordmark hint names what the device can actually do */
+.hintTouch {
+  display: none;
+}
+@media (hover: none), (pointer: coarse) {
+  .hintPointer {
+    display: none;
+  }
+  .hintTouch {
+    display: inline;
+  }
+}
+@media (min-width: 901px) {
+  .confirmed {
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+  .confirmedTitle {
+    font-size: 96px;
   }
 }

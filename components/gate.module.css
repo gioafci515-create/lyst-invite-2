@@ -1,0 +1,79 @@
+/* "Opens on" / "Closed": one card, the date as the loudest thing on the screen. */
+.gate {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+}
+.card {
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  border-top: 8px solid var(--red);
+  padding: 22px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gate[data-gate="closed"] .card {
+  border-top-color: var(--ink);
+}
+.what {
+  font-family: var(--f-grotesk);
+  font-size: 18px;
+  font-weight: 700;
+}
+.when {
+  font-family: var(--f-grotesk);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+}
+.opens {
+  display: block;
+  color: var(--red-text);
+}
+.line {
+  font-size: 16px;
+  line-height: 1.5;
+  max-width: 52ch;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.primary,
+.secondary {
+  flex: 1 1 200px;
+  min-height: 52px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.primary {
+  background: var(--red);
+  border: 1px solid var(--red);
+  color: var(--ink);
+}
+.secondary {
+  border: 1px solid var(--ink);
+  color: var(--ink);
+}
+@media (min-width: 901px) {
+  .gate {
+    padding-top: 48px;
+  }
+  .when {
+    font-size: 48px;
+  }
+}

@@ -4,11 +4,12 @@ import Image from "next/image";
 import { TonightEssentials } from "./Essentials";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { ModuleId } from "@/lib/eventState";
+import { COPY } from "@/lib/copy";
+import { untilLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { moduleOf, ROUTE, toRoute } from "@/lib/sections";
 import { useTasks } from "@/lib/useTasks";
-import type { GalleryItem } from "./HomeView";
+import type { GalleryItem, Recap } from "./HomeView";
 import { Icon, type IconName } from "./icons";
 import styles from "./nightindex.module.css";
 
@@ -23,17 +24,10 @@ type PhotoKey = keyof typeof PHOTO;
 
 type Row = { key: string; title: string; line: string; href: string; photo: PhotoKey; module?: ModuleId; desktopOnly?: boolean };
 
-const clock = (ms: number) => {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const sec = String(s % 60).padStart(2, "0");
-  return h ? `${h}:${m}:${sec}` : `${m}:${sec}`;
-};
 const path = (href: string) => toRoute(href).split("?")[0];
 
 function Photo({ k, sizes, priority }: { k: PhotoKey; sizes: string; priority?: boolean }) {
-  return <Image src={PHOTO[k].src} alt="" fill sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
+  return <Image src={PHOTO[k].src} alt="" fill quality={90} sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
 }
 
 function Rows({ rows }: { rows: Row[] }) {
@@ -41,7 +35,7 @@ function Rows({ rows }: { rows: Row[] }) {
   return (
     <ul className={styles.rows}>
       {rows.map((r) => (
-        <li key={r.key} data-desktop-only={r.desktopOnly || undefined}>
+        <li key={r.key} data-desktop-only={r.desktopOnly || undefined} data-reveal>
           <Link href={r.href} className={styles.row}>
             <span className={styles.thumb}>
               <Photo k={r.photo} sizes="56px" />
@@ -65,7 +59,7 @@ function Band({ heading }: { heading: string }) {
   return (
     <>
       <h1 className="sr-only">{heading}</h1>
-      <div className={styles.band} aria-hidden>
+      <div className={styles.band} aria-hidden data-reveal>
         <Photo k="stage" sizes="100vw" priority />
         <p className={styles.bandMark}>
           UN/FOLD <span>2026</span>
@@ -98,8 +92,8 @@ function Tonight() {
       cta: task.action.label,
       href: toRoute(task.action.href),
       photo: task.type === "voice" ? "poster" : task.type === "video" ? "stage" : "portrait",
-      tag: task.inWindow && now > 0 ? `Live now · ${clock(task.windowEnd! - now)} left` : "Open task",
-      urgent: !!task.inWindow,
+      tag: COPY.live.label,
+      urgent: false,
     };
   } else if (ev.enabled("camera")) {
     lead = {
@@ -126,7 +120,7 @@ function Tonight() {
   const more: [string, string, IconName][] = (
     [
       [ROUTE.live, "Live room", "live", "live"],
-      [ROUTE.later, "Letter", "note", "later"],
+      [ROUTE.later, "For later", "note", "later"],
       [ROUTE.updates, "Updates", "megaphone"],
       [ROUTE.programme, "Programme", "clock"],
     ] as [string, string, IconName, ModuleId?][]
@@ -137,11 +131,13 @@ function Tonight() {
   // a secondary link inside the lead: the other open tasks, or when the next one opens
   const taskLink =
     task && openCount > 1
-      ? `All tasks (${openCount})`
+      ? COPY.moments.allMoments(openCount)
       : !task && next && now > 0
-        ? `Next task in ${clock(next.at! - now)}`
+        ? next.at! - now > 86400_000
+          ? COPY.moments.nextMoment(untilLabel(next.at!, now, ev.timezone))
+          : COPY.moments.nextMomentIn(untilLabel(next.at!, now, ev.timezone))
         : tasksOn && openCount
-          ? `All tasks (${openCount})`
+          ? COPY.moments.allMoments(openCount)
           : null;
 
   return (
@@ -153,7 +149,7 @@ function Tonight() {
         </h2>
         <div className={styles.layout}>
           {lead && (
-            <article className={styles.lead} data-urgent={lead.urgent || undefined}>
+            <article className={styles.lead} data-urgent={lead.urgent || undefined} data-reveal>
               <div className={styles.leadPhoto}>
                 <Photo k={lead.photo} sizes="(max-width: 900px) 100vw, 640px" />
               </div>
@@ -176,7 +172,7 @@ function Tonight() {
           )}
           <Rows rows={rows} />
           {more.length > 0 && (
-          <nav className={styles.more} aria-labelledby="more-tonight">
+          <nav className={styles.more} aria-labelledby="more-tonight" data-reveal>
             <h3 id="more-tonight" className={styles.moreLabel}>
               More tonight
             </h3>
@@ -215,7 +211,7 @@ function GalleryLead({ initial }: { initial: GalleryItem[] | null }) {
   const photos = (items ?? []).filter((i) => i.kind === "photo").slice(0, 3);
   const count = items?.length ?? 0;
   return (
-    <article className={`${styles.lead} ${styles.galleryLead}`}>
+    <article className={`${styles.lead} ${styles.galleryLead}`} data-reveal>
       {photos.length > 0 && (
         <div className={styles.mosaic} data-count={photos.length}>
           {photos.map((p) => (
@@ -226,33 +222,67 @@ function GalleryLead({ initial }: { initial: GalleryItem[] | null }) {
         </div>
       )}
       <div className={styles.leadBody}>
-        <p className={styles.tag}>{items === null ? "Gallery" : count ? `${count} in the gallery` : "Gallery"}</p>
-        <h3 className={styles.leadTitle}>Revisit the night</h3>
+        <p className={styles.tag}>{count ? `${count} in the gallery` : "Gallery"}</p>
+        <h3 className={styles.leadTitle}>{items !== null && !count ? "The hosts are choosing the photos." : "Revisit the night"}</h3>
         <p className={styles.leadLine}>
-          {items === null
-            ? "Photos and clips the hosts have approved."
-            : count
-              ? "Photos and clips from the room, approved by the hosts."
-              : "Nothing is up yet. The hosts approve every photo and clip before it appears here."}
+          {items === null ? "Photos and clips the hosts have approved." : count ? "Photos and clips from the room, approved by the hosts." : "Check back soon."}
         </p>
-        <div className={styles.leadActions}>
-          <Link href={ROUTE.gallery} className={styles.leadCta} data-btn>
-            Open the gallery
-          </Link>
-        </div>
+        {count > 0 && (
+          <div className={styles.leadActions}>
+            <Link href={ROUTE.gallery} className={styles.leadCta} data-btn>
+              Open the gallery
+            </Link>
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
-function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
+/** The night in numbers, from the server. Only what is above zero; nothing at all when everything is zero. */
+function RecapStrip({ initial }: { initial: Recap | null }) {
+  const [recap, setRecap] = useState<Recap | null>(initial);
+  useEffect(() => {
+    if (initial) return;
+    // the page was opened before the event ended: ask now
+    fetch("/api/stats", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) =>
+        c && setRecap({ photos: c.approvedPhotos ?? 0, clips: c.approvedClips ?? 0, voices: c.voice ?? 0, letters: (c.letter ?? 0) + (c.later ?? 0) + (c.forlater ?? 0) }),
+      )
+      .catch(() => {});
+  }, [initial]);
+  if (!recap) return null;
+  const items = (
+    [
+      [recap.photos, "photo", "photos"],
+      [recap.clips, "clip", "clips"],
+      [recap.voices, "voice", "voices"],
+      [recap.letters, "letter", "letters"],
+    ] as [number, string, string][]
+  ).filter(([n]) => n > 0);
+  if (!items.length) return null;
+  return (
+    <section className={styles.recap} aria-labelledby="recap-title" data-reveal>
+      <h3 id="recap-title" className={styles.moreLabel}>
+        What the night left
+      </h3>
+      <ul>
+        {items.map(([n, one, many]) => (
+          <li key={many}>
+            <b>{n}</b> {n === 1 ? one : many}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Recap | null }) {
   const ev = useEvent();
   const on = (m?: ModuleId) => !m || ev.enabled(m);
   const keep = (
-    [
-      { key: "capsule", title: "Time capsule", line: "Sealed, to open a year from now.", href: ROUTE.capsule, photo: "hall", module: "capsule" },
-      { key: "letter", title: "Write to the future", line: "Seal a note for a date you choose.", href: ROUTE.later, photo: "portrait", module: "later" },
-    ] as Row[]
+    [{ key: "forlater", title: "Leave something for later", line: "Sealed until the day you pick, even for the hosts.", href: ROUTE.later, photo: "portrait", module: "later" }] as Row[]
   ).filter((r) => on(r.module));
   // the server still accepts these after the event while the hosts keep them switched on
   const late = (
@@ -270,6 +300,15 @@ function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
         <h2 id="memories-title" className={styles.sectionLabel}>
           After the night
         </h2>
+        {ev.thankYou && (
+          <section className={styles.thanks} aria-labelledby="thanks-title">
+            <h3 id="thanks-title" className={styles.moreLabel}>
+              From the hosts
+            </h3>
+            <p className={styles.thanksText}>{ev.thankYou}</p>
+          </section>
+        )}
+        <RecapStrip initial={recap} />
         <div className={styles.layout}>
           {galleryOn && <GalleryLead initial={gallery} />}
           <Rows rows={galleryOn ? keep : [...keep, ...late]} />
@@ -290,7 +329,7 @@ function Memories({ gallery }: { gallery: GalleryItem[] | null }) {
   );
 }
 
-export default function NightIndex({ gallery }: { gallery: GalleryItem[] | null }) {
+export default function NightIndex({ gallery, recap = null }: { gallery: GalleryItem[] | null; recap?: Recap | null }) {
   const ev = useEvent();
-  return ev.phase === "after" ? <Memories gallery={gallery} /> : <Tonight />;
+  return ev.phase === "after" ? <Memories gallery={gallery} recap={recap} /> : <Tonight />;
 }

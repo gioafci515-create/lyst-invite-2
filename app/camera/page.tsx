@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getWire } from "@/lib/serverEvent";
 import { EventSeed } from "@/lib/eventStore";
+import PhaseGate from "@/components/PhaseGate";
+import PhaseShift from "@/components/PhaseShift";
 import CameraClient from "./CameraClient";
 
 export const metadata: Metadata = { title: "Camera — UN/FOLD 2026" };
@@ -13,7 +15,10 @@ async function Gated() {
   if (!wire.modules.camera) notFound();
   return (
     <EventSeed wire={wire}>
-      <CameraClient />
+      <PhaseGate kind="camera" standalone="Camera">
+        <CameraClient />
+      </PhaseGate>
+      <PhaseShift />
     </EventSeed>
   );
 }

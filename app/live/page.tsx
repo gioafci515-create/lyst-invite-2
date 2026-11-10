@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Live room — UN/FOLD 2026" };
 
 export default function LivePage() {
   return (
-    <FeatureRoute module="live" title="Live room" framed={false}>
+    <FeatureRoute module="live" capture="live" title="Live room" framed={false}>
       <InteractScreen />
     </FeatureRoute>
   );

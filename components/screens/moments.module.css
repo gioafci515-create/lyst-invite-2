@@ -1,0 +1,239 @@
+/* Moments: a deck of cards. Face down = ink with the wordmark; open = cream with a red edge; collected = face up. */
+.screen {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 60ch;
+}
+.when {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.progress {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.note {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.deck {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+.single {
+  grid-template-columns: minmax(0, 220px);
+}
+.card {
+  aspect-ratio: 3 / 4;
+}
+.cardLink {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--ink);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+}
+.card[data-card="down"] .cardLink,
+.card[data-card="missed"] .cardLink {
+  background: var(--ink) repeating-linear-gradient(-45deg, transparent 0 10px, rgba(245, 240, 227, 0.06) 10px 11px);
+  color: var(--cream);
+}
+.card[data-card="missed"] .cardLink {
+  opacity: 0.6;
+}
+.card[data-card="open"] .cardLink {
+  background: var(--cream);
+  border: 3px solid var(--red);
+  box-shadow: 4px 4px 0 var(--red);
+}
+.card[data-card="done"] .cardLink {
+  background: var(--cream);
+}
+.cardNo,
+.cardFoot {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.back {
+  align-self: center;
+  font-family: var(--f-grotesk);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: rgba(245, 240, 227, 0.35);
+}
+.face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  background: rgba(10, 10, 10, 0.06);
+  overflow: hidden;
+}
+.face svg {
+  width: 26px;
+  height: 26px;
+}
+.cardTitle {
+  font-family: var(--f-grotesk);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card[data-card="open"] .cardFoot {
+  color: var(--red-text);
+}
+.cardLink:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 3px;
+}
+
+.sectionTitle {
+  font-family: var(--f-grotesk);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+.openList ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.item {
+  background: var(--cream);
+  border: 1px solid var(--ink);
+  border-left: 6px solid var(--red);
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.item > div {
+  flex: 1 1 260px;
+  display: grid;
+  gap: 4px;
+}
+.itemTitle {
+  font-family: var(--f-grotesk);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.itemText {
+  font-size: 16px;
+  line-height: 1.45;
+}
+.itemCount {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.itemAction {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--red);
+  border: 1px solid var(--red);
+  color: var(--ink);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.backLink {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 600px) {
+  .itemAction {
+    flex: 1 1 100%;
+  }
+}
+@media (min-width: 901px) {
+  .screen {
+    padding-top: 28px;
+  }
+  .deck {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+  }
+}
+
+/* the deck is dealt onto the table, one card after another; a card that opens while you look turns face up */
+@media (prefers-reduced-motion: no-preference) {
+  .deck .card {
+    animation: deal 560ms var(--ease-arrive) backwards;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  .card[data-card="open"] .cardLink {
+    animation: turnUp 720ms var(--ease-arrive) backwards;
+    animation-delay: calc(160ms + var(--i, 0) * 60ms);
+  }
+  .card[data-card="open"] .cardLink:hover {
+    transform: translate(-2px, -2px);
+    transition: transform 160ms var(--ease-arrive);
+  }
+}
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(-4deg);
+  }
+}
+@keyframes turnUp {
+  from {
+    transform: perspective(700px) rotateY(-90deg);
+  }
+}

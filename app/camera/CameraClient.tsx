@@ -1,5 +1,6 @@
 "use client";
 
+import { COPY } from "@/lib/copy";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -139,7 +140,7 @@ function CameraApp() {
   const router = useRouter();
   const params = useSearchParams();
   const taskId = params.get("task");
-  const { tasks, now } = useTasks();
+  const { tasks } = useTasks();
   const ev = useEvent();
   const activeTask = tasks.find((t) => t.id === taskId) ?? tasks.find((t) => t.type === "photo" && t.open) ?? null;
 
@@ -561,8 +562,7 @@ function CameraApp() {
   };
 
   const flashLabel = flash === "off" ? "Off" : flash === "auto" ? "Auto" : "On";
-  const taskWindow = activeTask?.inWindow && activeTask.windowEnd ? Math.max(0, Math.ceil((activeTask.windowEnd - now) / 1000)) : null;
-  const leftLabel = activeTask ? "left for task" : "left";
+  const leftLabel = activeTask ? "left for this task" : "left";
   const galleryOn = ev.enabled("gallery");
 
   const thumb = <RollThumb shots={shots} onRetry={retry} canRetry={left > 0} />;
@@ -639,14 +639,13 @@ function CameraApp() {
 
           {activeTask && !full && (
             <div className={css.task}>
-              <p className={css.taskTitle}>{activeTask.title}</p>
-              <p className={css.taskText}>
-                {taskWindow !== null
-                  ? `Capture it now · ${taskWindow}s left`
-                  : activeTask.late
-                    ? "Still open: late, but it counts"
-                    : `${activeTask.progress} of ${activeTask.count} saved`}
+              <p className={css.taskTitle}>
+                <span>{activeTask.title}</span>
+                <span className={css.taskCount} aria-label={`${activeTask.progress} of ${activeTask.count} saved`}>
+                  {COPY.prompt.progress(activeTask.progress, activeTask.count)}
+                </span>
               </p>
+              <p className={css.taskText}>{activeTask.text}</p>
             </div>
           )}
 

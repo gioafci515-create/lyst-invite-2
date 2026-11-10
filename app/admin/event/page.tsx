@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { getEventConfig } from "@/lib/eventConfig";
-import { computeEventState, FRAMES_MAX, FRAMES_MIN, MODULE_IDS, timeLabel, dateLabel, type ModuleId } from "@/lib/eventState";
+import { computeEventState, FRAMES_MAX, FRAMES_MIN, MODULE_IDS, THANK_YOU_MAX, timeLabel, dateLabel, type ModuleId } from "@/lib/eventState";
 import { buildRows, getTaskState, utcToZonedLocal } from "@/lib/tasks";
 import {
   addProgrammeRow,
@@ -29,8 +29,8 @@ const MODULE_LABEL: Record<ModuleId, string> = {
   gallery: "Guest gallery",
   tasks: "Tasks",
   live: "Live room",
-  later: "Message for later",
-  capsule: "Time capsule",
+  later: "Leave something for later",
+  capsule: "Time capsule (hosts' archive view)",
 };
 
 async function Panel({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
@@ -150,6 +150,11 @@ async function Panel({ searchParams }: { searchParams: Promise<{ ok?: string; er
             <input type="number" name="cameraFrames" min={FRAMES_MIN} max={FRAMES_MAX} step={1} required defaultValue={config.cameraFrames} className={styles.input} />
           </label>
           <p className={styles.note}>A photo task asks for its own number of photos (set on the Tasks page).</p>
+          <label className={styles.label}>
+            Thank-you note (shown at the top of the home page after the event)
+            <textarea name="thankYou" rows={4} maxLength={THANK_YOU_MAX} defaultValue={config.thankYou} className={styles.input} />
+          </label>
+          <p className={styles.note}>Leave it empty and guests see no note at all: nothing is written for you.</p>
           <button className={styles.btn}>Save event settings</button>
         </form>
 

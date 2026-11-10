@@ -1,4 +1,4 @@
-import { addContribution, castVote, GALLERY_TYPES, newOwnerKey, TYPES, type ContribType } from "@/lib/contrib";
+import { addContribution, castVote, GALLERY_TYPES, LEGACY_LATER, newOwnerKey, TYPES, type ContribType } from "@/lib/contrib";
 import { isBlobUrl, MAX_FILE, MEDIA_MIME, storeBuffer, type MediaFile } from "@/lib/media";
 
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -68,6 +68,8 @@ export async function POST(req: Request) {
     }
 
     if (!TYPES.includes(type as ContribType)) return fail("Unknown submission type.", 400);
+    // the letter, the message for later and the capsule became one thing: "for later". Old data stays; new posts go there.
+    if (LEGACY_LATER.includes(type as ContribType)) return fail("This moved: leave it in “Leave something for later”. Nothing was saved.", 410);
     {
       const { getEventConfig } = await import("@/lib/eventConfig");
       const m = (await getEventConfig()).config.modules;
@@ -76,6 +78,7 @@ export async function POST(req: Request) {
         video: m.video,
         later: m.later,
         capsule: m.capsule,
+        forlater: m.later,
         letter: m.live,
         question: m.live,
         poll: m.live,
@@ -84,7 +87,34 @@ export async function POST(req: Request) {
       };
       if (needs[type] === false) return fail("This part of the event is switched off.", 403);
     }
+    {
+      // the camera, voice, video and the live room take submissions during the event; voice and video stay open after it
+      const { TYPE_CAPTURE, captureState, captureRefusal } = await import("@/lib/eventState");
+      const kind = TYPE_CAPTURE[type];
+      if (kind) {
+        const { getEventState } = await import("@/lib/eventConfig");
+        const { state } = await getEventState();
+        const slot = captureState(kind, state.phase);
+        if (slot !== "open") return fail(captureRefusal(slot, state), 403);
+      }
+    }
     if (!text && !file && !Object.keys(meta).length) return fail("Nothing to submit.", 400);
+
+    // for later: sealed until the day the guest picked (default: a year after the event), even for the hosts
+    let openAt: string | undefined;
+    if (type === "forlater") {
+      if (!text) return fail("Write something first. Nothing was saved.", 400);
+      const { getEventConfig } = await import("@/lib/eventConfig");
+      const { forLaterBounds } = await import("@/lib/eventState");
+      const { zonedToUtc } = await import("@/lib/tasks");
+      const { config } = await getEventConfig();
+      const b = forLaterBounds(config);
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(meta.openAt ?? "") ? meta.openAt : b.byDefault;
+      if (day < b.first || day > b.last) return fail(`Pick a day from ${b.first} to ${b.last}. Nothing was saved.`, 400);
+      openAt = zonedToUtc(`${day}T00:00`, config.timezone)?.toISOString();
+      if (!openAt) return fail("That day isn't a date. Nothing was saved.", 400);
+      meta.openAt = day;
+    }
 
     // one poll vote per voter per question — claimed atomically
     if (type === "poll") {
@@ -94,7 +124,7 @@ export async function POST(req: Request) {
 
     // gallery media: the uploader's phone gets a key so it (and nobody else) can see its own upload while it waits for approval
     const key = file && GALLERY_TYPES.includes(type as ContribType) && !file.mime.startsWith("audio/") ? newOwnerKey() : undefined;
-    const row = await addContribution({ type: type as ContribType, name, text, meta }, file, key);
+    const row = await addContribution({ type: type as ContribType, name, text, meta, ...(openAt ? { openAt } : {}) }, file, key);
     return Response.json({ ok: true, id: row.id, ...(key ? { key } : {}) });
   } catch (e) {
     console.error("[contribute]", e);

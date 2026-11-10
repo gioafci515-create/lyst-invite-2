@@ -27,6 +27,7 @@ const TYPE_MAP: Record<string, ClientTask["type"]> = {
   video: "video",
   letter: "text",
   later: "text",
+  forlater: "text",
 };
 
 const get = (k: string) => {

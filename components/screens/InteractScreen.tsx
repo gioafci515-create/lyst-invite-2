@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useRef, useState, type ReactNode } from "react";
 import { timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
+import { ROUTE } from "@/lib/sections";
 import { getGuest, submitContribution } from "@/lib/submit";
 import { useHydrated } from "@/lib/useClient";
 import { useLive, voterId, type LiveData } from "@/lib/useLive";
 import { Progress } from "./CaptureBits";
-import { EyeIcon, LockIcon, SealedCard, WritingSheet } from "./Sealed";
+import { EyeIcon, LockIcon } from "./Sealed";
 import r from "./room.module.css";
 
 const lsGet = (k: string) => {
@@ -291,87 +293,18 @@ function Question({ from }: { from: string }) {
   );
 }
 
-function Letter({ from }: { from: string }) {
-  const [text, setText] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "sealed" | "failed">("idle");
-  const [error, setError] = useState("");
-  const sealedRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (state === "sealed") sealedRef.current?.focus();
-  }, [state]);
-
-  async function seal() {
-    if (!text.trim()) return setError("Write your letter first.");
-    setState("sending");
-    setError("");
-    const res = await submitContribution({ type: "letter", name: from.trim() || "Anonymous", text, meta: { reveal: "1 year" } });
-    if (res.ok) setState("sealed");
-    else {
-      setState("failed");
-      setError(`${res.error} Your letter is still here.`);
-    }
-  }
-
+function Letter() {
   return (
-    <Item id="letter" kind="Letter" open="always" who="hosts" whoText="They get it now, marked to open in a year. It can't be changed once sent.">
+    <Item id="letter" kind="Letter" open="always" who="hosts" whoText="Sealed until the day you pick, even for them. It can't be changed once sent.">
       <h3 id="letter-title" className={r.title}>
         Write to the hosts
       </h3>
-      {state === "sealed" ? (
-        <SealedCard
-          headingRef={sealedRef}
-          title="Letter sealed."
-          facts={[
-            ["For", "The hosts, and no one else"],
-            ["Open", "In a year"],
-            ["From", from.trim() || "Anonymous"],
-          ]}
-        >
-          <div className={r.actions}>
-            <button
-              type="button"
-              className={r.secondary}
-              onClick={() => {
-                setText("");
-                setState("idle");
-              }}
-            >
-              Write another
-            </button>
-          </div>
-        </SealedCard>
-      ) : (
-        <>
-          <WritingSheet
-            id="letter-text"
-            head={[
-              ["To", "The hosts"],
-              ["Open", "In a year"],
-            ]}
-            label="Your letter"
-            value={text}
-            onChange={setText}
-            placeholder="A longer note to the hosts, for a year from now."
-            maxLength={3000}
-            disabled={state === "sending"}
-            signedAs={from.trim()}
-          />
-          {error && (
-            <p className={r.error} role="alert">
-              {error}
-            </p>
-          )}
-          {state === "sending" ? (
-            <Progress fraction={null} label="Sealing your letter" />
-          ) : (
-            <div className={r.actions}>
-              <button type="button" className={r.primary} onClick={seal}>
-                {state === "failed" ? "Try sealing again" : "Seal letter"}
-              </button>
-            </div>
-          )}
-        </>
-      )}
+      <p className={r.body}>Longer words, a photo if you like, opened on a day you choose: a year from now unless you pick another.</p>
+      <div className={r.actions}>
+        <Link href={ROUTE.later} className={r.secondary}>
+          Leave something for later
+        </Link>
+      </div>
     </Item>
   );
 }
@@ -461,7 +394,7 @@ export default function InteractScreen() {
           />
         </label>
         <Question from={sender} />
-        <Letter from={from} />
+        <Letter />
       </section>
     </div>
   );

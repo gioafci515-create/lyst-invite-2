@@ -37,7 +37,7 @@ const counter = (page) => page.ev("(document.querySelector('[class*=counterNum]'
 const thumb = (page) => page.ev("(document.querySelector('[class*=thumb][data-state]') || { dataset: {} }).dataset.state || ''");
 const roll = (page) => page.ev("localStorage.getItem('lyst_roll')");
 const hasButton = (page, re) => page.ev(`[...document.querySelectorAll('button, a[href]')].some((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && ${re.toString()}.test((e.getAttribute('aria-label') || e.textContent).trim()); })`);
-const media = (o) => open({ flags: FAKE_MEDIA, wait: 4000, ...o });
+const media = (o) => open({ flags: FAKE_MEDIA, wait: 4000, now: AT.duringNoTask, ...o }); // the capture screens only open during the event
 /** the viewfinder is open and showing a picture */
 const live = (page) => until(() => page.ev("!!document.querySelector('[data-phase=live]') && document.querySelector('video').videoWidth > 0"));
 

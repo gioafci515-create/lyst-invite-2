@@ -33,7 +33,12 @@ export type EventConfig = {
   modules: Modules;
   /** frames on each guest's disposable camera roll (a photo task brings its own count) */
   cameraFrames: number;
+  /** the hosts' thank-you, shown at the top of the home page after the event; empty = nothing is shown */
+  thankYou: string;
 };
+
+/** the longest thank-you note the hosts can leave */
+export const THANK_YOU_MAX = 600;
 
 /** the roll size the hosts can choose from */
 export const FRAMES_MIN = 1;
@@ -54,6 +59,7 @@ export const DEFAULT_CONFIG: EventConfig = {
   ],
   modules: { camera: true, voice: true, video: true, gallery: true, tasks: true, live: true, later: true, capsule: true },
   cameraFrames: 24,
+  thankYou: "",
 };
 
 export type ConfigIssue = { level: "error" | "warning"; message: string };
@@ -138,6 +144,10 @@ export function resolveConfig(raw: unknown): { config: EventConfig; issues: Conf
     if (typeof n === "number" && Number.isInteger(n) && n >= FRAMES_MIN && n <= FRAMES_MAX) cfg.cameraFrames = n;
     else issues.push({ level: "error", message: `Camera frames must be a whole number from ${FRAMES_MIN} to ${FRAMES_MAX}; using ${d.cameraFrames}.` });
   }
+  if (r.thankYou !== undefined) {
+    if (typeof r.thankYou === "string" && r.thankYou.trim().length <= THANK_YOU_MAX) cfg.thankYou = r.thankYou.trim();
+    else issues.push({ level: "error", message: `The thank-you note must be text of at most ${THANK_YOU_MAX} characters; nothing is shown.` });
+  }
   return { config: cfg, issues };
 }
 
@@ -155,6 +165,8 @@ export type EventState = {
   programme: ProgrammeItem[];
   /** frames on each guest's camera roll */
   cameraFrames: number;
+  /** the hosts' thank-you note ("" when they wrote none) */
+  thankYou: string;
   /** the next automatic change, or null (an override suppresses automatic changes) */
   next: { at: string; to: Phase } | null;
 };
@@ -193,6 +205,7 @@ export function computeEventState(cfg: EventConfig, now: number): EventState {
     modules: cfg.modules,
     programme: cfg.programme,
     cameraFrames: cfg.cameraFrames,
+    thankYou: cfg.thankYou,
     next,
   };
 }
@@ -235,3 +248,74 @@ export const SECTION_MODULE: Record<string, ModuleId | undefined> = {
   gallery: "gallery",
   capsule: "capsule",
 };
+
+/* ------------------------------------------------------------------ what guests can send, by phase */
+
+/** The things that only make sense at the event itself. Letters for later and the capsule are open in every phase. */
+export type CaptureKind = "camera" | "voice" | "video" | "live" | "tasks";
+export type CaptureState = "open" | "not-yet" | "closed";
+
+/**
+ * One rule for the server and the screens: everything opens when the event starts (or the host forces "during").
+ * After the end, voice and video stay open while the hosts keep them switched on; the camera, the live room and tasks close.
+ */
+export function captureState(kind: CaptureKind, phase: Phase): CaptureState {
+  if (phase === "during") return "open";
+  if (phase === "before") return "not-yet";
+  return kind === "voice" || kind === "video" ? "open" : "closed";
+}
+
+/** submission type -> the window it belongs to (types missing here, "later" and "capsule", are open in every phase) */
+export const TYPE_CAPTURE: Partial<Record<string, CaptureKind>> = {
+  photo: "camera",
+  voice: "voice",
+  video: "video",
+  challenge: "live",
+  poll: "live",
+  question: "live",
+  letter: "live",
+};
+
+/** "Saturday 14 November at 19:13", in the event timezone */
+export const whenLabel = (iso: string, tz: string) =>
+  `${new Date(iso).toLocaleDateString("en-GB", { timeZone: tz, weekday: "long", day: "numeric", month: "long" })} at ${timeLabel(iso, tz)}`;
+
+/** what the server answers when something arrives outside its window */
+export const captureRefusal = (s: CaptureState, ev: { startsAt: string; endsAt: string; timezone: string }) =>
+  s === "not-yet" ? `This opens on ${whenLabel(ev.startsAt, ev.timezone)}. Nothing was saved.` : `This closed when the event ended, ${whenLabel(ev.endsAt, ev.timezone)}. Nothing was saved.`;
+
+/** A countdown that stays readable: "4:05" / "1:02:33" within a day, "Sat 22:33" (event timezone) beyond it. */
+export function untilLabel(atMs: number, nowMs: number, tz: string): string {
+  const ms = atMs - nowMs;
+  if (ms > 86400_000) {
+    const day = new Date(atMs).toLocaleDateString("en-GB", { timeZone: tz, weekday: "short" });
+    return `${day} ${timeLabel(new Date(atMs).toISOString(), tz)}`;
+  }
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${m}:${sec}` : `${m}:${sec}`;
+}
+
+/** The next row of the running order (opening first), never one that has already started. null when none is left. */
+export function nextProgrammeRow(startsAt: string, programme: ProgrammeItem[], nowMs: number): ProgrammeItem | null {
+  if (!Number.isFinite(nowMs) || nowMs <= 0) return null;
+  const rows = [{ at: startsAt, label: "Page opens" }, ...programme].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  return rows.find((p) => Date.parse(p.at) > nowMs) ?? null;
+}
+
+/* ------------------------------------------------------------------ for later */
+
+const ymd = (ms: number, tz: string) => {
+  const { y, m, d } = TZ_PARTS(ms, tz);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+};
+const plusYears = (day: string, n: number) => `${Number(day.slice(0, 4)) + n}${day.slice(4)}`;
+
+/** The days a "for later" message may open, in the event timezone (yyyy-mm-dd): first, default and last. */
+export function forLaterBounds(cfg: Pick<EventConfig, "startsAt" | "endsAt" | "timezone">) {
+  const eventDay = ymd(Date.parse(cfg.startsAt), cfg.timezone);
+  const first = ymd(Date.parse(cfg.endsAt) + 86400_000, cfg.timezone);
+  return { first, byDefault: plusYears(eventDay, 1), last: plusYears(eventDay, 10) };
+}

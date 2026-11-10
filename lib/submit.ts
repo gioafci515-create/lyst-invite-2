@@ -192,7 +192,7 @@ export async function submitContribution(input: {
       if (task) creditTask(task);
       const id = typeof data.id === "string" ? data.id : undefined;
       const key = typeof data.key === "string" ? data.key : undefined;
-      if (id && key && file) addMine({ id, key, kind: file.type.startsWith("video/") ? "video" : "photo", at: new Date().toISOString(), ...(size ?? {}) });
+      if (id && key && file) addMine({ id, key, kind: file.type.startsWith("video/") ? "video" : "photo", at: new Date().toISOString(), ...(size ?? {}), ...(task ? { task: task.id } : {}) });
       return { ok: true, id, key };
     }
     return { ok: false, error: typeof data.error === "string" ? data.error : "Something went wrong. Try again." };

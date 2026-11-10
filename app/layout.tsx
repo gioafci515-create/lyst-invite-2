@@ -19,9 +19,19 @@ export const viewport: Viewport = {
   themeColor: "#ff3b21",
 };
 
+/**
+ * A screen-change animation the browser skips (the phone turned, the window or its scrollbar changed size mid-way)
+ * ends in an error nobody can act on: the new screen is already there. Keep it out of the error log. Inline in the
+ * head, because React can start such an animation while the page is still streaming, before any component runs.
+ */
+const SKIPPED_TRANSITION = `(function(){var s=function(r){return!!r&&(r.name==="InvalidStateError"||r.name==="AbortError")&&/transition/i.test(r.message||"")};addEventListener("unhandledrejection",function(e){if(s(e.reason))e.preventDefault()});addEventListener("error",function(e){if(s(e.error))e.preventDefault()})})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${arimo.variable} ${robotoMono.variable} ${spaceGrotesk.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SKIPPED_TRANSITION }} />
+      </head>
       <body>{children}</body>
     </html>
   );

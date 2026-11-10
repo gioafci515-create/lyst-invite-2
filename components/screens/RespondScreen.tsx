@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import AddToCalendar from "@/components/AddToCalendar";
+import ReplyCard from "@/components/ReplyCard";
 import { shortDateLabel, timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
-import { EMPTY_REPLY, GUESTS_MAX, MEALS, readReply, sendReply, useReply, type Reply } from "@/lib/rsvp";
+import { EMPTY_REPLY, GUESTS_MAX, MEALS, readReply, sendReply, useReply, validateReply, type Reply, type ReplyErrors } from "@/lib/rsvp";
 import { getGuest } from "@/lib/submit";
 import { useHydrated } from "@/lib/useClient";
 import { LockIcon } from "./Sealed";
@@ -13,38 +15,6 @@ import r from "./room.module.css";
 function deadline(iso: string, tz: string) {
   const year = new Date(iso).toLocaleDateString("en-GB", { timeZone: tz, year: "numeric" });
   return `${shortDateLabel(iso, tz)} ${year} at ${timeLabel(iso, tz)}`;
-}
-
-/** The guest's current answer. A decline reads as a decline, never as "coming". */
-function Answer({ reply, children, headingRef }: { reply: Reply; children?: React.ReactNode; headingRef?: React.Ref<HTMLHeadingElement> }) {
-  const going = reply.attending === "accept";
-  const rows: [string, string][] = going
-    ? [
-        ["Name", reply.name],
-        ["Party", reply.guests === 1 ? "Just you" : `${reply.guests} people${reply.companion ? `, with ${reply.companion}` : ""}`],
-        ["Meal", reply.meal],
-        ["Dietary", reply.dietary || "Nothing to note"],
-        ["Access", reply.requests || "Nothing to note"],
-      ]
-    : [["Name", reply.name]];
-  return (
-    <section className={r.answer} data-attending={reply.attending} aria-labelledby="answer-title">
-      <h2 id="answer-title" ref={headingRef} tabIndex={-1} className={r.h2}>
-        {going ? "You’re coming." : "You’re not coming."}
-      </h2>
-      <dl className={r.answerList}>
-        {rows
-          .filter(([, v]) => v)
-          .map(([k, v]) => (
-            <div key={k} style={{ display: "contents" }}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
-            </div>
-          ))}
-      </dl>
-      {children}
-    </section>
-  );
 }
 
 /**
@@ -57,7 +27,7 @@ export default function RespondScreen() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Reply>(EMPTY_REPLY);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<ReplyErrors>({});
   const [saved, setSaved] = useState(false);
   const answerHeading = useRef<HTMLHeadingElement>(null);
   const firstField = useRef<HTMLInputElement>(null);
@@ -81,7 +51,7 @@ export default function RespondScreen() {
     setDraft(startingDraft());
     setEditing(true);
     setSaved(false);
-    setError("");
+    setErrors({});
     requestAnimationFrame(() => firstField.current?.focus());
   }
 
@@ -93,21 +63,28 @@ export default function RespondScreen() {
     setDraft(startingDraft());
   }
 
-  const set = <K extends keyof Reply>(k: K, v: Reply[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const set = <K extends keyof Reply>(k: K, v: Reply[K]) => {
+    setDraft((d) => ({ ...d, [k]: v }));
+    if (k === "name" || k === "email") setErrors((e) => ({ ...e, [k]: undefined }));
+  };
   const going = draft.attending === "accept";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!draft.name.trim()) return setError("Add your name.");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) return setError("Add an email address the hosts can reach you on.");
+    const problems = validateReply(draft);
+    if (problems.name || problems.email) {
+      setErrors(problems);
+      document.getElementById(problems.name ? "details-name" : "details-email")?.focus();
+      return;
+    }
     setSending(true);
-    setError("");
+    setErrors({});
     const res = await sendReply(draft);
     setSending(false);
     if (res.ok) {
       setEditing(false);
       setSaved(true);
-    } else setError(res.error);
+    } else setErrors({ form: res.error });
   }
 
   const status = (
@@ -129,6 +106,12 @@ export default function RespondScreen() {
       <span>Only the hosts see your answer and your details.</span>
     </p>
   );
+  const fieldError = (id: string, text?: string) =>
+    text ? (
+      <span id={id} className={r.fieldError}>
+        {text}
+      </span>
+    ) : null;
 
   if (ev.rsvpOpen === null) {
     return (
@@ -144,21 +127,22 @@ export default function RespondScreen() {
     return (
       <div className={r.screen}>
         {stored ? (
-          <Answer reply={stored} headingRef={answerHeading}>
+          <ReplyCard reply={stored} headingRef={answerHeading} onChooseMeal={open ? change : undefined}>
             {saved && (
               <p className={r.status} role="status">
                 Saved. The hosts have your answer.
               </p>
             )}
             {status}
-            {open && (
-              <div className={r.actions}>
+            <div className={r.actions}>
+              {stored.attending === "accept" && <AddToCalendar className={r.primary} />}
+              {open && (
                 <button type="button" className={r.secondary} onClick={change}>
                   Change
                 </button>
-              </div>
-            )}
-          </Answer>
+              )}
+            </div>
+          </ReplyCard>
         ) : (
           <section className={r.answer} data-attending="decline" aria-labelledby="answer-title">
             <h2 id="answer-title" className={r.h2}>
@@ -176,42 +160,49 @@ export default function RespondScreen() {
   return (
     <div className={r.screen}>
       <form className={r.form} onSubmit={submit} noValidate>
-        <h2 className={r.h2}>{stored ? "Change your answer" : "Will you be there?"}</h2>
+        <h2 className={r.h2}>{stored ? "Change your answer" : "Are you coming?"}</h2>
         <fieldset className={`${r.options} ${r.two}`}>
           <legend className={r.fieldLabel}>Your answer</legend>
           <label className={r.option}>
             <input type="radio" name="attending" checked={going} onChange={() => set("attending", "accept")} />
-            Yes, I&rsquo;ll be there
+            I&rsquo;m coming
           </label>
           <label className={r.option}>
             <input type="radio" name="attending" checked={!going} onChange={() => set("attending", "decline")} />
-            No, I can&rsquo;t come
+            Can&rsquo;t make it
           </label>
         </fieldset>
 
         <label className={r.field}>
           <span className={r.fieldLabel}>Your name</span>
           <input
+            id="details-name"
             ref={firstField}
             className={r.input}
             value={draft.name}
             onChange={(e) => set("name", e.target.value)}
             maxLength={100}
             autoComplete="name"
-            required
+            aria-invalid={!!errors.name || undefined}
+            aria-describedby={errors.name ? "details-name-error" : undefined}
           />
+          {fieldError("details-name-error", errors.name)}
         </label>
         <label className={r.field}>
           <span className={r.fieldLabel}>Email</span>
           <input
+            id="details-email"
             className={r.input}
             type="email"
+            inputMode="email"
             value={draft.email}
             onChange={(e) => set("email", e.target.value)}
             maxLength={200}
             autoComplete="email"
-            required
+            aria-invalid={!!errors.email || undefined}
+            aria-describedby={errors.email ? "details-email-error" : undefined}
           />
+          {fieldError("details-email-error", errors.email)}
         </label>
 
         {going && (
@@ -225,12 +216,7 @@ export default function RespondScreen() {
                   −
                 </button>
                 <output aria-live="polite">{draft.guests}</output>
-                <button
-                  type="button"
-                  aria-label="One more"
-                  onClick={() => set("guests", Math.min(GUESTS_MAX, draft.guests + 1))}
-                  disabled={draft.guests >= GUESTS_MAX}
-                >
+                <button type="button" aria-label="One more" onClick={() => set("guests", Math.min(GUESTS_MAX, draft.guests + 1))} disabled={draft.guests >= GUESTS_MAX}>
                   +
                 </button>
               </div>
@@ -242,7 +228,7 @@ export default function RespondScreen() {
               </label>
             )}
             <fieldset className={`${r.options} ${r.three}`}>
-              <legend className={r.fieldLabel}>Meal</legend>
+              <legend className={r.fieldLabel}>Meal{draft.meal ? "" : " (not chosen yet)"}</legend>
               {MEALS.map((m) => (
                 <label key={m} className={r.option}>
                   <input type="radio" name="meal" checked={draft.meal === m} onChange={() => set("meal", m)} />
@@ -252,32 +238,19 @@ export default function RespondScreen() {
             </fieldset>
             <label className={r.field}>
               <span className={r.fieldLabel}>Dietary needs</span>
-              <input
-                className={r.input}
-                value={draft.dietary}
-                onChange={(e) => set("dietary", e.target.value)}
-                maxLength={500}
-                placeholder="Optional, e.g. nut allergy"
-              />
+              <input className={r.input} value={draft.dietary} onChange={(e) => set("dietary", e.target.value)} maxLength={500} placeholder="Optional, e.g. nut allergy" />
             </label>
             <label className={r.field}>
               <span className={r.fieldLabel}>Access or other requests</span>
-              <textarea
-                className={r.textarea}
-                rows={3}
-                value={draft.requests}
-                onChange={(e) => set("requests", e.target.value)}
-                maxLength={500}
-                placeholder="Optional, e.g. step-free arrival"
-              />
+              <textarea className={r.textarea} rows={3} value={draft.requests} onChange={(e) => set("requests", e.target.value)} maxLength={500} placeholder="Optional, e.g. step-free arrival" />
             </label>
           </>
         )}
 
         {status}
-        {error && (
+        {errors.form && (
           <p className={r.error} role="alert">
-            {error}
+            {errors.form}
           </p>
         )}
         <div className={r.actions}>
@@ -287,7 +260,7 @@ export default function RespondScreen() {
             </button>
           )}
           <button type="submit" className={r.primary} disabled={sending}>
-            {sending ? "Saving…" : stored ? "Update response" : "Confirm response"}
+            {sending ? "Saving…" : stored ? "Update my reply" : "Send my reply"}
           </button>
         </div>
         {hostsOnly}

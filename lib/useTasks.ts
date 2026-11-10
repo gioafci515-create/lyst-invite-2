@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PULSE_EVENT } from "./eventStore";
 import { cacheTasks, readCachedTasks, readProgress, serverNow, TASKS_EVENT, type ClientTask } from "./taskProgress";
 import { useHydrated } from "./useClient";
 
@@ -61,6 +62,8 @@ export function useTasks() {
     const sync = () => setProgress(readProgress());
     window.addEventListener(TASKS_EVENT, sync);
     window.addEventListener("storage", sync);
+    // the hosts changed something (started the tasks, edited one): reload now instead of at the next 20 s poll
+    window.addEventListener(PULSE_EVENT, load);
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         load();
@@ -74,6 +77,7 @@ export function useTasks() {
       clearInterval(clock);
       window.removeEventListener(TASKS_EVENT, sync);
       window.removeEventListener("storage", sync);
+      window.removeEventListener(PULSE_EVENT, load);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);

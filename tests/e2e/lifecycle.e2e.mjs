@@ -3,7 +3,9 @@
 // server-side gating is covered at the end with the real config (data/kv.json, restored afterwards).
 // Usage: start the app (npm run build && npx next start -p 3100), then: node tests/e2e/lifecycle.e2e.mjs
 import fs from "node:fs";
-import { open, sleep, AT, tappable, FEATURES, ROUTES, text, reporter, launch, ORIGIN } from "./helpers.mjs";
+import { open, sleep, AT, tappable, FEATURES, ROUTES, text, reporter, launch, ORIGIN, pinTaskSchedule } from "./helpers.mjs";
+
+const restoreTasks = pinTaskSchedule();
 
 const R = reporter();
 const { ok } = R;
@@ -15,7 +17,7 @@ const MOBILES = [
   ["412x915 (Pixel 7)", 412, 915],
 ];
 
-const STATUS = "header p[aria-live]";
+const STATUS = "header [data-status]";
 const BAR = 'nav[aria-label="Quick navigation"]';
 const barText = (page) => page.ev(`[...document.querySelectorAll('${BAR} a, ${BAR} button')].map(x=>x.textContent.trim()||x.getAttribute('aria-label')).join('|')`);
 const headerCta = (page) => page.ev(`(document.querySelector('header [class*=actionSlot] a') || {}).textContent || ''`);
@@ -68,8 +70,8 @@ for (const [scn, label] of [["duringVoiceTask", "voice task live"], ["duringPhot
 console.log("\n--- three phases");
 for (const [name, scn, status, h1, tabs] of [
   ["before", "rsvpOpen", /days to go|tomorrow|today/i, /UN\/\s*FOLD\s*2026/, "Home|RSVP|Open camera|Programme|Menu"],
-  ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Tasks\|Open camera\|Live\|Menu$/],
-  ["after", "after", /memories open/i, /memories/i, "Home|Gallery|Open camera|Capsule|Menu"],
+  ["during", "duringNoTask", /live · ends 00:30/i, /tonight/i, /^Home\|\d*Tasks\|Open camera(, a photo task is open)?\|Live\|Menu$/],
+  ["after", "after", /memories open/i, /memories/i, "Home|Gallery|Open camera|For later|Menu"],
 ]) {
   const c = await open({ now: AT[scn] });
   const bar = await barText(c.page);
@@ -95,26 +97,26 @@ const formPresent = (page) => page.ev(`!!document.querySelector('#rsvp form')`);
 {
   const c = await open({ now: AT.rsvpOpen });
   ok("open: header offers RSVP", (await headerCta(c.page)).trim() === "RSVP");
-  ok("open: hero button says Claim a position", /claim a position/i.test(await text(c.page, "section[aria-labelledby=invite-title] a")));
+  ok("open: hero button asks for a reply in plain words", /reply now/i.test(await text(c.page, "section[aria-labelledby=invite-title] a")));
   ok("open: quick RSVP form is present", await formPresent(c.page));
   ok("open: the RSVP section names the deadline", /reply by 12 November/i.test(await text(c.page, "#rsvp")));
   ok("open: bottom bar has an RSVP tab", /RSVP/.test(await barText(c.page)));
   ok("open: no designer notes visible", !/default state|hover \/ open form|→\s*confirmed/i.test(await c.page.ev("document.body.innerText")));
-  ok("open: 'On the night' lists the enabled features without links", /on the night you.ll be able to/i.test(await text(c.page, "main")) && (await c.page.ev(`[...document.querySelectorAll('section[aria-labelledby=night-title] a')].length`)) === 0);
+  ok("open: 'On the night' teases every enabled feature, with no links", (await c.page.ev(`[...document.querySelectorAll('[data-teaser]')].map(e => e.dataset.teaser).join(',')`)) === "camera,tasks,voice,video,live" && (await c.page.ev(`[...document.querySelectorAll('section[aria-labelledby=night-title] a')].length`)) === 0);
   await c.close();
 }
 {
   // the quick form and the details form share one stored reply: accept/decline must survive both and read correctly
   const c = await open({ now: AT.rsvpOpen });
-  for (const [val, re, label] of [["accept", /on the list/i, "accept"], ["decline", /replied no/i, "decline"]]) {
+  for (const [val, re, label] of [["accept", /You’re coming\./, "accept"], ["decline", /You’re not coming\./, "decline"]]) {
     await c.page.ev(`localStorage.setItem('lyst_rsvp', JSON.stringify({ attending: ${JSON.stringify(val)} })); window.dispatchEvent(new Event('lyst:rsvp'));`);
     await sleep(500);
     const t = await text(c.page, "#rsvp");
-    ok(`stored reply "${label}" is shown correctly (a decline is never shown as accepted)`, re.test(t) && (label !== "decline" || !/on the list/i.test(t)), t.slice(0, 90));
+    ok(`stored reply "${label}" is shown correctly (a decline is never shown as accepted)`, re.test(t) && (label !== "decline" || !/You’re coming/.test(t)), t.slice(0, 90));
   }
   await c.page.ev(`localStorage.removeItem('lyst_rsvp'); window.dispatchEvent(new Event('lyst:rsvp'));`);
   await sleep(500);
-  ok("clearing the reply removes the status line", !/on the list|replied no/i.test(await text(c.page, "#rsvp")));
+  ok("clearing the reply brings the form back", !/You’re coming|You’re not coming/.test(await text(c.page, "#rsvp")) && (await formPresent(c.page)));
   await c.close();
 }
 {
@@ -193,11 +195,10 @@ const ROUTE_TITLES = [
   ["/voice", /voice guestbook/i],
   ["/video", /video message/i],
   ["/live", /live room/i],
-  ["/letter", /message for later/i],
+  ["/for-later", /leave something for later/i],
   ["/gallery", /gallery/i],
-  ["/capsule", /time capsule/i],
   ["/details", /your details/i],
-  ["/tasks", /tasks/i],
+  ["/moments", /tasks/i],
   ["/updates", /updates/i],
   ["/programme", /programme/i],
 ];
@@ -214,7 +215,7 @@ for (const [path, title] of ROUTE_TITLES) {
   }
   await c.close();
 }
-for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/letter"], ["#gallery", "/gallery"], ["#capsule", "/capsule"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/tasks"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
+for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/for-later"], ["#gallery", "/gallery"], ["#capsule", "/for-later"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/moments"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
   const c = await open({ path: "/" + hash, now: AT.duringNoTask, wait: 4500 });
   const at = await c.page.ev("location.pathname + location.hash");
   ok(`old link /${hash} forwards to ${to}`, at === to, at);
@@ -228,7 +229,7 @@ for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", 
   ok("/#programme stays on the invitation before the event", (await b.page.ev("location.pathname === '/' && !!document.getElementById('programme')")) === true);
   await b.close();
 }
-for (const [from, to] of [["/guestbook", "/voice"], ["/later", "/letter"], ["/hub", "/programme"], ["/respond", "/details"], ["/notifications", "/updates"], ["/interact", "/live"]]) {
+for (const [from, to] of [["/guestbook", "/voice"], ["/later", "/for-later"], ["/letter", "/for-later"], ["/capsule", "/for-later"], ["/hub", "/programme"], ["/respond", "/details"], ["/notifications", "/updates"], ["/interact", "/live"]]) {
   const r = await fetch(ORIGIN + from, { redirect: "manual" });
   ok(`old address ${from} redirects to ${to}`, r.status >= 300 && r.status < 400 && new URL(r.headers.get("location"), ORIGIN).pathname === to, `${r.status} ${r.headers.get("location")}`);
 }
@@ -247,12 +248,16 @@ for (const [scn, label] of [["duringVoiceTask", "during"], ["after", "after"], [
   for (const [name, fn] of Object.entries(need)) if (!(await tappable(c.page, fn, { barPx: 0 })).length) miss.push(name);
   ok(`desktop ${label}: primary actions visible and unobstructed on the first screen`, miss.length === 0, miss.join(","));
   const nav = await c.page.ev(`[...document.querySelectorAll('header nav > a, header nav > div > button')].map(x => x.textContent.trim())`);
-  ok(`desktop ${label}: header has at most 5 items (Invitation, Programme, Tonight, Memories + context)`, nav.join("|") === "Invitation|Programme|Tonight|Memories" && (await c.page.ev(`getComputedStyle(document.querySelector('${BAR}')).display`)) === "none", nav.join("|"));
+  const night = label === "before" ? "On the night" : "Tonight"; // never "Tonight" before the event day
+  // during the event Tasks sits in the header itself (with how many are open), never only inside a menu
+  const names = nav.map((x) => x.replace(/^Tasks.*/, "Tasks"));
+  const want = label === "during" ? `Invitation|Programme|Tasks|${night}|Memories` : `Invitation|Programme|${night}|Memories`;
+  ok(`desktop ${label}: header: Invitation, Programme, ${label === "during" ? "Tasks, " : ""}${night}, Memories + context`, names.join("|") === want && (await c.page.ev(`getComputedStyle(document.querySelector('${BAR}')).display`)) === "none", nav.join("|"));
   if (label === "during") {
     await c.page.ev(`[...document.querySelectorAll('header nav button')].find(b => b.textContent.includes('Tonight')).click()`);
     await sleep(300);
     const items = await c.page.ev(`[...document.querySelectorAll('header nav ul:not([hidden]) a')].map(a => a.getAttribute('href'))`);
-    ok("desktop: the Tonight menu opens and lists every enabled feature of the night", ["/tasks", "/camera", "/voice", "/video", "/live", "/letter"].every((h) => items.includes(h)), items.join(","));
+    ok("desktop: the Tonight menu opens and lists every other feature of the night (Tasks is in the header itself)", ["/camera", "/voice", "/video", "/live"].every((h) => items.includes(h)) && (await c.page.ev(`!!document.querySelector('header nav > a[href="/moments"]')`)), items.join(","));
     await c.page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await sleep(200);
     ok("desktop: Escape closes the Tonight menu", (await c.page.ev(`document.querySelectorAll('header nav ul:not([hidden])').length`)) === 0);
@@ -280,7 +285,7 @@ console.log("\n--- keyboard and accessibility (during, phone)");
   ok("a11y: no duplicate ids", dups.length === 0, dups.join(","));
   ok("a11y: landmarks (header, main, labelled navs)", await p.ev(`!!document.querySelector('header') && !!document.querySelector('main') && [...document.querySelectorAll('nav')].every(n => n.getAttribute('aria-label') || n.getAttribute('aria-labelledby'))`));
   ok("a11y: every image has an alt attribute", await p.ev(`[...document.querySelectorAll('img')].every(i => i.hasAttribute('alt'))`));
-  ok("a11y: phase status is a polite live region", await p.ev(`document.querySelector("${STATUS}").getAttribute('aria-live') === 'polite'`));
+  ok("a11y: the phase status is not a live region (a ticking countdown is not read out again and again)", await p.ev(`!document.querySelector("${STATUS}").hasAttribute('aria-live') && !document.querySelector("${STATUS}").closest('[aria-live]')`));
 
   // menu sheet: modal dialog, focus moves in and stays in, Escape closes, focus returns to the Menu button
   await p.ev(`(() => { const b = [...document.querySelectorAll('${BAR} button')].find(b=>b.textContent.includes('Menu')); b.focus(); b.click(); })()`);
@@ -341,6 +346,9 @@ for (const [scn, w] of [["rsvpOpen", 390], ["duringVoiceTask", 390], ["after", 3
 console.log("\n--- contrast (WCAG AA 4.5:1 for normal text)");
 for (const scn of ["duringVoiceTask", "after"]) {
   const c = await open({ now: AT[scn] });
+  // read the text as a guest sees it once it is on screen (the scroll reveal has run for everything)
+  await c.page.ev(`document.querySelectorAll('[data-reveal]').forEach((e) => e.setAttribute('data-shown', ''))`);
+  await sleep(1000);
   const ratios = await c.page.ev(`(() => {
     const parse = (s) => { const m = s.match(/rgba?\\(([^)]+)\\)/); const p = m[1].split(',').map(Number); return { r: p[0], g: p[1], b: p[2], a: p[3] === undefined ? 1 : p[3] }; };
     const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
@@ -369,7 +377,7 @@ console.log("\n--- disabled modules are gated on the server (real config, cold c
   const ROOT = new URL("../../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
   const KV = ROOT + "data/kv.json";
   const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
-  const OFF = ["voice", "video", "gallery", "capsule", "later"];
+  const OFF = ["voice", "video", "gallery", "later"]; // the capsule has no guest route any more: /capsule leads to /for-later
   try {
     const db = backup ? JSON.parse(backup.toString()) : {};
     db["event:config"] = { ...(db["event:config"] ?? {}), override: "during", modules: Object.fromEntries(OFF.map((m) => [m, false])) };
@@ -405,4 +413,5 @@ console.log("\n--- disabled modules are gated on the server (real config, cold c
   }
 }
 
+restoreTasks();
 process.exit(R.done() ? 1 : 0);

@@ -1,0 +1,107 @@
+/*
+ * The press clock: an ink band under the invitation, digits rolling like a counter in the print hall. Everything is
+ * centred and every unit is the same width: the labels sit under the middle of their digits, the colons sit halfway
+ * between the units and halfway up the digits.
+ */
+.band {
+  background: var(--ink);
+  color: var(--cream);
+  border-top: 4px solid var(--red);
+}
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 28px;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 22px;
+}
+.label,
+.at,
+.name {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.at {
+  color: rgba(245, 240, 227, 0.72);
+  font-variant-numeric: tabular-nums;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--acid);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dot {
+    animation: tick 1s steps(2, jump-none) infinite;
+  }
+}
+@keyframes tick {
+  50% {
+    opacity: 0.25;
+  }
+}
+.clock {
+  --gap: clamp(8px, 2.4vw, 26px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--gap);
+  font-family: var(--f-grotesk);
+  font-size: clamp(44px, 13vw, 140px);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0;
+}
+.unit {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.name {
+  color: rgba(245, 240, 227, 0.72);
+  letter-spacing: 0.12em;
+}
+/* two dots, centred on the digits' height */
+.colon {
+  height: 0.9em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.18em;
+}
+.colon::before,
+.colon::after {
+  content: "";
+  width: 0.1em;
+  height: 0.1em;
+  border-radius: 50%;
+  background: rgba(245, 240, 227, 0.35);
+}
+@media (min-width: 901px) {
+  .inner {
+    padding: 34px 48px 40px;
+    gap: 24px;
+  }
+  .label,
+  .at,
+  .name {
+    font-size: 13px;
+  }
+}

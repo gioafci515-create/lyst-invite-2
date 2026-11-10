@@ -64,13 +64,13 @@ try {
   setCfg({ modules: { later: false, live: false, voice: false } });
   const q = await post("/api/contribute", { type: "question", name: "t", text: "hello?" });
   ok("live off: a question is refused (403)", q.status === 403, JSON.stringify(q.body));
-  const l = await post("/api/contribute", { type: "later", name: "t", text: "note", meta: { reveal: "2027-01-01" } });
-  ok("later off: a letter-for-later is refused (403)", l.status === 403, JSON.stringify(l.body));
+  const l = await post("/api/contribute", { type: "forlater", name: "t", text: "note", meta: { openAt: "2027-11-14" } });
+  ok("later off: something for later is refused (403)", l.status === 403, JSON.stringify(l.body));
   const v = await post("/api/contribute", { type: "voice", name: "t", text: "", meta: {} });
   ok("voice off: a voice submission is refused (403)", v.status === 403, JSON.stringify(v.body));
-  setCfg({ modules: {} });
+  setCfg({ modules: {}, override: "during" });
   const q2 = await post("/api/contribute", { type: "question", name: "t", text: "hello?" });
-  ok("all on: the same question is accepted", q2.status === 200, JSON.stringify(q2.body));
+  ok("all on, during the event: the same question is accepted", q2.status === 200, JSON.stringify(q2.body));
   setCfg({ modules: { tasks: false } });
   let tk = await J("/api/tasks");
   ok("tasks off: /api/tasks offers no tasks and is not started", tk.body.tasks.length === 0 && tk.body.started === false);
