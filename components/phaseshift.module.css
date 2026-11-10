@@ -1,0 +1,147 @@
+/*
+ * The phase change: the page folds shut along a centre crease and opens on the new phase.
+ * Two halves, each half the screen; the words are split across the fold like a folded poster.
+ * Colours follow the phase it opens on: ink for the live night, cream for the memories, sand for the invitation.
+ */
+.shift {
+  --paper: var(--ink);
+  --type: var(--cream);
+  --accent: var(--red);
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  pointer-events: auto;
+}
+.shift[data-phase-shift="after"] {
+  --paper: var(--cream);
+  --type: var(--ink);
+}
+.shift[data-phase-shift="before"] {
+  --paper: var(--sand);
+  --type: var(--ink);
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.35);
+  opacity: 0;
+}
+.half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: var(--paper);
+  color: var(--type);
+  display: flex;
+  flex-direction: column;
+  padding: 0 clamp(16px, 5vw, 64px);
+  overflow: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.top {
+  top: 0;
+  transform-origin: 50% 0;
+  justify-content: space-between;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+}
+.bottom {
+  bottom: 0;
+  transform-origin: 50% 100%;
+  justify-content: flex-start;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
+/* the light falling on a sheet that is still turning */
+.shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(10, 10, 10, 0.9), rgba(10, 10, 10, 0.2));
+}
+.bottom .shade {
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.9), rgba(10, 10, 10, 0.2));
+}
+.kicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.shift[data-phase-shift="during"] .dot {
+  background: var(--acid);
+}
+.line {
+  position: relative;
+  font-family: var(--f-grotesk);
+  font-weight: 700;
+  font-size: clamp(54px, 15vw, 188px);
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.top .line {
+  padding-bottom: 0.06em;
+}
+.bottom .line {
+  padding-top: 0.1em;
+}
+.note {
+  position: relative;
+  margin-top: auto;
+  max-width: 34ch;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.crease {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 2px);
+  height: 4px;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+@media (min-width: 901px) {
+  .note {
+    font-size: 20px;
+  }
+}
+/* the first frame, before the animation takes over: halves open (edge-on), late words hidden; no flash of a covered page */
+@media (prefers-reduced-motion: no-preference) {
+  .top {
+    transform: perspective(1600px) rotateX(-94deg);
+  }
+  .bottom {
+    transform: perspective(1600px) rotateX(94deg);
+  }
+  .shift [data-after-close] {
+    opacity: 0;
+  }
+}
+/* reduced motion: nothing folds; the whole sheet fades in flat and fades out */
+@media (prefers-reduced-motion: reduce) {
+  .shift {
+    opacity: 0;
+  }
+  .shade {
+    display: none;
+  }
+  .crease {
+    transform: none;
+  }
+}

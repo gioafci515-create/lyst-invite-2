@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { useId, useLayoutEffect, useState, useSyncExternalStore, ViewTransition } from "react";
 import { captureState, type CaptureKind } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { groupLabel, HASH_ROUTE, NAV, ROUTE, type NavGroup } from "@/lib/sections";
@@ -10,6 +10,7 @@ import SiteHeader from "./SiteHeader";
 import QuickBar from "./QuickBar";
 import InviteScreen from "./screens/InviteScreen";
 import NightIndex from "./NightIndex";
+import NightLayer from "./NightLayer";
 import styles from "./site.module.css";
 
 export type GalleryItem = { id: string; kind: "photo" | "video"; w?: number; h?: number };
@@ -118,11 +119,14 @@ export default function HomeView({ gallery, recap = null }: { gallery: GalleryIt
   return (
     <>
       <SiteHeader />
-      <div className={styles.page}>
-        <main id="main">{ev.phase === "before" ? <InviteScreen /> : <NightIndex gallery={gallery} recap={recap} />}</main>
-        <SiteFooter />
-      </div>
+      <ViewTransition enter="page-in" exit="page-out" default="none">
+        <div className={styles.page}>
+          <main id="main">{ev.phase === "before" ? <InviteScreen /> : <NightIndex gallery={gallery} recap={recap} />}</main>
+          <SiteFooter />
+        </div>
+      </ViewTransition>
       <QuickBar />
+      <NightLayer />
     </>
   );
 }

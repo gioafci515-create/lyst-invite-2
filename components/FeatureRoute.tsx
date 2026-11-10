@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, ViewTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CaptureKind, ModuleId } from "@/lib/eventState";
@@ -8,6 +8,7 @@ import { EmbedProvider } from "./Embed";
 import ModuleGate from "./ModuleGate";
 import PhaseGate from "./PhaseGate";
 import LiveCard from "./LiveCard";
+import NightLayer from "./NightLayer";
 import styles from "./route.module.css";
 
 type Props = {
@@ -68,6 +69,7 @@ async function Gated({ module, intro, framed = true, capture, liveCard = true, c
             </>
           )}
           {liveCard && <LiveCard />}
+          <NightLayer />
         </EmbedProvider>
       </div>
     </EventSeed>
@@ -81,7 +83,10 @@ export default function FeatureRoute({ title, ...rest }: Props) {
       <Header title={title} />
       <main id="main" className={styles.main}>
         <Suspense fallback={<div className={styles.loading} aria-busy="true" aria-label="Loading" />}>
-          <Gated {...rest} />
+          {/* arriving on a screen: it rises in; leaving it: it fades (lateral moves, so no sideways slide) */}
+          <ViewTransition enter="page-in" exit="page-out" default="none">
+            <Gated {...rest} />
+          </ViewTransition>
         </Suspense>
       </main>
     </>

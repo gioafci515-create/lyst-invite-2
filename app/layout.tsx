@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Arimo, Roboto_Mono, Space_Grotesk } from "next/font/google";
+import TransitionGuard from "@/components/TransitionGuard";
 import "./globals.css";
 
 const arimo = Arimo({ variable: "--font-arimo", subsets: ["latin"], weight: ["400", "700"] });
@@ -22,7 +23,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${arimo.variable} ${robotoMono.variable} ${spaceGrotesk.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <TransitionGuard />
+      </body>
     </html>
   );
 }

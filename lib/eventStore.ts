@@ -78,14 +78,58 @@ function viewFromWire(w: Wire, now: number): EventView {
   };
 }
 
+/* ---------------- live phase changes ----------------
+ * When the phase changes while a page is open (the hosts switch it, or the schedule reaches the start or the end), the
+ * page can play a transition first: the old view stays on screen until the transition says the page is covered, then
+ * the new view is published. Without a transition mounted (admin, tests of the store), the change is published at once.
+ */
+export type PhaseShift = { from: Phase; to: Phase };
+type ShiftHandler = (shift: PhaseShift, commit: () => void) => void;
+let shiftHandler: ShiftHandler | null = null;
+/** the view waiting to be shown while a transition covers the page */
+let held: EventView | null = null;
+
+/** Register the page's phase transition. Returns the unregister function. Only one is active at a time. */
+export function onPhaseShift(h: ShiftHandler) {
+  shiftHandler = h;
+  return () => {
+    if (shiftHandler === h) shiftHandler = null;
+    commitHeld();
+  };
+}
+
+function commitHeld() {
+  if (!held) return;
+  view = held;
+  held = null;
+  subs.forEach((f) => f());
+}
+
 function recompute() {
   if (!wire) return;
   const now = Date.now() + offset;
   const next = viewFromWire(wire, now);
   // only publish a new snapshot when something a component renders actually changed
   const key = JSON.stringify([next.phase, next.rsvpOpen, next.startsAt, next.endsAt, next.rsvpClosesAt, next.modules, next.programme, next.countdown, next.timezone, next.cameraFrames, next.thankYou]);
+  if (held) {
+    // a transition is covering the page: keep the newest answer for when it lands
+    sig = key;
+    held = next;
+    return;
+  }
   if (key !== sig) {
     sig = key;
+    if (shiftHandler && view.loaded && next.phase !== view.phase) {
+      held = next;
+      const shift = { from: view.phase, to: next.phase };
+      let done = false;
+      shiftHandler(shift, () => {
+        if (done) return;
+        done = true;
+        commitHeld();
+      });
+      return;
+    }
     view = next;
     subs.forEach((f) => f());
   } else {
@@ -113,6 +157,31 @@ async function load() {
   }
 }
 
+/**
+ * The live signal: a tiny answer that changes whenever the hosts change the event settings or the task timeline. It is
+ * cheap to ask often (a shared cache in front of it answers most phones), so a switch in the admin reaches every open
+ * page within seconds. Only a change triggers the full reload; tasks listen for PULSE_EVENT.
+ */
+export const PULSE_EVENT = "lyst:pulse";
+const PULSE_MS = 4000;
+let pulseV: string | null = null;
+async function pulse() {
+  if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+  try {
+    const res = await fetch("/api/pulse", { cache: "no-store" });
+    if (!res.ok) return;
+    const { v } = (await res.json()) as { v?: unknown };
+    if (typeof v !== "string") return;
+    if (pulseV !== null && v !== pulseV) {
+      load();
+      window.dispatchEvent(new Event(PULSE_EVENT));
+    }
+    pulseV = v;
+  } catch {
+    /* offline: the 20 s poll and the focus reload still run */
+  }
+}
+
 function start() {
   // a page rendered by the server already handed over a fresh answer: never fall back to an older cached one
   if (!wire) try {
@@ -128,7 +197,9 @@ function start() {
     }
   } catch {}
   load();
+  pulse();
   timers = [
+    setInterval(pulse, PULSE_MS),
     setInterval(load, 20000),
     setInterval(() => {
       if (view.loaded && offset !== 0) recompute();

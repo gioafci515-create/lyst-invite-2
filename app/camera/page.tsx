@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getWire } from "@/lib/serverEvent";
 import { EventSeed } from "@/lib/eventStore";
 import PhaseGate from "@/components/PhaseGate";
+import PhaseShift from "@/components/PhaseShift";
 import CameraClient from "./CameraClient";
 
 export const metadata: Metadata = { title: "Camera — UN/FOLD 2026" };
@@ -17,6 +18,7 @@ async function Gated() {
       <PhaseGate kind="camera" standalone="Camera">
         <CameraClient />
       </PhaseGate>
+      <PhaseShift />
     </EventSeed>
   );
 }

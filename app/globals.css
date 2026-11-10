@@ -34,6 +34,11 @@
 html {
   scroll-behavior: smooth;
 }
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
 
 body {
   background: var(--sand);
@@ -172,5 +177,68 @@ button:disabled {
   button:not(:disabled):hover,
   a[data-btn]:hover {
     transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Motion. One easing for things arriving (fast out, long settle), one for leaving.
+   Everything below is off with reduced motion.
+   ------------------------------------------------------------------ */
+:root {
+  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-leave: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Scroll reveal (components/Reveal.tsx): only once the script runs, and only for what was below the fold. */
+html[data-reveal-on] [data-reveal]:not([data-shown]) {
+  opacity: 0;
+  transform: translateY(26px);
+}
+html[data-reveal-on] [data-reveal][data-shown] {
+  transition:
+    opacity 560ms ease-out var(--reveal-delay, 0ms),
+    transform 760ms var(--ease-arrive) var(--reveal-delay, 0ms);
+}
+
+/* Moving between screens (React view transitions). The page underneath stays live and clickable; only the content
+   that leaves fades and the content that arrives rises. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(.page-out) {
+  animation: 150ms var(--ease-leave) both vt-fade reverse;
+}
+::view-transition-new(.page-in) {
+  animation:
+    240ms ease-out 90ms both vt-fade,
+    460ms var(--ease-arrive) 90ms both vt-rise;
+}
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-rise {
+  from {
+    transform: translateY(22px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-reveal-on] [data-reveal]:not([data-shown]) {
+    opacity: 1;
+    transform: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }
