@@ -9,6 +9,9 @@ import AddToCalendar from "@/components/AddToCalendar";
 import Essentials, { ScheduleList } from "@/components/Essentials";
 import ReplyCard from "@/components/ReplyCard";
 import TechText from "@/components/TechText";
+import Countdown from "@/components/Countdown";
+import Neon from "@/components/Neon";
+import CRTWarp from "@/components/CRTWarp";
 import { dateLabel, shortDateLabel, timeLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { EMPTY_REPLY, readReply, sendReply, useReply, validateReply, type ReplyErrors } from "@/lib/rsvp";
@@ -55,7 +58,7 @@ function Teaser() {
         {rows.map((t) => (
           <li key={t.module} className={styles.teaserItem} data-teaser={t.module} data-reveal>
             <span className={styles.teaserPhoto}>
-              <Image src={t.src} alt="" fill sizes="(max-width: 900px) 96px, 260px" style={{ objectFit: "cover", objectPosition: t.pos }} />
+              <Image src={t.src} alt="" fill quality={90} sizes="(max-width: 900px) 96px, 22vw" style={{ objectFit: "cover", objectPosition: t.pos }} />
             </span>
             <span className={styles.teaserText}>
               <span className={styles.teaserWhat}>{t.what}</span>
@@ -193,6 +196,27 @@ function Rsvp() {
               : `Reply by ${shortDateLabel(ev.rsvpClosesAt, ev.timezone)}. Capacity is limited, and your dietary, access and guest details stay with the hosts.`}
           </p>
         )}
+        {/* with an answer on file: what it means for the night, next to the card that holds it */}
+        {showSummary && stored && (
+          <>
+            <p className={styles.rsvpBody}>
+              {stored.attending === "accept" ? (
+                <>
+                  See you on {when}.
+                  <br />
+                  {VENUE}, {CITY}.
+                </>
+              ) : (
+                "The hosts know you can’t make it. Thank you for telling them."
+              )}
+            </p>
+            {stored.attending === "accept" && (
+              <div className={styles.rsvpExtras}>
+                <AddToCalendar className={styles.calendar} />
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {showSummary && stored ? (
@@ -315,19 +339,53 @@ export default function InviteScreen() {
   return (
     <div id={SECTION.invite}>
       <section className={styles.hero} aria-labelledby="invite-title">
+        {/* a slow, faint print-plasma behind the hero: ink on sand, no colour, no shine (decoration only) */}
+        <div className={styles.crt} aria-hidden>
+          <CRTWarp
+            lightMode
+            color="#0a0a0a"
+            backgroundColor="transparent"
+            mask="none"
+            maskStrength={0}
+            brightness={0.22}
+            speed={0.22}
+            waveAmplitude={0.3}
+            waveFrequency={2.2}
+            levels={4}
+            columns={96}
+            persistence={0.55}
+            curvature={0}
+            scanlineStrength={0.45}
+            scanlineFrequency={240}
+            bloom={0.15}
+            bloomRadius={0.8}
+            rgbShift={0.001}
+            noise={0.05}
+            flicker={0.04}
+            interference={0.06}
+            vignette={0.45}
+            mouseStrength={0.3}
+            changeOnClick={false}
+            dpr={1.5}
+            fps={30}
+          />
+        </div>
         <div className={styles.media}>
           <div className={styles.photo}>
-            <Image className={styles.photoWide} src="/images/shard.png" alt="" width={520} height={690} priority sizes="520px" />
-            <Image className={styles.photoNarrow} src="/images/shard-mobile.png" alt="" width={300} height={430} priority sizes="60vw" />
+            <Image className={styles.photoWide} src="/images/shard.png" alt="" width={520} height={690} priority quality={90} sizes="(max-width: 900px) 1px, 640px" />
+            <Image className={styles.photoNarrow} src="/images/shard-mobile.png" alt="" width={300} height={430} priority quality={90} sizes="(max-width: 900px) 62vw, 1px" />
           </div>
           <div className={styles.acid} aria-hidden />
         </div>
         <div className={styles.heroCopy}>
+          {/* the title switches on like a neon sign when the invitation opens */}
           <h1 id="invite-title" className={styles.title}>
-            UN/
+            <Neon text="UN/" />
             <br />
-            FOLD{" "}
-            <span className={styles.year}>2026</span>
+            <Neon text="FOLD" from={3} />{" "}
+            <span className={styles.year}>
+              <Neon text="2026" from={7} tone="red" />
+            </span>
           </h1>
           <p className={styles.lede}>A live publishing experiment: type, sound, performance and an audience that edits the ending.</p>
           <p className={styles.when}>
@@ -344,6 +402,8 @@ export default function InviteScreen() {
           ) : null}
         </div>
       </section>
+
+      <Countdown />
 
       <section id={SECTION.story} className={styles.story} aria-labelledby="story-title" data-reveal>
         <div className={styles.sectionHead}>

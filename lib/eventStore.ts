@@ -78,6 +78,11 @@ function viewFromWire(w: Wire, now: number): EventView {
   };
 }
 
+/** The server's clock right now (epoch ms), or 0 while the server hasn't answered: never the device clock alone. */
+export function serverTime(): number {
+  return wire && view.loaded && offset !== 0 ? Date.now() + offset : 0;
+}
+
 /* ---------------- live phase changes ----------------
  * When the phase changes while a page is open (the hosts switch it, or the schedule reaches the start or the end), the
  * page can play a transition first: the old view stays on screen until the transition says the page is covered, then
