@@ -21,8 +21,8 @@
   --f-mark: var(--font-arimo), Arimo, Arial, sans-serif;
   /* legacy name used by the screens for their headings */
   --f-display: var(--f-grotesk);
-  /* the fixed phone tab bar: 52px tabs + 12px padding + 1px rule */
-  --bar-h: 65px;
+  /* the floating phone bar: 64px capsule + 10px below it + 10px of air above */
+  --bar-h: 84px;
 }
 
 * {

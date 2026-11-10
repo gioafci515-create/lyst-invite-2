@@ -1,4 +1,9 @@
-/* ---------- Bottom tab bar (phones) ---------- */
+/*
+ * Bottom navigation (phones): a floating cream capsule of sand pill tiles, outlined in ink with the site's hard ink
+ * shadow, and the camera as a raised red bubble in the middle. The current tab is ink. Hover (mouse) rises a red fill
+ * through a tile while its label rolls over; a red dot springs to the tab you press. The menu opens as a cream panel
+ * resting on the bar.
+ */
 .bar {
   display: none;
 }
@@ -8,89 +13,153 @@
 
 @media (max-width: 900px) {
   .bar {
+    --glass: rgba(245, 240, 227, 0.9);
+    --tile: var(--sand);
+    --tile-face: linear-gradient(180deg, #e2ddd1 0%, #d4cfc2 100%);
+    --tile-rim: inset 0 0 0 1px var(--ink);
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     z-index: 30;
+    height: 64px;
+    padding: 5px;
     display: flex;
-    align-items: flex-end;
-    background: var(--cream);
-    border-top: 1px solid var(--ink);
-    padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px);
+    align-items: stretch;
+    gap: 4px;
+    border-radius: 999px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    backdrop-filter: blur(20px) saturate(1.6);
+    border: 1.5px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    -webkit-tap-highlight-color: transparent;
   }
+  /* the dot that marks where you are */
+  .bar::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 9px;
+    width: 4px;
+    height: 4px;
+    margin-left: -2px;
+    border-radius: 999px;
+    background: var(--red);
+    opacity: 0;
+    transform: translateX(var(--dot-x, 0px));
+    pointer-events: none;
+  }
+  .bar[data-dot]::after {
+    opacity: 1;
+  }
+
   .tab {
+    position: relative;
     flex: 1 1 0;
     min-width: 0;
-    min-height: 52px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    background: none;
+    gap: 4px;
+    padding: 0 4px 6px;
     border: 0;
-    color: var(--muted);
+    border-radius: 999px;
+    background-color: var(--tile);
+    background-image: var(--tile-face);
+    box-shadow: var(--tile-rim);
+    color: var(--ink);
     font-family: var(--f-mono);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
+    overflow: hidden;
+    isolation: isolate;
   }
   .tab[aria-current="page"] {
-    color: var(--ink);
-    box-shadow: inset 0 3px 0 var(--red);
+    background-color: var(--ink);
+    background-image: none;
+    color: var(--cream);
+  }
+  .tab:focus-visible {
+    outline: 3px solid var(--red);
+    outline-offset: 2px;
   }
   .ico {
     position: relative;
     display: inline-flex;
   }
   .ico svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
+  /* the label and its twin (drawn from data-label) stacked in a one-line window */
+  .lbl {
+    display: block;
+    height: 1.25em;
+    line-height: 1.25em;
+    overflow: hidden;
+    max-width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .lbl > span,
+  .lbl::after {
+    display: block;
+  }
+  .lbl::after {
+    content: attr(data-label);
+    color: var(--ink);
+  }
+
   .badge {
     position: absolute;
-    top: -5px;
-    right: -9px;
-    min-width: 16px;
-    height: 16px;
+    top: -6px;
+    right: -11px;
+    min-width: 17px;
+    height: 17px;
     padding: 0 4px;
     border-radius: 999px;
     background: var(--ink);
     color: var(--cream);
     font-style: normal;
     font-size: 10px;
-    line-height: 16px;
+    line-height: 17px;
     text-align: center;
   }
   .badge[data-live="true"] {
     background: var(--red);
     color: var(--ink);
-    animation: ping 1.2s ease-in-out infinite;
   }
-  @keyframes ping {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 33, 0.6); }
-    50% { box-shadow: 0 0 0 7px rgba(255, 59, 33, 0); }
-  }
+
+  /* the camera: a raised red bubble in the middle of the capsule */
   .cam {
-    flex: 0 0 64px;
+    position: relative;
+    flex: 0 0 62px;
+    width: 62px;
+    height: 62px;
+    margin: -14px 2px 0;
     align-self: flex-start;
-    width: 64px;
-    height: 64px;
-    margin: -26px 6px 0;
     border-radius: 50%;
     background: var(--red);
     border: 3px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
     color: var(--ink);
     display: grid;
     place-items: center;
   }
   .cam svg {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
+  }
+  .cam:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
   }
 
+  /* ---------- the menu: a cream panel resting on the bar ---------- */
   .sheetWrap {
     position: fixed;
     inset: 0;
@@ -98,23 +167,28 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
+    padding: 0 10px calc(84px + env(safe-area-inset-bottom, 0px));
   }
   .scrim {
     position: absolute;
     inset: 0;
     border: 0;
-    background: rgba(10, 10, 10, 0.55);
+    background: rgba(10, 10, 10, 0.5);
   }
   .sheet {
     position: relative;
-    background: var(--cream);
-    border-top: 2px solid var(--ink);
-    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
-    max-height: 82dvh;
+    max-height: calc(100dvh - 120px);
     overflow-y: auto;
+    padding: 16px 14px 14px;
+    border-radius: 24px;
+    background: var(--cream);
+    border: 1.5px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    color: var(--ink);
     display: flex;
     flex-direction: column;
     gap: 14px;
+    transform-origin: 100% 100%;
   }
   .sheetHead {
     display: flex;
@@ -135,8 +209,10 @@
   .x {
     width: 44px;
     height: 44px;
+    flex: none;
     display: grid;
     place-items: center;
+    border-radius: 50%;
     background: var(--ink);
     color: var(--cream);
     border: 0;
@@ -163,22 +239,54 @@
     min-height: 48px;
     display: flex;
     align-items: center;
-    padding: 0 12px;
-    background: var(--sand);
-    border: 1px solid var(--ink);
+    padding: 0 16px;
+    border-radius: 999px;
+    background-color: var(--sand);
+    background-image: linear-gradient(180deg, #e2ddd1 0%, #d4cfc2 100%);
+    box-shadow: inset 0 0 0 1px var(--ink);
+    color: var(--ink);
     font-size: 16px;
     font-weight: 700;
     line-height: 1.2;
   }
+  .item:focus-visible,
+  .x:focus-visible {
+    outline: 3px solid var(--red);
+    outline-offset: 2px;
+  }
 }
 
-/* the menu sheet: the page dims, the sheet rises, its links follow one after another; closing reverses quickly */
+/* ---------- motion ---------- */
 @media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .bar::after {
+    transition:
+      transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      opacity 200ms ease;
+  }
+  .tab {
+    transition:
+      transform 180ms var(--ease-arrive),
+      color 250ms ease;
+  }
+  .tab:active {
+    transform: scale(0.95);
+  }
+  .lbl > span,
+  .lbl::after {
+    transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .badge[data-live="true"] {
+    animation: ping 1.2s ease-in-out infinite;
+  }
+  .cam[data-moment] {
+    animation: camCall 2.4s ease-in-out infinite;
+  }
+
   .scrim {
     animation: qbFadeIn 260ms ease-out both;
   }
   .sheet {
-    animation: qbUp 480ms var(--ease-arrive) both;
+    animation: qbUp 520ms var(--ease-arrive) both;
   }
   .sheet .grid li {
     animation: qbItem 440ms var(--ease-arrive) both;
@@ -190,14 +298,62 @@
   .sheetWrap[data-closing] .sheet {
     animation: qbDown 230ms var(--ease-leave) both;
   }
-  .tab .ico {
-    transition: transform 240ms var(--ease-arrive);
+}
+
+/* mouse only: a red fill rises through the tile and the label rolls over to its ink twin; the camera spins */
+@media (max-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .tab::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    z-index: -1;
+    width: 200%;
+    aspect-ratio: 1;
+    margin: -100% 0 0 -100%;
+    border-radius: 50%;
+    background: var(--red);
+    transform: scale(0);
+    transition: transform 360ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .tab:active .ico {
-    transform: translateY(2px) scale(0.92);
+  .tab:hover::before {
+    transform: scale(1);
+    transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .cam[data-moment] {
-    animation: camCall 2.4s ease-in-out infinite;
+  .tab:hover {
+    color: var(--ink);
+  }
+  .tab:hover .lbl > span,
+  .tab:hover .lbl::after {
+    transform: translateY(-100%);
+    transition-duration: 500ms;
+  }
+  .cam:hover svg {
+    animation: spin 900ms cubic-bezier(0.65, 0, 0.25, 1);
+  }
+}
+
+@keyframes ping {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 33, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(255, 59, 33, 0);
+  }
+}
+@keyframes camCall {
+  0%,
+  100% {
+    box-shadow: 3px 3px 0 var(--ink), 0 0 0 0 rgba(255, 59, 33, 0.55);
+  }
+  50% {
+    box-shadow: 3px 3px 0 var(--ink), 0 0 0 10px rgba(255, 59, 33, 0);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 @keyframes qbFadeIn {
@@ -212,28 +368,20 @@
 }
 @keyframes qbUp {
   from {
-    transform: translateY(100%);
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
   }
 }
 @keyframes qbDown {
   to {
-    transform: translateY(100%);
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
   }
 }
 @keyframes qbItem {
   from {
     opacity: 0;
-    transform: translateY(14px);
-  }
-}
-/* a photo task is open: the camera button breathes a red ring */
-@keyframes camCall {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 59, 33, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(255, 59, 33, 0);
+    transform: translateY(10px);
   }
 }
 
@@ -243,8 +391,8 @@
 }
 .camDot {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   width: 14px;
   height: 14px;
   border-radius: 50%;

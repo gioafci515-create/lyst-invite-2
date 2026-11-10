@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useEvent } from "@/lib/eventStore";
 import { useReply } from "@/lib/rsvp";
 import { groupLabel, NAV, ROUTE, SECTION, type NavGroup } from "@/lib/sections";
@@ -95,8 +95,14 @@ export default function QuickBar() {
   }
   if (left && right && left.key === right.key) right = null;
 
+  const label = (text: string) => (
+    <span className={styles.lbl} data-label={text}>
+      <span>{text}</span>
+    </span>
+  );
+
   const tab = (t: Tab) => (
-    <Link href={t.href} className={styles.tab}>
+    <Link href={t.href} className={styles.tab} data-tab>
       <span className={styles.ico}>
         <Icon name={t.icon} />
         {t.badge ? (
@@ -105,9 +111,49 @@ export default function QuickBar() {
           </i>
         ) : null}
       </span>
-      {t.label}
+      {label(t.label)}
     </Link>
   );
+
+  // the dot under the current tab; pressing another tab sends it there with a little overshoot, before the next screen
+  const nav = useRef<HTMLElement>(null);
+  const placeDot = (el: Element | null) => {
+    const n = nav.current;
+    if (!n || !(el instanceof HTMLElement)) return;
+    n.style.setProperty("--dot-x", `${el.offsetLeft + el.offsetWidth / 2}px`);
+    n.dataset.dot = "";
+  };
+  const leftKey = left?.key;
+  const rightKey = right?.key;
+  useLayoutEffect(() => {
+    const n = nav.current;
+    if (!n) return;
+    const place = () => placeDot(n.querySelector('[aria-current="page"]'));
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(n);
+    return () => ro.disconnect();
+  }, [leftKey, rightKey]);
+
+  // the bar arrives once per visit: the capsule unrolls, the tabs slide in one by one, the camera pops
+  useLayoutEffect(() => {
+    const n = nav.current;
+    if (!n || getComputedStyle(n).display === "none") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try {
+      if (sessionStorage.getItem("lyst_bar_intro")) return;
+      sessionStorage.setItem("lyst_bar_intro", "1");
+    } catch {}
+    const w = n.offsetWidth;
+    const h = n.offsetHeight;
+    const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
+    n.animate([{ clipPath: `inset(-30px ${Math.max(0, w - h)}px 0px 0px round ${h / 2}px)` }, { clipPath: `inset(-30px 0px 0px 0px round ${h / 2}px)` }], { duration: 760, delay: 90, easing: ease, fill: "backwards" });
+    [...n.children].forEach((c, i) => {
+      if (c.hasAttribute("data-cam"))
+        c.animate([{ opacity: 0, transform: "scale(0.6)" }, { opacity: 1, transform: "scale(1)" }], { duration: 700, delay: 260, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)", fill: "backwards" });
+      else c.animate([{ opacity: 0, transform: "translateX(-10px)" }, { opacity: 1, transform: "translateX(0)" }], { duration: 560, delay: 200 + i * 50, easing: ease, fill: "backwards" });
+    });
+  }, []);
 
   const cameraOn = ev.enabled("camera");
   // the sheet slides away before it is removed (at once with reduced motion)
@@ -129,10 +175,16 @@ export default function QuickBar() {
 
   return (
     <>
-      <nav className={styles.bar} aria-label="Quick navigation">
+      <nav
+        ref={nav}
+        className={styles.bar}
+        aria-label="Quick navigation"
+        onPointerDown={(e) => placeDot((e.target as Element).closest("[data-tab]"))}
+      >
         <Link
           href="/"
           className={styles.tab}
+          data-tab
           aria-current="page"
           onClick={(e) => {
             // already home: Home means the very top
@@ -143,11 +195,11 @@ export default function QuickBar() {
           <span className={styles.ico}>
             <Icon name="home" />
           </span>
-          Home
+          {label("Home")}
         </Link>
         {left && tab(left)}
         {cameraOn && (
-          <Link href={cameraHref} className={styles.cam} aria-label={photoOpen ? "Open camera, a photo task is open" : "Open camera"} data-btn data-moment={photoOpen || undefined}>
+          <Link href={cameraHref} className={styles.cam} aria-label={photoOpen ? "Open camera, a photo task is open" : "Open camera"} data-btn data-cam data-moment={photoOpen || undefined}>
             <Icon name="camera" />
             {photoOpen && <span className={styles.camDot} aria-hidden />}
           </Link>
@@ -157,7 +209,7 @@ export default function QuickBar() {
           <span className={styles.ico}>
             <Icon name="menu" />
           </span>
-          Menu
+          {label("Menu")}
         </button>
       </nav>
 
