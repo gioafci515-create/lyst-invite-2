@@ -92,7 +92,19 @@ export default function SiteHeader() {
 
   return (
     <header className={styles.header}>
-      <Link href="/" className={styles.mark} aria-label="LYST, home">
+      <Link
+        href="/"
+        className={styles.mark}
+        aria-label="LYST, home"
+        onClick={(e) => {
+          // already on the home page: the logo means the very top (a link to the same page would do nothing)
+          if (location.pathname !== "/") return;
+          e.preventDefault();
+          if (location.hash) history.replaceState(null, "", "/");
+          const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+        }}
+      >
         LYST
       </Link>
       <nav className={styles.nav} aria-label="Main">

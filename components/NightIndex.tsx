@@ -27,7 +27,7 @@ type Row = { key: string; title: string; line: string; href: string; photo: Phot
 const path = (href: string) => toRoute(href).split("?")[0];
 
 function Photo({ k, sizes, priority }: { k: PhotoKey; sizes: string; priority?: boolean }) {
-  return <Image src={PHOTO[k].src} alt="" fill sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
+  return <Image src={PHOTO[k].src} alt="" fill quality={90} sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
 }
 
 function Rows({ rows }: { rows: Row[] }) {

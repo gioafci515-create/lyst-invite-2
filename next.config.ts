@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // photographs are served at 90 (crisper type in the event photos); everything else keeps the default 75
+  images: { qualities: [75, 90] },
   partialPrefetching: true,
   experimental: {
     agentUpgrade: "security",
