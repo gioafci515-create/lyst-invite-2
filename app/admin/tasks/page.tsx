@@ -257,7 +257,7 @@ async function Panel() {
       <section className={styles.panel} id="qr-links" aria-labelledby="qr-title">
         <h2 id="qr-title">QR links</h2>
         <p className={styles.note}>
-          One address per moment, for table cards. A guest who scans one before it opens sees when it opens, never what it asks.
+          One address per task, for table cards. A guest who scans one before it opens sees when it opens, never what it asks.
         </p>
         <ul className={styles.list}>
           {rows.map((r) => (

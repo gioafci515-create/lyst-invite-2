@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useEvent } from "@/lib/eventStore";
 import { useReply } from "@/lib/rsvp";
 import { groupLabel, NAV, ROUTE, SECTION, type NavGroup } from "@/lib/sections";
@@ -20,8 +20,10 @@ export default function QuickBar() {
   const ev = useEvent();
   const { tasks } = useTasks();
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<() => void>(() => setOpen(false));
 
   const live = tasks.some((t) => t.inWindow);
   const openCount = tasks.filter((t) => t.open).length;
@@ -38,7 +40,7 @@ export default function QuickBar() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        setOpen(false);
+        closeRef.current();
         return;
       }
       if (e.key !== "Tab" || !el) return;
@@ -71,7 +73,7 @@ export default function QuickBar() {
     rsvp: (reply ? { key: "rsvp", href: ROUTE.details, label: "Your reply", icon: "check" } : { key: "rsvp", href: `/#${SECTION.rsvp}`, label: "RSVP", icon: "check" }) as Tab,
     programme: { key: "programme", href: ev.phase === "before" ? `/#${SECTION.programme}` : ROUTE.programme, label: "Programme", icon: "clock" } as Tab,
     updates: { key: "updates", href: ROUTE.updates, label: "Updates", icon: "live" } as Tab,
-    tasks: ev.enabled("tasks") ? ({ key: "tasks", href: ROUTE.tasks, label: "Moments", icon: "tasks", badge: openCount || undefined } as Tab) : null,
+    tasks: ev.enabled("tasks") ? ({ key: "tasks", href: ROUTE.tasks, label: "Tasks", icon: "tasks", badge: openCount || undefined } as Tab) : null,
     live: ev.enabled("live") ? ({ key: "live", href: ROUTE.live, label: "Live", icon: "live" } as Tab) : null,
     voice: ev.enabled("voice") ? ({ key: "voice", href: ROUTE.voice, label: "Voice", icon: "mic" } as Tab) : null,
     gallery: ev.enabled("gallery") ? ({ key: "gallery", href: ROUTE.gallery, label: "Gallery", icon: "image" } as Tab) : null,
@@ -108,7 +110,22 @@ export default function QuickBar() {
   );
 
   const cameraOn = ev.enabled("camera");
-  const close = () => setOpen(false);
+  // the sheet slides away before it is removed (at once with reduced motion)
+  const close = () => {
+    if (closing) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setOpen(false);
+      return;
+    }
+    setClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 230);
+  };
+  useEffect(() => {
+    closeRef.current = close;
+  });
 
   return (
     <>
@@ -130,7 +147,7 @@ export default function QuickBar() {
         </Link>
         {left && tab(left)}
         {cameraOn && (
-          <Link href={cameraHref} className={styles.cam} aria-label={photoOpen ? "Open camera, a photo moment is open" : "Open camera"} data-btn data-moment={photoOpen || undefined}>
+          <Link href={cameraHref} className={styles.cam} aria-label={photoOpen ? "Open camera, a photo task is open" : "Open camera"} data-btn data-moment={photoOpen || undefined}>
             <Icon name="camera" />
             {photoOpen && <span className={styles.camDot} aria-hidden />}
           </Link>
@@ -145,7 +162,7 @@ export default function QuickBar() {
       </nav>
 
       {open && (
-        <div className={styles.sheetWrap} role="dialog" aria-modal="true" aria-labelledby="menu-sheet-title">
+        <div className={styles.sheetWrap} role="dialog" aria-modal="true" aria-labelledby="menu-sheet-title" data-closing={closing || undefined}>
           <button className={styles.scrim} aria-label="Close menu" tabIndex={-1} onClick={close} />
           <div className={styles.sheet} ref={sheet}>
             <div className={styles.sheetHead}>
@@ -163,8 +180,8 @@ export default function QuickBar() {
                     {groupLabel(g, ev.phase)}
                   </h3>
                   <ul className={styles.grid}>
-                    {items.map((n) => (
-                      <li key={n.href}>
+                    {items.map((n, i) => (
+                      <li key={n.href} style={{ "--i": i } as CSSProperties}>
                         <Link href={n.href} className={styles.item} onClick={close}>
                           {n.label}
                         </Link>

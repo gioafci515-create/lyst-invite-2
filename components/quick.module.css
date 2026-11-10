@@ -172,7 +172,72 @@
   }
 }
 
-/* a photo moment is open: a small acid dot on the camera button */
+/* the menu sheet: the page dims, the sheet rises, its links follow one after another; closing reverses quickly */
+@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .scrim {
+    animation: qbFadeIn 260ms ease-out both;
+  }
+  .sheet {
+    animation: qbUp 480ms var(--ease-arrive) both;
+  }
+  .sheet .grid li {
+    animation: qbItem 440ms var(--ease-arrive) both;
+    animation-delay: calc(140ms + var(--i, 0) * 30ms);
+  }
+  .sheetWrap[data-closing] .scrim {
+    animation: qbFadeOut 220ms ease-in both;
+  }
+  .sheetWrap[data-closing] .sheet {
+    animation: qbDown 230ms var(--ease-leave) both;
+  }
+  .tab .ico {
+    transition: transform 240ms var(--ease-arrive);
+  }
+  .tab:active .ico {
+    transform: translateY(2px) scale(0.92);
+  }
+  .cam[data-moment] {
+    animation: camCall 2.4s ease-in-out infinite;
+  }
+}
+@keyframes qbFadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes qbFadeOut {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes qbUp {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes qbDown {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes qbItem {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+/* a photo task is open: the camera button breathes a red ring */
+@keyframes camCall {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 59, 33, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 59, 33, 0);
+  }
+}
+
+/* a photo task is open: a small acid dot on the camera button */
 .cam {
   position: relative;
 }

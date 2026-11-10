@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
+import { COPY } from "@/lib/copy";
 import { useReply } from "@/lib/rsvp";
+import { useMoments } from "@/lib/useMoments";
 import { groupLabel, NAV, ROUTE, SECTION, type NavItem } from "@/lib/sections";
 import styles from "./site.module.css";
 
@@ -75,6 +77,9 @@ export default function SiteHeader() {
   const status = usePhaseStatus();
   const on = (n: NavItem) => !n.module || ev.enabled(n.module);
   const reply = useReply();
+  const { open } = useMoments();
+  const tasksLink = ev.phase === "during" && ev.enabled("tasks");
+  const openCount = tasksLink ? open.length : 0;
 
   // One context action, and only when it works right now: your reply (or RSVP while open) before, nothing during, the gallery after.
   let action: { label: string; href: string; check?: boolean } | null = null;
@@ -97,7 +102,21 @@ export default function SiteHeader() {
         <Link href={programme} className={styles.navLink}>
           Programme
         </Link>
-        <Dropdown label={groupLabel("Tonight", ev.phase)} items={NAV.filter((n) => n.group === "Tonight" && on(n))} />
+        {/* during the event the tasks sit in the header itself, with how many are open, not inside a menu */}
+        {tasksLink && (
+          <Link href={ROUTE.tasks} className={`${styles.navLink} ${styles.navTasks}`} data-nav-tasks>
+            {COPY.moments.title}
+            {openCount > 0 && (
+              <>
+                <span className={styles.navCount} aria-hidden>
+                  {openCount}
+                </span>
+                <span className="sr-only">, {COPY.live.pill(openCount)}</span>
+              </>
+            )}
+          </Link>
+        )}
+        <Dropdown label={groupLabel("Tonight", ev.phase)} items={NAV.filter((n) => n.group === "Tonight" && on(n) && !(tasksLink && n.href === ROUTE.tasks))} />
         <Dropdown label="Memories" items={NAV.filter((n) => n.group === "Memories" && on(n))} />
       </nav>
       {/* not a live region: a countdown that ticks would be read out again and again */}

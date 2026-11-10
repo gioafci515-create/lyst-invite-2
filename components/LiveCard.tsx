@@ -48,7 +48,7 @@ export default function LiveCard() {
     return () => ro.disconnect();
   }, [visible, collapsed, current?.id]);
 
-  // a moment that unlocks while the page is open slides in (soft, no bounce) and the phone gives one short buzz
+  // a task that unlocks while the page is open slides in (soft, no bounce); the pop-up above it gives the one short buzz
   const seen = useRef<string | null | undefined>(undefined);
   const id = current?.id ?? null;
   useEffect(() => {
@@ -57,9 +57,6 @@ export default function LiveCard() {
       return;
     }
     if (id && id !== seen.current) {
-      try {
-        navigator.vibrate?.(30);
-      } catch {}
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!reduce) card.current?.animate([{ transform: "translateY(110%)" }, { transform: "translateY(0)" }], { duration: 480, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
     }

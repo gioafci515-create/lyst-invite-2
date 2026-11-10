@@ -562,7 +562,7 @@ function CameraApp() {
   };
 
   const flashLabel = flash === "off" ? "Off" : flash === "auto" ? "Auto" : "On";
-  const leftLabel = activeTask ? "left for this moment" : "left";
+  const leftLabel = activeTask ? "left for this task" : "left";
   const galleryOn = ev.enabled("gallery");
 
   const thumb = <RollThumb shots={shots} onRetry={retry} canRetry={left > 0} />;
@@ -698,9 +698,9 @@ function CameraApp() {
               {activeTask ? (
                 <>
                   <h1 id="roll-full" ref={fullHeading} className={css.fullTitle} tabIndex={-1}>
-                    Moment collected: {activeTask.count} of {activeTask.count}.
+                    Task done: {activeTask.count} of {activeTask.count}.
                   </h1>
-                  <p className={css.text}>{uploading ? "Your last photo is still saving." : "Every photo for this moment is saved. The hosts see them first."}</p>
+                  <p className={css.text}>{uploading ? "Your last photo is still saving." : "Every photo for this task is saved. The hosts see them first."}</p>
                   <div className={css.actions}>
                     {rollLeft > 0 && (
                       <Link className={css.primary} href="/camera">
@@ -747,7 +747,7 @@ function CameraApp() {
               <Counter left={left} size="big" />
               <span className={css.introLine}>
                 {left === 1 ? "frame" : "frames"}
-                {activeTask ? " for this moment." : "."}
+                {activeTask ? " for this task." : "."}
               </span>
               <span className={css.introLine}>What others might miss.</span>
             </h1>
