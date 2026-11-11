@@ -5,6 +5,8 @@ import { timeLabel } from "@/lib/eventState";
 import { serverTime, useEvent } from "@/lib/eventStore";
 import Counter from "./Counter";
 import s from "./countdown.module.css";
+import { zoneLabel } from "@/lib/identity";
+import { useFirstVisit } from "@/lib/firstVisit";
 
 const UNITS = [
   ["days", 86_400_000],
@@ -24,6 +26,8 @@ const DIGIT = { minWidth: "0.64em" };
  */
 export default function Countdown() {
   const ev = useEvent();
+  // the digits spin in on a first visit only
+  const intro = useFirstVisit();
   const [now, setNow] = useState(0);
   useEffect(() => {
     const tick = () => setNow(serverTime());
@@ -51,7 +55,9 @@ export default function Countdown() {
             <span className={s.dot} aria-hidden />
             Doors open in
           </h2>
-          <p className={s.at}>{timeLabel(ev.startsAt, ev.timezone)} Rotterdam time</p>
+          <p className={s.at}>
+            {timeLabel(ev.startsAt, ev.timezone)} {zoneLabel(ev.timezone)}
+          </p>
         </div>
         <p className="sr-only">{words}.</p>
         <div className={s.clock} aria-hidden>
@@ -69,6 +75,7 @@ export default function Countdown() {
                   stagger={0.05}
                   fade={0.25}
                   digitStyle={DIGIT}
+                  intro={intro}
                 />
                 <span className={s.name}>{unit}</span>
               </div>

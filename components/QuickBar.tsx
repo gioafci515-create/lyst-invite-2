@@ -135,11 +135,13 @@ export default function QuickBar() {
     return () => ro.disconnect();
   }, [leftKey, rightKey]);
 
-  // the bar arrives once per visit: the capsule unrolls, the tabs slide in one by one, the camera pops
+  // the bar arrives on a guest's first visit only: the capsule unrolls, the tabs slide in one by one, the camera pops
   useLayoutEffect(() => {
     const n = nav.current;
     if (!n || getComputedStyle(n).display === "none") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // a returning guest (marked before the first paint) gets the bar as it is
+    if (document.documentElement.hasAttribute("data-returning")) return;
     try {
       if (sessionStorage.getItem("lyst_bar_intro")) return;
       sessionStorage.setItem("lyst_bar_intro", "1");

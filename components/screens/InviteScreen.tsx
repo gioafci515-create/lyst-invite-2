@@ -12,6 +12,7 @@ import TechText from "@/components/TechText";
 import Countdown from "@/components/Countdown";
 import Neon from "@/components/Neon";
 import CRTWarp from "@/components/CRTWarp";
+import { useFirstVisit } from "@/lib/firstVisit";
 import { dateLabel, shortDateLabel, timeLabel, type ModuleId } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { EMPTY_REPLY, readReply, sendReply, useReply, validateReply, type ReplyErrors } from "@/lib/rsvp";
@@ -20,6 +21,7 @@ import { useHydrated } from "@/lib/useClient";
 import { ROUTE, SECTION } from "@/lib/sections";
 import { CITY, VENUE } from "@/lib/venue";
 import styles from "./invite.module.css";
+import { EVENT } from "@/lib/identity";
 
 const SCENES = [
   { src: "/images/gallery1.png", alt: "Torn brutalist typography poster pasted on concrete" },
@@ -334,6 +336,8 @@ function Rsvp() {
 /** The invitation: everything a guest needs before the night, in the order they need it. */
 export default function InviteScreen() {
   const ev = useEvent();
+  // the screen behind the hero warms up on a first visit only
+  const firstVisit = useFirstVisit();
   const replied = !!useReply();
 
   return (
@@ -366,6 +370,7 @@ export default function InviteScreen() {
             vignette={0.45}
             mouseStrength={0.3}
             changeOnClick={false}
+            intro={firstVisit}
             dpr={1.5}
             fps={30}
           />
@@ -415,9 +420,9 @@ export default function InviteScreen() {
         <Carousel slides={SCENES} label="The invitation, in scenes" />
       </section>
 
-      <section className={styles.wordmark} aria-label="UN/FOLD wordmark. The letters move when you drag them.">
+      <section className={styles.wordmark} aria-label={`${EVENT.name} wordmark. The letters move when you drag them.`}>
         <TechText
-          text="UN/FOLD"
+          text={EVENT.name}
           fontWeight={700}
           fontSize={200}
           letterSpacing={-0.04}
