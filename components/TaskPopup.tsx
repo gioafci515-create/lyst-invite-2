@@ -9,6 +9,7 @@ import { useHydrated } from "@/lib/useClient";
 import { useMoments } from "@/lib/useMoments";
 import { SHIFT_END, SHIFT_START } from "./PhaseShift";
 import s from "./taskpopup.module.css";
+import { EVENT } from "@/lib/identity";
 
 const SEEN = "lyst_task_seen";
 /** screens where the guest is already doing a task (or looking at all of them): no pop-up on top of that */
@@ -157,7 +158,7 @@ export default function TaskPopup() {
     >
       <div ref={card} className={s.card}>
         <div className={s.back} aria-hidden>
-          <span>UN/FOLD</span>
+          <span>{EVENT.name}</span>
         </div>
         <div className={s.front}>
           <div className={s.head}>

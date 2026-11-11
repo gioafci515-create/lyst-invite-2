@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import FeatureRoute from "@/components/FeatureRoute";
 import ForLaterScreen from "@/components/screens/ForLaterScreen";
+import { pageTitle } from "@/lib/identity";
 
-export const metadata: Metadata = { title: "Leave something for later — UN/FOLD 2026" };
+export const metadata: Metadata = { title: pageTitle("Leave something for later") };
 
 export default function ForLaterPage() {
   return (

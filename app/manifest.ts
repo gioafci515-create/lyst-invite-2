@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
+import { EVENT } from "@/lib/identity";
 
 // Makes the site installable ("Add to Home Screen"), which iPhones require before they allow push notifications.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "UN/FOLD 2026 — LYST",
-    short_name: "UN/FOLD",
-    description: "Your invitation, event hub and tasks for UN/FOLD 2026.",
+    name: `${EVENT.title} — ${EVENT.host}`,
+    short_name: EVENT.name,
+    description: `Your invitation, event hub and tasks for ${EVENT.title}.`,
     start_url: "/",
     scope: "/",
     display: "standalone",

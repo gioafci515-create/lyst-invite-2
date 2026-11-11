@@ -6,8 +6,9 @@ import { EventSeed } from "@/lib/eventStore";
 import PhaseGate from "@/components/PhaseGate";
 import PhaseShift from "@/components/PhaseShift";
 import CameraClient from "./CameraClient";
+import { pageTitle } from "@/lib/identity";
 
-export const metadata: Metadata = { title: "Camera — UN/FOLD 2026" };
+export const metadata: Metadata = { title: pageTitle("Camera") };
 
 /** Server check first (the proxy already redirects a switched-off camera; this is the backup), then the camera. */
 async function Gated() {

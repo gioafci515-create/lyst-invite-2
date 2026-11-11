@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import FeatureRoute from "@/components/FeatureRoute";
 import { MomentScreen } from "@/components/screens/MomentsScreen";
+import { pageTitle } from "@/lib/identity";
 
-export const metadata: Metadata = { title: "A task — UN/FOLD 2026" };
+export const metadata: Metadata = { title: pageTitle("A task") };
 
 /** the id is read inside the route's Suspense boundary, like every other request-time value */
 async function ById({ params }: { params: Promise<{ id: string }> }) {

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import FeatureRoute from "@/components/FeatureRoute";
 import GalleryScreen from "@/components/screens/GalleryScreen";
+import { pageTitle } from "@/lib/identity";
 
-export const metadata: Metadata = { title: "Gallery — UN/FOLD 2026" };
+export const metadata: Metadata = { title: pageTitle("Gallery") };
 
 export default function GalleryPage() {
   return (

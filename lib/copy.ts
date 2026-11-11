@@ -1,3 +1,4 @@
+import { EVENT } from "./identity";
 /**
  * Guest-facing words for the night's tasks, the live card, the task pop-up, the phase change and the reminder question,
  * in one place so they can be translated later. Written for UN/FOLD: a live publishing experiment, not a party game.
@@ -45,15 +46,15 @@ export const COPY = {
   /** the full-screen change when the hosts switch the evening on, or open the memories */
   shift: {
     // the note names only what the hosts switched on (tasks, the camera, the live room), and is left out when none is
-    during: { kicker: "UN/FOLD 2026", lines: ["The night", "is live"], note: "", announce: "The event is live. The page now shows tonight." },
+    during: { kicker: EVENT.title, lines: ["The night", "is live"], note: "", announce: "The event is live. The page now shows tonight." },
     duringParts: { tasks: "tasks", camera: "the camera", live: "the live room" },
     opens: (parts: string[]) => {
       if (!parts.length) return "";
       const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
       return `${list.charAt(0).toUpperCase()}${list.slice(1)} ${parts.length === 1 ? "opens" : "open"} now.`;
     },
-    after: { kicker: "UN/FOLD 2026", lines: ["Memories", "are open"], note: "Photos and clips appear once the hosts approve them.", announce: "The event is over. The page now shows the memories." },
-    before: { kicker: "UN/FOLD 2026", lines: ["Before", "the night"], note: "", announce: "The page shows the invitation again." },
+    after: { kicker: EVENT.title, lines: ["Memories", "are open"], note: "Photos and clips appear once the hosts approve them.", announce: "The event is over. The page now shows the memories." },
+    before: { kicker: EVENT.title, lines: ["Before", "the night"], note: "", announce: "The page shows the invitation again." },
   },
   push: {
     ask: "Want a buzz when the next one opens?",

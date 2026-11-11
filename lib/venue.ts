@@ -1,9 +1,10 @@
+import { EVENT } from "./identity";
 /** Where the event is. One place, used by the invitation, the home screen during the night and the calendar file. */
-export const VENUE = "Former Print Works 4B";
-export const CITY = "Rotterdam";
-export const MAP = "https://maps.google.com/?q=Former+Print+Works+4B+Rotterdam";
-export const DRESS = "Come as a visual interruption.";
-export const ARRIVAL = "Enter behind loading bay 4. Water taxi to Rijnhaven; cycle racks inside the press hall.";
+export const VENUE = EVENT.venue;
+export const CITY = EVENT.city;
+export const MAP = EVENT.map;
+export const DRESS = EVENT.dress;
+export const ARRIVAL = EVENT.arrival;
 
 const stamp = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
@@ -13,15 +14,15 @@ export function icsFor(e: { startsAt: string; endsAt: string }): string {
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//LYST//UN/FOLD 2026//EN",
+    `PRODID:-//${EVENT.host}//${EVENT.title}//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:unfold-2026-${stamp(e.startsAt)}@lyst.events`,
+    `UID:${EVENT.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${stamp(e.startsAt)}@lyst.events`,
     `DTSTAMP:${stamp(e.startsAt)}`,
     `DTSTART:${stamp(e.startsAt)}`,
     `DTEND:${stamp(e.endsAt)}`,
-    `SUMMARY:${esc("UN/FOLD 2026")}`,
+    `SUMMARY:${esc(EVENT.title)}`,
     `LOCATION:${esc(`${VENUE}, ${CITY}`)}`,
     `DESCRIPTION:${esc(ARRIVAL)}`,
     "END:VEVENT",

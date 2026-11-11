@@ -7,9 +7,10 @@ import { ROUTE } from "@/lib/sections";
 import styles from "./essentials.module.css";
 
 import { ARRIVAL, CITY, DRESS, MAP, VENUE } from "@/lib/venue";
+import { zoneLabel } from "@/lib/identity";
 
-/** "Rotterdam time" for the event's own timezone, otherwise the timezone's name */
-const zoneName = (tz: string) => (tz === "Europe/Amsterdam" ? "Rotterdam time" : tz.replace(/_/g, " "));
+/** how guests read the event's zone (from the event identity) */
+const zoneName = zoneLabel;
 
 /** The essentials during the night, on the home screen: what's next on the stored programme, the end, where, what to wear. */
 export function TonightEssentials() {
