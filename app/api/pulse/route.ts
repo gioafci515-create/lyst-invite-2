@@ -11,7 +11,7 @@ import { getTaskState } from "@/lib/tasks";
 export async function GET() {
   await connection();
   const [{ config }, tasks] = await Promise.all([getEventConfig(), getTaskState()]);
-  const v = createHash("sha1").update(JSON.stringify([config, tasks.start, tasks.defs, tasks.sentAt])).digest("hex").slice(0, 16);
+  const v = createHash("sha1").update(JSON.stringify([config, tasks.start, tasks.defs, tasks.sentAt, tasks.timing])).digest("hex").slice(0, 16);
   return Response.json(
     { v },
     { headers: { "Cache-Control": "public, max-age=0, s-maxage=3, stale-while-revalidate=5" } },

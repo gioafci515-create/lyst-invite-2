@@ -1,18 +1,33 @@
 import { createHash } from "crypto";
 import { getKV } from "./kv";
+import { EVENT } from "./identity";
 
-export const INTERVAL_MIN = 20;
-/** like BeReal: everyone gets a short window to capture the moment right when the alert lands */
-export const WINDOW_MIN = 2;
+/**
+ * The rhythm of the night's tasks is a host setting (/admin/tasks), not a constant: how many minutes between two
+ * automatic tasks, and how long the short capture window right after each alert lasts.
+ */
+export type TaskTiming = { intervalMin: number; windowMin: number };
+export const DEFAULT_TIMING: TaskTiming = { intervalMin: 20, windowMin: 2 };
+export const TIMING_LIMITS = { interval: { min: 1, max: 240 }, window: { min: 1, max: 60 } } as const;
+
+/** a stored or submitted rhythm, or null when it isn't a sensible one (whole minutes, in range, window inside the gap) */
+export function validTiming(v: unknown): TaskTiming | null {
+  if (!v || typeof v !== "object") return null;
+  const { intervalMin: i, windowMin: w } = v as Record<string, unknown>;
+  if (typeof i !== "number" || typeof w !== "number" || !Number.isInteger(i) || !Number.isInteger(w)) return null;
+  if (i < TIMING_LIMITS.interval.min || i > TIMING_LIMITS.interval.max) return null;
+  if (w < TIMING_LIMITS.window.min || w > TIMING_LIMITS.window.max || w > i) return null;
+  return { intervalMin: i, windowMin: w };
+}
 
 /** The alert copy — edit these two functions to change what phones show. */
-export const NOTIFY_TITLE = "⚠️ Time to UN/FOLD. ⚠️";
-export const notifyBody = (taskTitle: string) =>
-  `${taskTitle} — ${WINDOW_MIN} min left to capture it and see what everyone else is up to!`;
+export const NOTIFY_TITLE = `⚠️ Time to ${EVENT.name}. ⚠️`;
+export const notifyBody = (taskTitle: string, windowMin: number) =>
+  `${taskTitle} — ${windowMin} min left to capture it and see what everyone else is up to!`;
 /** nudge sent one minute into the window, only to phones that haven't done the task yet */
-export const REMIND_TITLE = "⏰ 1 min left to UN/FOLD";
+export const REMIND_TITLE = `⏰ 1 min left to ${EVENT.name}`;
 export const remindBody = (taskTitle: string) => `${taskTitle} — everyone else is already in. Don't miss it.`;
-export const TIMEZONE = "Europe/Amsterdam";
+export const TIMEZONE: string = EVENT.timezone;
 /** first task unlocks 20 minutes after doors: Sat 14 Nov 2026, 19:33 Rotterdam time */
 export const DEFAULT_START = "2026-11-14T18:33:00.000Z";
 
@@ -113,22 +128,36 @@ export async function clearTaskData(id: string): Promise<void> {
 
 /* ---------- schedule state (server) ---------- */
 
-export type TaskState = { start: string | null; defs: TaskDef[]; sentAt: Record<string, number> };
+export type TaskState = { start: string | null; defs: TaskDef[]; sentAt: Record<string, number>; timing: TaskTiming };
 
 const START = "tasks:start"; // ISO string; "" = stopped; missing = use DEFAULT_START
 const SENT_AT = "tasks:sentat"; // hash: task id -> the moment it went out (epoch ms)
 const REMINDED = "tasks:reminded"; // set of task ids already nudged
+const TIMING = "tasks:timing"; // { intervalMin, windowMin }; missing or invalid = DEFAULT_TIMING
+
+export async function getTaskTiming(): Promise<TaskTiming> {
+  return validTiming(await getKV().get<TaskTiming>(TIMING)) ?? DEFAULT_TIMING;
+}
+
+/** save the rhythm; refuses (false) anything validTiming would not accept, so nothing half-valid is ever stored */
+export async function setTaskTiming(t: TaskTiming): Promise<boolean> {
+  const ok = validTiming(t);
+  if (!ok) return false;
+  await getKV().set(TIMING, ok);
+  return true;
+}
 
 export async function getTaskState(): Promise<TaskState> {
   const kv = getKV();
-  const [start, defs, sent] = await Promise.all([
+  const [start, defs, sent, timing] = await Promise.all([
     kv.get<string>(START),
     getTaskDefs(),
     kv.hgetall<number | string>(SENT_AT),
+    getTaskTiming(),
   ]);
   const sentAt: Record<string, number> = {};
   for (const [k, v] of Object.entries(sent)) if (Number.isFinite(Number(v))) sentAt[k] = Number(v);
-  return { start: start === null ? DEFAULT_START : start === "" ? null : start, defs, sentAt };
+  return { start: start === null ? DEFAULT_START : start === "" ? null : start, defs, sentAt, timing };
 }
 
 /** change the start time (or stop with null); clears which tasks were already sent */
@@ -179,7 +208,7 @@ export function buildRows(state: TaskState): TaskRow[] {
   const t0 = state.start ? new Date(state.start).getTime() : NaN;
   let slot = 0;
   return state.defs.map((d, pos) => {
-    const sched = d.mode === "auto" ? (Number.isFinite(t0) ? t0 + slot * INTERVAL_MIN * 60000 : null) : null;
+    const sched = d.mode === "auto" ? (Number.isFinite(t0) ? t0 + slot * state.timing.intervalMin * 60000 : null) : null;
     if (d.mode === "auto") slot++;
     const sentAt = state.sentAt[d.id] ?? null;
     return { ...d, action: actionFor(d), pos, sched, sentAt, at: sentAt ?? sched };

@@ -5,12 +5,12 @@ import {
   doneSet,
   endpointHash,
   getTaskState,
+  getTaskTiming,
   NOTIFY_TITLE,
   notifyBody,
   remindBody,
   REMIND_TITLE,
   visibleRows,
-  WINDOW_MIN,
   type TaskRow,
 } from "./tasks";
 import { sendToAll, type PushPayload } from "./push";
@@ -47,7 +47,7 @@ export async function announceTask(id: string) {
   // the phone alert: short, urgent, same moment for everyone
   return sendToAll({
     title: NOTIFY_TITLE,
-    body: notifyBody(task.title),
+    body: notifyBody(task.title, (await getTaskTiming()).windowMin),
     url: "/tasks",
     tag: `task-${task.id}`,
     requireInteraction: true,
@@ -104,7 +104,7 @@ export async function tick(now = Date.now()): Promise<TickResult> {
   // one minute into a task's window: nudge phones that haven't done it (announced earlier, still inside the window)
   for (const r of rows) {
     if (r.sentAt === null || r.at === null) continue;
-    if (now >= r.at + 60000 && now < r.at + WINDOW_MIN * 60000 + 30000 && (await claimReminder(r.id))) {
+    if (now >= r.at + 60000 && now < r.at + state.timing.windowMin * 60000 + 30000 && (await claimReminder(r.id))) {
       await remindTask(r.id);
       result.reminded = r.id;
     }

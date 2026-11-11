@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { buildRows, getTaskState, INTERVAL_MIN, visibleRows, WINDOW_MIN } from "@/lib/tasks";
+import { buildRows, getTaskState, visibleRows } from "@/lib/tasks";
 import { moduleOf, toRoute } from "@/lib/sections";
 
 // public: the tasks guests can see, when each unlocks, and the server clock so phones can count down accurately
@@ -19,8 +19,8 @@ export async function GET() {
   return Response.json(
     {
       now,
-      intervalMin: INTERVAL_MIN,
-      windowMin: WINDOW_MIN,
+      intervalMin: state.timing.intervalMin,
+      windowMin: state.timing.windowMin,
       started: tasksOn && (state.start !== null || shown.some((r) => r.sentAt !== null)),
       tasks: shown.map((t, i) => ({
         id: t.id,
@@ -31,7 +31,7 @@ export async function GET() {
         action: { ...t.action, href: toRoute(t.action.href) },
         index: i,
         at: t.at,
-        windowEnd: t.at === null ? null : t.at + WINDOW_MIN * 60000,
+        windowEnd: t.at === null ? null : t.at + state.timing.windowMin * 60000,
         unlocked: t.at !== null && t.at <= now,
       })),
     },

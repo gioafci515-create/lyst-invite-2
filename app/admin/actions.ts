@@ -162,6 +162,15 @@ export async function saveTaskStart(formData: FormData) {
   revalidatePath("/admin/tasks");
 }
 
+/** The rhythm of the night: minutes between automatic tasks and the capture window after each alert. Invalid = nothing saved. */
+export async function saveTaskTiming(formData: FormData) {
+  await requireAdmin();
+  const { setTaskTiming } = await import("@/lib/tasks");
+  const n = (k: string) => Number(String(formData.get(k) ?? "").trim());
+  await setTaskTiming({ intervalMin: n("intervalMin"), windowMin: n("windowMin") });
+  revalidatePath("/admin/tasks");
+}
+
 export async function startTasksNow() {
   await requireAdmin();
   const { setTaskStart } = await import("@/lib/tasks");

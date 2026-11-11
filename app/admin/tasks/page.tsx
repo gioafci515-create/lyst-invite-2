@@ -4,10 +4,10 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
-import { buildRows, getTaskState, INTERVAL_MIN, TIMEZONE, utcToZonedLocal, type TaskRow } from "@/lib/tasks";
+import { buildRows, getTaskState, TIMEZONE, TIMING_LIMITS, utcToZonedLocal, type TaskRow } from "@/lib/tasks";
 import { listSubs, pushConfigured } from "@/lib/push";
 import { getKV } from "@/lib/kv";
-import { createTask, deleteTask, removeSubscription, saveTaskStart, sendTaskNow, sendTestToAll, startTasksNow, stopTasks, updateTask } from "../actions";
+import { createTask, deleteTask, removeSubscription, saveTaskStart, saveTaskTiming, sendTaskNow, sendTestToAll, startTasksNow, stopTasks, updateTask } from "../actions";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Tasks — LYST admin", robots: { index: false } };
@@ -136,7 +136,7 @@ async function Panel() {
           <span>Push service</span>
         </div>
         <div>
-          <b>{INTERVAL_MIN} min</b>
+          <b>{state.timing.intervalMin} min</b>
           <span>Between tasks</span>
         </div>
       </section>
@@ -159,7 +159,7 @@ async function Panel() {
           <h2>Start time</h2>
           <p className={styles.note}>
             Task 1 unlocks at this moment and a notification goes to every subscribed phone; then one more every{" "}
-            {INTERVAL_MIN} minutes. Times are Rotterdam ({TIMEZONE}).
+            {state.timing.intervalMin} minutes. Times are in {TIMEZONE}.
           </p>
           <label className={styles.label}>
             First task unlocks
@@ -172,6 +172,23 @@ async function Panel() {
             />
           </label>
           <button className={styles.btn}>Save schedule</button>
+        </form>
+
+        <form action={saveTaskTiming} className={styles.panel} id="rhythm">
+          <h2>Rhythm</h2>
+          <p className={styles.note}>
+            How the automatic tasks are spaced, and how long the short capture window after each alert lasts. The window can&apos;t be
+            longer than the gap. Guests never see the window as a deadline: a task stays open until they do it.
+          </p>
+          <label className={styles.label}>
+            Minutes between tasks ({TIMING_LIMITS.interval.min}–{TIMING_LIMITS.interval.max})
+            <input type="number" name="intervalMin" required min={TIMING_LIMITS.interval.min} max={TIMING_LIMITS.interval.max} step={1} defaultValue={state.timing.intervalMin} className={styles.input} />
+          </label>
+          <label className={styles.label}>
+            Capture window after each alert, minutes ({TIMING_LIMITS.window.min}–{TIMING_LIMITS.window.max})
+            <input type="number" name="windowMin" required min={TIMING_LIMITS.window.min} max={TIMING_LIMITS.window.max} step={1} defaultValue={state.timing.windowMin} className={styles.input} />
+          </label>
+          <button className={styles.btn}>Save rhythm</button>
         </form>
 
         <div className={styles.panel}>
@@ -192,7 +209,7 @@ async function Panel() {
             </button>
           </form>
           <p className={styles.note}>
-            “Start now” sends Task 1 on the next minute-ping, then Tasks 2–5 at 20-minute intervals. (Reminders are triggered by the 1-minute pinger on /api/cron/tick — see DEPLOY.md.) Phones need the page opened once
+            “Start now” sends Task 1 on the next minute-ping, then the next ones every {state.timing.intervalMin} minutes. (Reminders are triggered by the 1-minute pinger on /api/cron/tick — see DEPLOY.md.) Phones need the page opened once
             and reminders turned on (iPhones: added to the Home Screen first).
           </p>
         </div>
@@ -231,7 +248,7 @@ async function Panel() {
         <h2>New task</h2>
         <p className={styles.note}>
           Add a task any time, even mid-event. “Hand-sent” tasks stay hidden from guests until you press send; “on the timeline” tasks join
-          the {INTERVAL_MIN}-minute schedule after the others.
+          the {state.timing.intervalMin}-minute schedule after the others.
         </p>
         <form action={createTask} className={styles.inline}>
           <input name="title" placeholder="Title" required maxLength={60} className={styles.input} />
