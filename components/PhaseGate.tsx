@@ -8,6 +8,7 @@ import { ROUTE } from "@/lib/sections";
 import AddToCalendar from "./AddToCalendar";
 import g from "./gate.module.css";
 import route from "./route.module.css";
+import { spoken, VIDEO_MAX_SECONDS, VOICE_MAX_SECONDS } from "@/lib/limits";
 
 /** What each part of the night is, told before it opens or after it closed (no "tonight" before the event day). */
 function what(kind: CaptureKind, frames: number): { title: string; line: string } {
@@ -15,9 +16,9 @@ function what(kind: CaptureKind, frames: number): { title: string; line: string 
     case "camera":
       return { title: "The disposable camera", line: `A roll of ${frames} frames for the night. Every photo goes to the hosts first; they choose what reaches the gallery.` };
     case "voice":
-      return { title: "The voice guestbook", line: "Leave the hosts a voice message of up to three minutes. Only they hear it." };
+      return { title: "The voice guestbook", line: `Leave the hosts a voice message of up to ${spoken(VOICE_MAX_SECONDS)}. Only they hear it.` };
     case "video":
-      return { title: "Video messages", line: "Record up to 45 seconds for the hosts. They approve a clip before it reaches the gallery." };
+      return { title: "Video messages", line: `Record up to ${spoken(VIDEO_MAX_SECONDS)} for the hosts. They approve a clip before it reaches the gallery.` };
     case "live":
       return { title: "The live room", line: "Polls, a photo challenge and questions for the hosts, while the event is on." };
     case "tasks":

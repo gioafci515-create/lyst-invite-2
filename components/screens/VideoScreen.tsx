@@ -7,8 +7,9 @@ import { clock, useRecorder } from "@/components/useRecorder";
 import { submitContribution } from "@/lib/submit";
 import { Progress, type SendState } from "./CaptureBits";
 import c from "./capture.module.css";
+import { VIDEO_MAX_SECONDS } from "@/lib/limits";
 
-const MAX = 45; // seconds — at the recorder's bitrate this stays under the 4.5 MB upload limit
+const MAX = VIDEO_MAX_SECONDS; // the recorder stops here; the server's file limit (25 MB) is far above a clip this long
 const COUNTDOWN = 3;
 const RING = 2 * Math.PI * 46;
 

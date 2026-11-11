@@ -245,16 +245,28 @@ export default function GalleryScreen() {
   const tiles = filter === "all" ? all : all.filter((t) => t.kind === filter);
   const count = (f: Filter) => (f === "all" ? all.length : all.filter((t) => t.kind === f).length);
 
-  // masonry: every tile keeps its real shape; each goes to the shortest column, DOM order stays newest first
-  const cols = width >= 1000 ? 4 : width >= 600 ? 3 : 2;
+  // editorial masonry: every tile keeps its real shape. From three pieces on, the newest leads across two columns and the
+  // rest fill the shortest column in order (DOM order stays newest first). Few pieces get few columns, so three photos
+  // read as a composed spread rather than a sparse grid; a single photo stands alone, centred, at a sensible size.
+  const base = width >= 1000 ? 4 : width >= 600 ? 3 : 2;
+  const cols = tiles.length <= 1 ? 1 : Math.min(base, Math.max(2, tiles.length));
   const gap = width >= 600 ? 12 : 8;
-  const colW = width ? (width - gap * (cols - 1)) / cols : 0;
+  const fullW = width ? (width - gap * (cols - 1)) / cols : 0;
+  const colW = cols === 1 ? Math.min(fullW, 720) : fullW;
+  const offset = cols === 1 ? Math.max(0, (width - colW) / 2) : 0;
+  const lead = tiles.length >= 3 && cols >= 2;
   const heights = new Array(cols).fill(0);
-  const placed = tiles.map((t) => {
+  const placed = tiles.map((t, i) => {
     const ratio = clampRatio(t.w && t.h ? t.w / t.h : (ratios[t.id] ?? 0.8));
+    if (lead && i === 0) {
+      const w = colW * 2 + gap;
+      const h = Math.round(w / ratio);
+      heights[0] = heights[1] = h + gap;
+      return { x: 0, y: 0, h, w };
+    }
     const h = Math.round(colW / ratio);
     const c = heights.indexOf(Math.min(...heights));
-    const pos = { x: c * (colW + gap), y: heights[c], h };
+    const pos = { x: offset + c * (colW + gap), y: heights[c], h, w: colW };
     heights[c] += h + gap;
     return pos;
   });
@@ -362,7 +374,7 @@ export default function GalleryScreen() {
                   key={t.id}
                   type="button"
                   className={g.tile}
-                  style={{ transform: `translate(${p.x}px, ${p.y}px)`, width: colW, height: p.h }}
+                  style={{ transform: `translate(${p.x}px, ${p.y}px)`, width: p.w, height: p.h }}
                   onClick={(e) => {
                     opener.current = e.currentTarget;
                     setViewer(i);

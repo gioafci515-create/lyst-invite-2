@@ -9,6 +9,7 @@ import { useTaskFor } from "@/lib/useMoments";
 import { submitContribution } from "@/lib/submit";
 import { Player, Progress, type SendState } from "./CaptureBits";
 import c from "./capture.module.css";
+import { VOICE_MAX_SECONDS } from "@/lib/limits";
 
 /** Optional prompts, written for UN/FOLD (type, sound, performance) rather than a generic ceremony. */
 const PROMPTS = {
@@ -25,7 +26,7 @@ const PROMPTS = {
     "Say something about that night that deserves to be remembered.",
   ],
 };
-const MAX_SECONDS = 180;
+const MAX_SECONDS = VOICE_MAX_SECONDS;
 
 const Lock = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

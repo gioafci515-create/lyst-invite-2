@@ -12,6 +12,11 @@ import { useTasks } from "@/lib/useTasks";
 import type { GalleryItem, Recap } from "./HomeView";
 import { Icon, type IconName } from "./icons";
 import styles from "./nightindex.module.css";
+import { EVENT } from "@/lib/identity";
+import { spoken, VIDEO_MAX_SECONDS } from "@/lib/limits";
+import { readMine, type MineEntry } from "@/lib/mine";
+import { useHydrated } from "@/lib/useClient";
+import { useMoments } from "@/lib/useMoments";
 
 /** Approved event photography only. Crops are done with object-position; the images themselves are untouched. */
 const PHOTO = {
@@ -62,7 +67,7 @@ function Band({ heading }: { heading: string }) {
       <div className={styles.band} aria-hidden data-reveal>
         <Photo k="stage" sizes="100vw" priority />
         <p className={styles.bandMark}>
-          UN/FOLD <span>2026</span>
+          {EVENT.name} <span>{EVENT.edition}</span>
         </p>
       </div>
     </>
@@ -112,7 +117,7 @@ function Tonight() {
       // phones open the camera from the bar's centre button; desktop has no bar, so it gets a row there
       { key: "camera", title: "Capture a moment", line: "The hosts approve photos first.", href: ROUTE.camera, photo: "portrait", module: "camera", desktopOnly: true },
       { key: "voice", title: "Leave a voice", line: "Only the hosts will hear it.", href: ROUTE.voice, photo: "poster", module: "voice" },
-      { key: "video", title: "Say hello on film", line: "Up to 45 seconds.", href: ROUTE.video, photo: "stage", module: "video" },
+      { key: "video", title: "Say hello on film", line: `Up to ${spoken(VIDEO_MAX_SECONDS)}.`, href: ROUTE.video, photo: "stage", module: "video" },
       { key: "gallery", title: "See the night", line: "Approved photos and clips.", href: ROUTE.gallery, photo: "hall", module: "gallery" },
     ] as Row[]
   ).filter((r) => on(r.module) && (!lead || path(lead.href) !== r.href)); // the lead already covers its own destination
@@ -142,7 +147,7 @@ function Tonight() {
 
   return (
     <section className={styles.wrap} data-phase="during" aria-labelledby="tonight-title">
-      <Band heading="UN/FOLD 2026, tonight" />
+      <Band heading={`${EVENT.title}, tonight`} />
       <div className={styles.body}>
         <h2 id="tonight-title" className="sr-only">
           Tonight
@@ -278,6 +283,39 @@ function RecapStrip({ initial }: { initial: Recap | null }) {
   );
 }
 
+/**
+ * What this phone left, from its own records: the uploads it kept a private key for, and the tasks it completed. Nothing
+ * estimated, nothing from other guests; voice messages and sealed notes are not listed (this phone keeps no copy of them).
+ * Shown only when there is something to show.
+ */
+function Yours() {
+  const ev = useEvent();
+  const hydrated = useHydrated();
+  const { tasks, collected } = useMoments();
+  const [mine, setMine] = useState<MineEntry[] | null>(null);
+  if (hydrated && mine === null) setMine(readMine());
+  if (!mine) return null;
+  const count = (k: MineEntry["kind"]) => mine.filter((m) => m.kind === k).length;
+  const [photos, clips] = [count("photo"), count("video")];
+  const parts = [photos ? `${photos} ${photos === 1 ? "photo" : "photos"}` : "", clips ? `${clips} ${clips === 1 ? "clip" : "clips"}` : ""].filter(Boolean);
+  const tasksDone = ev.enabled("tasks") && tasks.length > 0 && collected > 0;
+  if (!parts.length && !tasksDone) return null;
+  return (
+    <section className={styles.yours} aria-labelledby="yours-title" data-reveal data-yours>
+      <h3 id="yours-title" className={styles.moreLabel}>
+        From this phone
+      </h3>
+      <p className={styles.yoursText}>
+        {parts.length > 0 && `You left ${parts.join(" and ")}.`} {tasksDone && `${collected} of ${tasks.length} tasks done.`}
+      </p>
+      <p className={styles.yoursLinks}>
+        {parts.length > 0 && ev.enabled("gallery") && <Link href={ROUTE.gallery}>See yours in the gallery</Link>}
+        {tasksDone && <Link href={ROUTE.tasks}>Your tasks from the night</Link>}
+      </p>
+    </section>
+  );
+}
+
 function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Recap | null }) {
   const ev = useEvent();
   const on = (m?: ModuleId) => !m || ev.enabled(m);
@@ -288,14 +326,14 @@ function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Re
   const late = (
     [
       { key: "voice", title: "Leave a voice", line: "Only the hosts will hear it.", href: ROUTE.voice, photo: "poster", module: "voice" },
-      { key: "video", title: "Send a clip", line: "Up to 45 seconds.", href: ROUTE.video, photo: "stage", module: "video" },
+      { key: "video", title: "Send a clip", line: `Up to ${spoken(VIDEO_MAX_SECONDS)}.`, href: ROUTE.video, photo: "stage", module: "video" },
     ] as Row[]
   ).filter((r) => on(r.module));
   const galleryOn = ev.enabled("gallery");
 
   return (
     <section className={styles.wrap} data-phase="after" aria-labelledby="memories-title">
-      <h1 className="sr-only">UN/FOLD 2026, memories</h1>
+      <h1 className="sr-only">{`${EVENT.title}, memories`}</h1>
       <div className={styles.body}>
         <h2 id="memories-title" className={styles.sectionLabel}>
           After the night
@@ -309,6 +347,7 @@ function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Re
           </section>
         )}
         <RecapStrip initial={recap} />
+        <Yours />
         <div className={styles.layout}>
           {galleryOn && <GalleryLead initial={gallery} />}
           <Rows rows={galleryOn ? keep : [...keep, ...late]} />

@@ -409,3 +409,29 @@
     font-size: 32px;
   }
 }
+
+/* what this phone left: a quiet line, its own numbers, links to where those things are */
+.yours {
+  margin-bottom: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ink);
+  display: grid;
+  gap: 6px;
+}
+.yoursText {
+  font-size: 18px;
+  line-height: 1.45;
+}
+.yoursLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+}
+.yoursLinks a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
