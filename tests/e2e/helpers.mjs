@@ -26,11 +26,12 @@ export const AT = {
  *              error) or "hold" (kept waiting until release()). Once used up, every request is answered "ok".
  *              Nothing reaches the real server, so tests never write submissions.
  *  livePatch   (json) => void, rewrites /api/live (what the hosts have opened)
+ *  stub        { "/api/path": json }: answered inside the browser with that JSON (200), for fixtures like gallery items
  *  rsvp        answers for /api/rsvp, in order: "ok" (200), "error" (500) or "closed" (403, closed). Nothing reaches the
  *              server; the bodies the page sent are kept in ctl.rsvpBodies.
  * Returns { held, release(answer), contributions, rsvpBodies } to drive held requests and inspect what was sent.
  */
-export async function installMocks(page, { now, modulesOff = [], eventPatch, failEvent = false, contribute, livePatch, rsvp } = {}) {
+export async function installMocks(page, { now, modulesOff = [], eventPatch, failEvent = false, contribute, livePatch, rsvp, stub } = {}) {
   const plan = [...(contribute ?? [])];
   const rsvpPlan = [...(rsvp ?? [])];
   const ctl = { held: [], contributions: 0, rsvpBodies: [], contributeBodies: [] };
@@ -51,6 +52,11 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
     (async () => {
       const id = d.params.requestId;
       const url = d.params.request.url;
+      for (const [part, body] of Object.entries(stub ?? {})) {
+        if (!url.includes(part)) continue;
+        await page.send("Fetch.fulfillRequest", { requestId: id, responseCode: 200, responseHeaders: [{ name: "content-type", value: "application/json" }], body: Buffer.from(JSON.stringify(body)).toString("base64") });
+        return;
+      }
       if (url.includes("/api/rsvp")) {
         try { ctl.rsvpBodies.push(JSON.parse(d.params.request.postData ?? "{}")); } catch { ctl.rsvpBodies.push(null); }
         const a = rsvpPlan.length ? rsvpPlan.shift() : "ok";
@@ -100,6 +106,7 @@ export async function installMocks(page, { now, modulesOff = [], eventPatch, fai
       ...(contribute ? [{ urlPattern: "*/api/contribute*", requestStage: "Request" }] : []),
       ...(livePatch ? [{ urlPattern: "*/api/live*", requestStage: "Response" }] : []),
       ...(rsvp ? [{ urlPattern: "*/api/rsvp*", requestStage: "Request" }] : []),
+      ...Object.keys(stub ?? {}).map((part) => ({ urlPattern: `*${part}*`, requestStage: "Request" })),
     ],
   });
   return ctl;
@@ -117,6 +124,7 @@ export function pinTaskSchedule() {
   d["tasks:start"] = "2026-11-14T18:33:00.000Z";
   delete d["tasks:sentat"];
   delete d["tasks:defs"];
+  delete d["tasks:timing"];
   // the built-in event settings: the test browser's clock decides the phase (whatever the admin forced or moved in
   // this store is put back afterwards)
   delete d["event:config"];
@@ -144,7 +152,7 @@ export async function open({ w = 390, h = 844, mobile = true, dsf = 1, path = "/
   await c.page.send("Page.enable");
   await c.page.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: dsf, mobile });
   if (init) await c.page.send("Page.addScriptToEvaluateOnNewDocument", { source: init });
-  if (mock.now || mock.modulesOff || mock.failEvent || mock.eventPatch || mock.contribute || mock.livePatch || mock.rsvp) c.mock = await installMocks(c.page, mock);
+  if (mock.now || mock.modulesOff || mock.failEvent || mock.eventPatch || mock.contribute || mock.livePatch || mock.rsvp || mock.stub) c.mock = await installMocks(c.page, mock);
   await c.page.send("Page.navigate", { url: ORIGIN + path });
   await sleep(wait);
   c.errs = errs;

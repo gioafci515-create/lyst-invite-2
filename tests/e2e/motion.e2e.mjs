@@ -19,6 +19,7 @@ store((d) => {
   d["tasks:start"] = "2026-11-14T18:33:00.000Z";
   delete d["tasks:sentat"];
   delete d["tasks:defs"];
+  delete d["tasks:timing"];
 });
 
 const { ok, done } = reporter();

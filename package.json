@@ -17,7 +17,8 @@
     "test:fixes": "node tests/e2e/fixes.e2e.mjs",
     "test:experience": "node tests/e2e/experience.e2e.mjs",
     "test:moments": "node tests/e2e/moments.e2e.mjs",
-    "test:motion": "node tests/e2e/motion.e2e.mjs"
+    "test:motion": "node tests/e2e/motion.e2e.mjs",
+    "test:living": "node tests/e2e/living.e2e.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.39.0",

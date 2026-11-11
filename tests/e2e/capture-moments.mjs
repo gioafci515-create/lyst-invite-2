@@ -17,6 +17,7 @@ const env = Object.fromEntries(
   d["tasks:start"] = "2026-11-14T18:33:00.000Z";
   delete d["tasks:sentat"];
   delete d["tasks:defs"];
+  delete d["tasks:timing"];
   fs.writeFileSync(KV, JSON.stringify(d, null, 2));
 }
 const PHONE = ["phone", 390, 844, true, 2];

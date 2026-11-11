@@ -37,6 +37,7 @@ try {
     d["tasks:start"] = new Date(Date.now() - 60_000).toISOString();
     delete d["tasks:sentat"];
     delete d["tasks:defs"];
+  delete d["tasks:timing"];
   });
   phase("before");
 

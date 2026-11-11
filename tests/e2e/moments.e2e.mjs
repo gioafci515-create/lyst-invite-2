@@ -14,6 +14,7 @@ const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
   d["tasks:start"] = "2026-11-14T18:33:00.000Z";
   delete d["tasks:sentat"];
   delete d["tasks:defs"];
+  delete d["tasks:timing"];
   // the built-in event settings: the test browser's clock decides the phase (whatever the admin forced or moved in
   // this store is put back afterwards)
   delete d["event:config"];
