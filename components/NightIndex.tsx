@@ -232,16 +232,20 @@ function Tonight() {
 /** a print's small tilt, fixed per position so the server and the browser draw the same thing */
 const TILT = [-1.6, 1.2, -0.8];
 
-function GalleryLead({ initial }: { initial: GalleryItem[] | null }) {
+/** The approved gallery items: from the server render, or asked for when the page was opened before the event ended. */
+function useGalleryItems(initial: GalleryItem[] | null, on: boolean) {
   const [items, setItems] = useState<GalleryItem[] | null>(initial);
   useEffect(() => {
-    if (initial) return;
-    // the page was opened before the event ended: ask now
+    if (initial || !on) return;
     fetch("/api/gallery", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : []))
       .then((rows: GalleryItem[]) => setItems(Array.isArray(rows) ? rows : []))
       .catch(() => setItems([]));
-  }, [initial]);
+  }, [initial, on]);
+  return items;
+}
+
+function GalleryLead({ items }: { items: GalleryItem[] | null }) {
 
   const photos = (items ?? []).filter((i) => i.kind === "photo").slice(0, 3);
   const count = items?.length ?? 0;
@@ -372,8 +376,9 @@ function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Re
     ] as Row[]
   ).filter((r) => on(r.module));
   const galleryOn = ev.enabled("gallery");
-  // a way into the gallery only when the server counted something in it (never a button into an empty gallery)
-  const hasMedia = (gallery?.length ?? 0) > 0 || (recap ? recap.photos + recap.clips > 0 : false);
+  const items = useGalleryItems(gallery, galleryOn);
+  // a way into the gallery only when the server has something in it (never a button into an empty gallery)
+  const hasMedia = (items?.length ?? 0) > 0;
 
   return (
     <section className={styles.memory} data-phase="after" aria-labelledby="memories-title">
@@ -399,7 +404,7 @@ function Memories({ gallery, recap }: { gallery: GalleryItem[] | null; recap: Re
           </p>
         )}
       </div>
-      {galleryOn && <GalleryLead initial={gallery} />}
+      {galleryOn && <GalleryLead items={items} />}
       <div className={styles.memoryBody}>
         <Yours />
         <Verbs rows={galleryOn ? keep : [...keep, ...late]} label="Keep something" />
