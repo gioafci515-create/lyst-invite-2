@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     if (!TYPES.includes(type as ContribType)) return fail("Unknown submission type.", 400);
-    // the letter, the message for later and the capsule became one thing: "for later". Old data stays; new posts go there.
+    // the unsealed message for later became "for later" (sealed, hosts included). Old data stays; new posts go there.
     if (LEGACY_LATER.includes(type as ContribType)) return fail("This moved: leave it in “Leave something for later”. Nothing was saved.", 410);
     {
       const { getEventConfig } = await import("@/lib/eventConfig");
@@ -115,6 +115,17 @@ export async function POST(req: Request) {
       if (!openAt) return fail("That day isn't a date. Nothing was saved.", 400);
       meta.openAt = day;
     }
+    // time capsule: a name for the archive and the day it opens (within the same bounds as "for later"); nothing else
+    if (type === "capsule") {
+      if (!text) return fail("Give the capsule a name first. Nothing was saved.", 400);
+      if (file) return fail("A capsule holds a name and a day only. Nothing was saved.", 400);
+      const { getEventConfig } = await import("@/lib/eventConfig");
+      const { forLaterBounds } = await import("@/lib/eventState");
+      const b = forLaterBounds((await getEventConfig()).config);
+      const day = meta.unlock ?? "";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day < b.first || day > b.last) return fail(`Pick a day from ${b.first} to ${b.last}. Nothing was saved.`, 400);
+    }
+    if (type === "letter" && !text) return fail("Write your letter first. Nothing was saved.", 400);
 
     // one poll vote per voter per question — claimed atomically
     if (type === "poll") {

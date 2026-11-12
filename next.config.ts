@@ -20,9 +20,8 @@ const nextConfig: NextConfig = {
       ["/tasks", "/moments"],
       ["/guestbook", "/voice"],
       ["/later", "/for-later"],
-      // the letter, the message for later and the capsule became one screen
-      ["/letter", "/for-later"],
-      ["/capsule", "/for-later"],
+      // the letter lives in the live room again (its own rule: the hosts read it at once); the capsule has its own screen
+      ["/letter", "/live"],
       ["/interact", "/live"],
       ["/remember", "/live"],
       ["/notifications", "/updates"],

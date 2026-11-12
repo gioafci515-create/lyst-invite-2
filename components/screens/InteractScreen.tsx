@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { timeLabel } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { ROUTE } from "@/lib/sections";
@@ -9,7 +9,7 @@ import { getGuest, submitContribution } from "@/lib/submit";
 import { useHydrated } from "@/lib/useClient";
 import { useLive, voterId, type LiveData } from "@/lib/useLive";
 import { Progress } from "./CaptureBits";
-import { EyeIcon, LockIcon } from "./Sealed";
+import { EyeIcon, LockIcon, SealedCard, WritingSheet } from "./Sealed";
 import r from "./room.module.css";
 
 const lsGet = (k: string) => {
@@ -293,18 +293,95 @@ function Question({ from }: { from: string }) {
   );
 }
 
-function Letter() {
+/**
+ * A letter to the hosts: its own privacy model, kept distinct from "for later". Type "letter" (switched on with the live
+ * room), only the hosts receive it, and they can read it right away; it can't be changed once sent. A note meant to
+ * stay sealed until a day goes to "Leave something for later" instead.
+ */
+function Letter({ from }: { from: string }) {
+  const [text, setText] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  const [error, setError] = useState("");
+  const sentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state === "sent") sentRef.current?.focus();
+  }, [state]);
+
+  async function send() {
+    if (!text.trim()) return setError("Write your letter first. Nothing was sent.");
+    setState("sending");
+    setError("");
+    const res = await submitContribution({ type: "letter", name: from.trim() || "Anonymous", text });
+    if (res.ok) setState("sent");
+    else {
+      setState("failed");
+      setError(`${res.error} Your letter is still here.`);
+    }
+  }
+
   return (
-    <Item id="letter" kind="Letter" open="always" who="hosts" whoText="Sealed until the day you pick, even for them. It can't be changed once sent.">
+    <Item id="letter" kind="Letter" open="always" who="hosts" whoText="They can read it right away. It can't be changed once sent.">
       <h3 id="letter-title" className={r.title}>
         Write to the hosts
       </h3>
-      <p className={r.body}>Longer words, a photo if you like, opened on a day you choose: a year from now unless you pick another.</p>
-      <div className={r.actions}>
-        <Link href={ROUTE.later} className={r.secondary}>
-          Leave something for later
-        </Link>
-      </div>
+      {state === "sent" ? (
+        <SealedCard
+          headingRef={sentRef}
+          title="Sent to the hosts."
+          facts={[
+            ["For", "The hosts, and no one else"],
+            ["They read it", "Whenever they like, from now"],
+            ["From", from.trim() || "Anonymous"],
+          ]}
+        >
+          <div className={r.actions}>
+            <button
+              type="button"
+              className={r.secondary}
+              onClick={() => {
+                setText("");
+                setState("idle");
+              }}
+            >
+              Write another
+            </button>
+          </div>
+        </SealedCard>
+      ) : (
+        <>
+          <WritingSheet
+            id="letter-text"
+            head={[
+              ["To", "The hosts"],
+              ["Read", "From tonight"],
+            ]}
+            label="Your letter"
+            value={text}
+            onChange={setText}
+            placeholder="A longer note to the hosts, for them to read tonight or tomorrow."
+            maxLength={3000}
+            disabled={state === "sending"}
+            signedAs={from.trim()}
+          />
+          {error && (
+            <p className={r.error} role="alert">
+              {error}
+            </p>
+          )}
+          {state === "sending" ? (
+            <Progress fraction={null} label="Sending your letter" />
+          ) : (
+            <div className={r.actions}>
+              <button type="button" className={r.primary} onClick={send}>
+                {state === "failed" ? "Try sending again" : "Send letter"}
+              </button>
+              <Link href={ROUTE.later} className={r.secondary}>
+                Keep it sealed for later instead
+              </Link>
+            </div>
+          )}
+        </>
+      )}
     </Item>
   );
 }
@@ -394,7 +471,7 @@ export default function InteractScreen() {
           />
         </label>
         <Question from={sender} />
-        <Letter />
+        <Letter from={from} />
       </section>
     </div>
   );

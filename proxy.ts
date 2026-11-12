@@ -9,6 +9,7 @@ const ROUTE_MODULE: Record<string, ModuleId> = {
   "/video": "video",
   "/live": "live",
   "/for-later": "later",
+  "/capsule": "capsule",
   "/gallery": "gallery",
   "/moments": "tasks",
 };
@@ -30,5 +31,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/camera", "/voice", "/video", "/live", "/for-later", "/gallery", "/moments", "/moments/:id", "/"],
+  matcher: ["/camera", "/voice", "/video", "/live", "/for-later", "/capsule", "/gallery", "/moments", "/moments/:id", "/"],
 };

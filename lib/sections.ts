@@ -73,4 +73,5 @@ export const NAV: NavItem[] = [
   { href: ROUTE.live, label: "Live room", group: "Tonight", module: "live" },
   { href: ROUTE.gallery, label: "Gallery", group: "Memories", module: "gallery" },
   { href: ROUTE.later, label: "For later", group: "Memories", module: "later" },
+  { href: ROUTE.capsule, label: "Time capsule", group: "Memories", module: "capsule" },
 ];

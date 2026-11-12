@@ -35,8 +35,13 @@ export type Contribution = {
   openAt?: string;
 };
 
-/** Letters, messages for later and capsules from before "for later" existed: still stored and readable, no longer accepted. */
-export const LEGACY_LATER: readonly ContribType[] = ["letter", "later", "capsule"];
+/**
+ * Messages for later from before "for later" existed (marked with a day, but readable by the hosts at once): still stored
+ * and readable, no longer accepted. "for later" replaced them with a stricter rule (sealed until the day, hosts included).
+ * Letters (the hosts read them at once) and time capsules (a name and an opening day for the archive) keep their own
+ * rules and are accepted again, each under its own switch.
+ */
+export const LEGACY_LATER: readonly ContribType[] = ["later"];
 
 /** A "for later" row whose moment hasn't come: its content stays sealed, even in the admin. */
 export const isSealed = (r: Pick<Contribution, "openAt">, now = Date.now()) => !!r.openAt && Date.parse(r.openAt) > now;
