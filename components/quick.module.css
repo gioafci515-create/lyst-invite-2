@@ -399,3 +399,52 @@
   background: var(--acid);
   border: 2px solid var(--ink);
 }
+
+/* ---------- Chapter II, the night: the bar goes dark with the room (cream on ink, no hard shadow) ---------- */
+@media (max-width: 900px) {
+  html[data-chapter="during"] .bar {
+    --glass: rgba(20, 19, 18, 0.78);
+    --tile: #1f1e1c;
+    --tile-face: linear-gradient(180deg, #262523 0%, #1a1917 100%);
+    --tile-rim: inset 0 0 0 1px rgba(245, 240, 227, 0.22);
+    border-color: rgba(245, 240, 227, 0.32);
+    box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.9);
+  }
+  html[data-chapter="during"] .tab {
+    color: var(--cream);
+  }
+  html[data-chapter="during"] .tab[aria-current="page"] {
+    background-color: var(--cream);
+    color: var(--ink);
+  }
+  html[data-chapter="during"] .lbl::after {
+    color: var(--cream);
+  }
+  html[data-chapter="during"] .badge {
+    background: var(--cream);
+    color: var(--ink);
+  }
+  html[data-chapter="during"] .sheet {
+    background: #1a1917;
+    color: var(--cream);
+    border-color: rgba(245, 240, 227, 0.32);
+    box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.9);
+  }
+  html[data-chapter="during"] .x {
+    background: var(--cream);
+    color: var(--ink);
+  }
+  html[data-chapter="during"] .group {
+    color: rgba(245, 240, 227, 0.65);
+  }
+  html[data-chapter="during"] .item {
+    background-color: #1f1e1c;
+    background-image: linear-gradient(180deg, #262523 0%, #1a1917 100%);
+    box-shadow: inset 0 0 0 1px rgba(245, 240, 227, 0.22);
+    color: var(--cream);
+  }
+  /* Chapter III, the memory: the bar on cream paper */
+  html[data-chapter="after"] .bar {
+    --glass: rgba(251, 248, 240, 0.9);
+  }
+}

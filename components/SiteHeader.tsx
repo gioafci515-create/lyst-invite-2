@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { timeLabel } from "@/lib/eventState";
@@ -9,6 +10,12 @@ import { useReply } from "@/lib/rsvp";
 import { useMoments } from "@/lib/useMoments";
 import { groupLabel, NAV, ROUTE, SECTION, type NavItem } from "@/lib/sections";
 import styles from "./site.module.css";
+import { CHAPTER } from "@/lib/chapters";
+
+/** The approved Lyst. wordmark, as supplied (a raster export; shown at half its pixel size so it stays sharp). */
+export function Wordmark({ className }: { className?: string }) {
+  return <Image src="/brand/lyst-wordmark.png" alt="Lyst." width={56} height={20} unoptimized priority className={className} />;
+}
 
 /** Phase status, written for a glance: "4 days to go" / "Live · ends 00:30" / "Memories open". */
 export function usePhaseStatus() {
@@ -95,7 +102,7 @@ export default function SiteHeader() {
       <Link
         href="/"
         className={styles.mark}
-        aria-label="LYST, home"
+        aria-label="Lyst., home"
         onClick={(e) => {
           // already on the home page: the logo means the very top (a link to the same page would do nothing)
           if (location.pathname !== "/") return;
@@ -105,7 +112,11 @@ export default function SiteHeader() {
           window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
         }}
       >
-        LYST
+        <Wordmark className={styles.wordmark} />
+        <span className={styles.chapter} aria-hidden>
+          <span className={styles.chapterNo}>{CHAPTER[ev.phase].no}</span>
+          {CHAPTER[ev.phase].name}
+        </span>
       </Link>
       <nav className={styles.nav} aria-label="Main">
         <Link href="/" className={styles.navLink}>

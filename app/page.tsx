@@ -3,6 +3,7 @@ import { approvedMedia, countByType, galleryItem } from "@/lib/contrib";
 import { EventSeed } from "@/lib/eventStore";
 import { getWire } from "@/lib/serverEvent";
 import HomeView, { type GalleryItem, type Recap } from "@/components/HomeView";
+import { Wordmark } from "@/components/SiteHeader";
 import styles from "@/components/site.module.css";
 
 /** Approved photos for the memories lead, newest first. Never fails the page: no photos is an honest empty state. */
@@ -45,7 +46,9 @@ async function Loaded() {
 function Shell() {
   return (
     <header className={styles.header} aria-busy="true">
-      <span className={styles.mark}>LYST</span>
+      <span className={styles.mark}>
+        <Wordmark className={styles.wordmark} />
+      </span>
     </header>
   );
 }

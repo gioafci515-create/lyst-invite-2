@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, createElement, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, createElement, useContext, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { computeEventState, countdownLabel, DEFAULT_CONFIG, MODULE_IDS, type EventConfig, type EventState, type ModuleId, type Phase } from "./eventState";
 
 /** What the browser knows about the event. The server stays authoritative: this is re-fetched every 20 s and on focus. */
@@ -250,7 +250,26 @@ const SeedContext = createContext<EventView | null>(null);
 export function EventSeed({ wire: w, children }: { wire: Wire; children: ReactNode }) {
   const seeded = useMemo(() => viewFromWire(w, w.now), [w]);
   seedFrom(w);
-  return createElement(SeedContext.Provider, { value: seeded }, children);
+  return createElement(SeedContext.Provider, { value: seeded }, createElement(ChapterMark), children);
+}
+
+/**
+ * Puts the chapter the page is in (before / during / after) on <html> (data-chapter), which the stylesheet reads to light
+ * the whole page, header and bar included. The server-rendered page sets it with an inline script while it is still
+ * being parsed, so the first paint is already in the right light; after that the visible page keeps it in step with
+ * the live store (and the held view during a phase change). Pages kept hidden for back/forward run no effects, so a
+ * stale chapter never wins.
+ */
+function ChapterMark() {
+  const v = useEvent();
+  useLayoutEffect(() => {
+    const html = document.documentElement;
+    html.dataset.chapter = v.phase;
+    return () => {
+      if (html.dataset.chapter === v.phase) delete html.dataset.chapter;
+    };
+  }, [v.phase]);
+  return createElement("script", { suppressHydrationWarning: true, dangerouslySetInnerHTML: { __html: `document.documentElement.dataset.chapter=${JSON.stringify(v.phase)}` } });
 }
 
 export function useEvent() {

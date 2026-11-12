@@ -1,25 +1,55 @@
-/* ---------- Site header: wordmark, phase status, one context action ---------- */
+/* ---------- Site header: the Lyst. wordmark, where we are in the story, one context action ---------- */
 .header {
   position: sticky;
   top: 0;
   z-index: 20;
   height: var(--header-h);
-  padding: 0 36px;
+  padding: 0 clamp(16px, 3vw, 40px);
   display: flex;
   align-items: center;
   gap: 28px;
-  background: var(--cream);
-  border-bottom: 1px solid var(--ink);
+  background: var(--glass-ground);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--fg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .header {
+    transition: background-color 700ms var(--ease-fold), border-color 700ms var(--ease-fold), color 700ms var(--ease-fold);
+  }
 }
 .mark {
-  font-family: var(--f-grotesk);
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: 1.5px;
   white-space: nowrap;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  gap: 14px;
+}
+/* the approved wordmark, as supplied (raster); on the night's dark ground it is shown reversed */
+.wordmark {
+  display: block;
+  width: 56px;
+  height: 20px;
+}
+html[data-chapter="during"] .wordmark {
+  filter: invert(1);
+}
+.chapter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-left: 14px;
+  border-left: 1px solid var(--rule-soft);
+  font-family: var(--f-grotesk);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+.chapterNo {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--fg-2);
 }
 
 .nav {
@@ -27,7 +57,8 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
 }
 .navLink {
   min-height: 44px;
@@ -38,16 +69,15 @@
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
-  font-family: var(--f-mono);
-  font-size: 12px;
+  font-family: var(--f-grotesk);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink);
+  letter-spacing: -0.01em;
+  color: var(--fg);
 }
 .navLink:hover,
 .navLink[aria-expanded="true"] {
-  border-bottom-color: var(--red);
+  border-bottom-color: var(--accent);
 }
 .navLink svg {
   width: 14px;
@@ -68,9 +98,10 @@
   left: 0;
   min-width: 220px;
   list-style: none;
-  background: var(--cream);
-  border: 1px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
+  background: var(--raised);
+  color: var(--fg);
+  border: 1px solid var(--rule);
+  box-shadow: 0 18px 40px -18px rgba(10, 10, 10, 0.45);
   padding: 6px 0;
   z-index: 30;
 }
@@ -83,7 +114,7 @@
 }
 .dropList a:hover,
 .dropList a:focus-visible {
-  background: var(--sand);
+  background: var(--ground);
 }
 .dropList a:focus-visible {
   outline-offset: -3px;
@@ -97,21 +128,24 @@
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  color: var(--fg);
 }
 .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--red);
+  box-shadow: 0 0 0 0 rgba(255, 59, 33, 0.6);
   animation: pulse 1.6s ease-in-out infinite;
 }
 @keyframes pulse {
   50% {
-    opacity: 0.3;
+    opacity: 0.35;
+    box-shadow: 0 0 0 5px rgba(255, 59, 33, 0);
   }
 }
 
@@ -131,14 +165,23 @@
   padding: 0 18px;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   border-radius: 999px;
-  background: var(--red);
-  color: var(--btn-ink);
-  font-family: var(--f-mono);
-  font-size: 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--f-grotesk);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+/* an answer already given: the guest's own mark */
+.cta[data-reply] {
+  background: transparent;
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1.5px var(--fg);
+}
+.cta[data-reply] svg {
+  color: var(--fg);
 }
 
 @media (max-width: 900px) {
@@ -147,13 +190,13 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: 8px;
-    padding: 0 16px;
   }
-  .nav {
+  .nav,
+  .chapter {
     display: none;
   }
   .status {
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
   }
 }
 
@@ -181,11 +224,19 @@
   gap: 32px;
 }
 .footerMark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-family: var(--f-grotesk);
   font-weight: 700;
-  letter-spacing: 1.5px;
   font-size: 16px;
   color: var(--cream);
+}
+/* the approved wordmark, reversed on the dark footer */
+.footerWordmark {
+  width: 56px;
+  height: 20px;
+  filter: invert(1);
 }
 .footerNote {
   margin-top: 12px;
@@ -306,7 +357,7 @@
   /* the red rule under a header link draws in from the left */
   .navLink {
     border-bottom-color: transparent;
-    background-image: linear-gradient(var(--red), var(--red));
+    background-image: linear-gradient(var(--accent), var(--accent));
     background-repeat: no-repeat;
     background-position: 0 100%;
     background-size: 0 2px;

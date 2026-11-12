@@ -6,7 +6,7 @@ import { useId, useLayoutEffect, useState, useSyncExternalStore, ViewTransition 
 import { captureState, type CaptureKind } from "@/lib/eventState";
 import { useEvent } from "@/lib/eventStore";
 import { groupLabel, HASH_ROUTE, NAV, ROUTE, type NavGroup } from "@/lib/sections";
-import SiteHeader from "./SiteHeader";
+import SiteHeader, { Wordmark } from "./SiteHeader";
 import QuickBar from "./QuickBar";
 import InviteScreen from "./screens/InviteScreen";
 import NightIndex from "./NightIndex";
@@ -95,7 +95,10 @@ function SiteFooter() {
   return (
     <footer className={styles.footer}>
       <div>
-        <p className={styles.footerMark}>LYST / invitations</p>
+        <p className={styles.footerMark}>
+          <Wordmark className={styles.footerWordmark} />
+          <span>Invitations</span>
+        </p>
         <p className={styles.footerNote}>
           Questions for the hosts: <a href="mailto:hello@lyst.events">hello@lyst.events</a>. This invitation is for named guests only.
         </p>

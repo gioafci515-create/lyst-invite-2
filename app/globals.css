@@ -242,3 +242,104 @@ html[data-reveal-on] [data-reveal][data-shown] {
     animation-delay: 0s !important;
   }
 }
+
+/* ==================================================================
+   Chapters. The same sheet in three lights, switched by the event's phase (the server's, then the live store's):
+     I    before  The invitation   daylight: sand paper, ink type
+     II   during  The night        projection: ink ground, cream type, red = live, acid = what you did
+     III  after   The memory       developed print: cream ground, ink type, red only as a hairline
+   Screens use these roles; the raw palette above stays for the approved artwork.
+   ================================================================== */
+:root {
+  --ground: var(--sand);
+  --ground-2: var(--cream);
+  --raised: var(--cream);
+  --fg: var(--ink);
+  --fg-2: var(--muted);
+  --rule: rgba(10, 10, 10, 0.88);
+  --rule-soft: rgba(10, 10, 10, 0.16);
+  --accent: var(--red);
+  --accent-ink: var(--red-text);
+  --on-accent: var(--btn-ink);
+  --mine: var(--acid);
+  --f-display-x: var(--f-mark);
+  --ease-fold: cubic-bezier(0.7, 0, 0.2, 1);
+}
+html[data-chapter="during"] {
+  --ground: var(--ink);
+  --ground-2: #1a1917;
+  --raised: #1a1917;
+  --fg: var(--cream);
+  --fg-2: rgba(245, 240, 227, 0.7);
+  --rule: rgba(245, 240, 227, 0.85);
+  --rule-soft: rgba(245, 240, 227, 0.16);
+  --accent-ink: var(--red);
+  color-scheme: dark;
+}
+html[data-chapter="after"] {
+  --ground: var(--cream);
+  --ground-2: var(--sand);
+  --raised: #fbf8f0;
+  --fg: var(--ink);
+  --fg-2: var(--muted);
+  --rule: rgba(10, 10, 10, 0.88);
+  --rule-soft: rgba(10, 10, 10, 0.14);
+}
+body {
+  background: var(--ground);
+  color: var(--fg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    transition:
+      background-color 700ms var(--ease-fold),
+      color 700ms var(--ease-fold);
+  }
+}
+:focus-visible {
+  outline-color: var(--fg);
+}
+
+/* The display voice: the UN/FOLD lockup's letterforms, used for chapter titles and verbs. */
+.display {
+  font-family: var(--f-mark);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.86;
+}
+
+/* where a guest types: white paper by day, a dark well at night */
+:root {
+  --field: #fff;
+}
+html[data-chapter="during"] {
+  --field: #141312;
+}
+html[data-chapter="during"] input,
+html[data-chapter="during"] textarea,
+html[data-chapter="during"] select {
+  color: var(--cream);
+}
+html[data-chapter="during"] ::placeholder {
+  color: rgba(245, 240, 227, 0.45);
+}
+html[data-chapter="during"] input[type="date"] {
+  color-scheme: dark;
+}
+/* ink-drawn icon files (public/images/app) shown reversed on the night's ground */
+:root {
+  --icon-ink: none;
+}
+html[data-chapter="during"] {
+  --icon-ink: invert(0.94);
+}
+/* the sticky headers: the chapter's ground, slightly see-through */
+:root {
+  --glass-ground: rgba(217, 212, 200, 0.9);
+}
+html[data-chapter="during"] {
+  --glass-ground: rgba(10, 10, 10, 0.86);
+}
+html[data-chapter="after"] {
+  --glass-ground: rgba(245, 240, 227, 0.92);
+}
