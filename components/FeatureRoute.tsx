@@ -1,4 +1,5 @@
 import { Suspense, ViewTransition, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CaptureKind, ModuleId } from "@/lib/eventState";
@@ -37,6 +38,29 @@ function Header({ title }: { title: string }) {
       </Link>
       <h1 className={styles.title}>{title}</h1>
     </header>
+  );
+}
+
+/** Each feature's approved photograph (crops by object-position only; the images are untouched). */
+const SCENE: Partial<Record<ModuleId, { src: string; pos: string }>> = {
+  voice: { src: "/images/gallery1.png", pos: "50% 40%" },
+  video: { src: "/images/shard.png", pos: "50% 38%" },
+  live: { src: "/images/gallery3.png", pos: "50% 55%" },
+  gallery: { src: "/images/gallery3.png", pos: "50% 40%" },
+  later: { src: "/images/gallery2.png", pos: "50% 26%" },
+  tasks: { src: "/images/story-mobile.png", pos: "50% 30%" },
+  capsule: { src: "/images/gallery3.png", pos: "50% 70%" },
+};
+const SCENE_DEFAULT = { src: "/images/gallery2.png", pos: "50% 30%" };
+
+/** The screen's opening scene: its photograph, its name set large (the h1 in the header says the same to assistive tech). */
+function Scene({ title, module }: { title: string; module?: ModuleId }) {
+  const ph = (module && SCENE[module]) || SCENE_DEFAULT;
+  return (
+    <div className={styles.scene} aria-hidden>
+      <Image src={ph.src} alt="" fill priority quality={90} sizes="100vw" style={{ objectFit: "cover", objectPosition: ph.pos }} />
+      <p className={styles.sceneTitle}>{title}</p>
+    </div>
   );
 }
 
@@ -82,6 +106,7 @@ export default function FeatureRoute({ title, ...rest }: Props) {
     <>
       <Header title={title} />
       <main id="main" className={styles.main}>
+        <Scene title={title} module={rest.module} />
         <Suspense fallback={<div className={styles.loading} aria-busy="true" aria-label="Loading" />}>
           {/* arriving on a screen: it rises in; leaving it: it fades (lateral moves, so no sideways slide) */}
           <ViewTransition enter="page-in" exit="page-out" default="none">

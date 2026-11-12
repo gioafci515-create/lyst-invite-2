@@ -42,7 +42,7 @@ export default function AppShell({ header, title, step, action, bg, children }: 
       <header className={styles.bar}>
         <div className={styles.heading}>{title && <h3>{title}</h3>}</div>
         {header && (
-          <Image src={header.src} alt="" width={header.width} height={header.height ?? 44} aria-hidden />
+          <Image src={header.src} alt="" width={header.width} height={header.height ?? 44} aria-hidden style={{ filter: "var(--icon-ink)" }} />
         )}
       </header>
 

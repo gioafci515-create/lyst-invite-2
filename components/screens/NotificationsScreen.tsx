@@ -95,18 +95,19 @@ export default function NotificationsScreen() {
                     alignItems: "center",
                     gap: 10,
                     padding: 11,
-                    border: `1px solid ${n.priority ? "var(--red)" : "var(--ink)"}`,
-                    background: n.priority ? "var(--cream)" : "var(--sand)",
+                    border: `1px solid ${n.priority ? "var(--red)" : "var(--rule-soft)"}`,
+                    background: n.priority ? "var(--raised)" : "var(--ground-2)",
+                    color: "var(--fg)",
                   }}
                 >
-                  <Image src={`/images/app/${n.icon}.svg`} alt="" width={18} height={18} />
+                  <Image src={`/images/app/${n.icon}.svg`} alt="" width={18} height={18} style={{ filter: "var(--icon-ink)" }} />
                   <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                     <b className="label-mono">{n.title}</b>
                     <span className={styles.muted}>
                       {n.text}
                     </span>
                   </span>
-                  <span className="label-mono" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>
+                  <span className="label-mono" style={{ color: "var(--fg-2)", whiteSpace: "nowrap" }}>
                     {now ? relative(n.createdAt, now) : ""}
                   </span>
                   {isUnread && <Image src="/images/app/unread.svg" alt="Unread" width={7} height={7} />}
@@ -118,7 +119,7 @@ export default function NotificationsScreen() {
 
       <div className={styles.row} style={{ alignItems: "stretch" }}>
         <button className={styles.secondary} style={{ flex: 1 }} onClick={() => setSettings((s) => !s)} aria-expanded={settings}>
-          <Image src="/images/app/settings-2.svg" alt="" width={16} height={16} />
+          <Image src="/images/app/settings-2.svg" alt="" width={16} height={16} style={{ filter: "var(--icon-ink)" }} />
           Reminder settings
         </button>
       </div>

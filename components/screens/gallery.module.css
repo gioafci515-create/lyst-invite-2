@@ -22,7 +22,7 @@
 .filters {
   display: flex;
   gap: 0;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--rule);
   width: max-content;
   max-width: 100%;
 }
@@ -34,13 +34,13 @@
   gap: 8px;
   background: transparent;
   border: 0;
-  border-right: 1px solid var(--ink);
+  border-right: 1px solid var(--rule);
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink);
+  color: var(--fg);
 }
 .filter:last-child {
   border-right: 0;
@@ -63,8 +63,8 @@
   gap: 8px;
 }
 .queueItem {
-  background: var(--cream);
-  border: 1px solid var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -113,13 +113,13 @@
   height: 36px;
   display: grid;
   place-items: center;
-  background: var(--cream);
-  border: 1px solid var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
 }
 .play svg {
   width: 16px;
   height: 16px;
-  fill: var(--ink);
+  fill: var(--fg);
 }
 .pending {
   position: absolute;
@@ -127,9 +127,9 @@
   right: 0;
   bottom: 0;
   padding: 8px 10px;
-  background: var(--cream);
-  border-top: 1px solid var(--ink);
-  color: var(--ink);
+  background: var(--raised);
+  border-top: 1px solid var(--rule);
+  color: var(--fg);
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 700;
@@ -140,7 +140,7 @@
 }
 
 .empty {
-  border: 1px dashed var(--ink);
+  border: 1px dashed var(--rule);
   padding: 32px 18px;
   display: flex;
   flex-direction: column;
@@ -210,9 +210,9 @@
   flex: none;
   display: grid;
   place-items: center;
-  background: var(--cream);
+  background: var(--raised);
   border: 1px solid var(--cream);
-  color: var(--ink);
+  color: var(--fg);
 }
 .viewerBtn svg {
   width: 22px;

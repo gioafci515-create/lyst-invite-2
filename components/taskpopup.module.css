@@ -13,7 +13,7 @@
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   border: 0;
   background: transparent;
-  color: var(--ink);
+  color: var(--fg);
   display: none;
   align-items: flex-end;
   justify-content: center;
@@ -63,8 +63,8 @@ html:has(.dialog[open]) {
 }
 .front {
   position: relative;
-  background: var(--cream);
-  border: 3px solid var(--ink);
+  background: var(--raised);
+  border: 3px solid var(--rule);
   box-shadow: 8px 8px 0 var(--red);
   padding: 18px 18px 16px;
   display: grid;
@@ -76,7 +76,7 @@ html:has(.dialog[open]) {
   inset: 0;
   transform: rotateY(180deg);
   background: var(--ink) repeating-linear-gradient(-45deg, transparent 0 12px, rgba(245, 240, 227, 0.07) 12px 13px);
-  border: 3px solid var(--ink);
+  border: 3px solid var(--rule);
   box-shadow: 8px 8px 0 var(--red);
   display: grid;
   place-items: center;
@@ -108,7 +108,7 @@ html:has(.dialog[open]) {
   font-variant-numeric: tabular-nums;
 }
 .pos {
-  color: var(--muted);
+  color: var(--fg-2);
 }
 .dot {
   width: 9px;
@@ -166,7 +166,7 @@ html:has(.dialog[open]) {
   min-height: 52px;
   padding: 0 18px;
   background: transparent;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--rule);
   font-family: var(--f-mono);
   font-size: 13px;
   font-weight: 700;
@@ -182,7 +182,7 @@ html:has(.dialog[open]) {
   text-underline-offset: 4px;
 }
 .dialog :focus-visible {
-  outline: 3px solid var(--ink);
+  outline: 3px solid var(--rule);
   outline-offset: 3px;
 }
 @media (min-width: 761px) {

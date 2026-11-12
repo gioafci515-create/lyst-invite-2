@@ -54,7 +54,7 @@
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 6px;
   padding: 10px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--rule);
   text-decoration: none;
   color: inherit;
   overflow: hidden;
@@ -68,12 +68,12 @@
   opacity: 0.6;
 }
 .card[data-card="open"] .cardLink {
-  background: var(--cream);
+  background: var(--raised);
   border: 3px solid var(--red);
   box-shadow: 4px 4px 0 var(--red);
 }
 .card[data-card="done"] .cardLink {
-  background: var(--cream);
+  background: var(--raised);
 }
 .cardNo,
 .cardFoot {
@@ -116,7 +116,7 @@
   overflow: hidden;
 }
 .card[data-card="open"] .cardFoot {
-  color: var(--red-text);
+  color: var(--accent-ink);
 }
 .cardLink:focus-visible {
   outline: 3px solid var(--red);
@@ -139,8 +139,8 @@
   gap: 10px;
 }
 .item {
-  background: var(--cream);
-  border: 1px solid var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
   border-left: 6px solid var(--red);
   padding: 14px;
   display: flex;
@@ -179,7 +179,7 @@
   justify-content: center;
   background: var(--red);
   border: 1px solid var(--red);
-  color: var(--ink);
+  color: var(--fg);
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 700;

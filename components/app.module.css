@@ -1,6 +1,6 @@
 /* Shared mobile app chrome + primitives for the LYST event screens */
 .phone {
-  background: var(--sand);
+  background: var(--ground);
   width: 100%;
   max-width: 480px;
   min-height: 100dvh;
@@ -17,8 +17,8 @@
 }
 
 .bar {
-  background: var(--cream);
-  border-bottom: 1px solid var(--ink);
+  background: var(--raised);
+  border-bottom: 1px solid var(--rule);
   height: 72px;
   padding: 0 16px;
   display: flex;
@@ -45,7 +45,7 @@
 }
 
 .dock {
-  background: var(--cream);
+  background: var(--raised);
   padding: 10px 16px 12px;
   display: flex;
   flex-direction: column;
@@ -66,10 +66,10 @@
   gap: 4px;
   font-size: 12px;
   text-align: center;
-  color: var(--muted);
+  color: var(--fg-2);
 }
 .step[aria-current="step"] {
-  color: var(--ink);
+  color: var(--fg);
 }
 .stepBar {
   height: 3px;
@@ -99,9 +99,9 @@
   text-transform: uppercase;
 }
 .secondary {
-  background: var(--cream);
-  border: 1px solid var(--ink);
-  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  color: var(--fg);
   min-height: 44px;
   padding: 0 14px;
   display: flex;
@@ -122,9 +122,9 @@
   gap: 6px;
 }
 .choice {
-  background: var(--cream);
-  border: 1px solid var(--ink);
-  color: var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  color: var(--fg);
   min-height: 44px;
   padding: 7px 11px;
   font-size: 16px;
@@ -142,8 +142,8 @@
 
 /* form fields */
 .field {
-  background: var(--cream);
-  border: 1px solid var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
   padding: 9px 12px;
   display: flex;
   flex-direction: column;
@@ -152,7 +152,7 @@
   font-size: 16px;
 }
 .field > span:first-child {
-  color: var(--muted);
+  color: var(--fg-2);
   font-family: var(--f-mono);
   font-weight: 700;
   font-size: 12px;
@@ -163,7 +163,7 @@
 .field textarea {
   font: inherit;
   line-height: 1.35;
-  color: var(--ink);
+  color: var(--fg);
   background: none;
   border: 0;
   width: 100%;
@@ -174,7 +174,7 @@
   outline: none;
 }
 .field:focus-within {
-  outline: 3px solid var(--ink);
+  outline: 3px solid var(--rule);
   outline-offset: 1px;
 }
 .valueRow {
@@ -184,7 +184,7 @@
   gap: 8px;
 }
 .verified {
-  color: var(--red-text);
+  color: var(--accent-ink);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -193,8 +193,8 @@
 
 /* cards */
 .card {
-  background: var(--cream);
-  border: 1px solid var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -202,7 +202,7 @@
 }
 .cardRed {
   background: var(--red);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--rule);
   color: #191817;
   padding: 12px;
   display: flex;
@@ -211,7 +211,7 @@
   font-size: 16px;
 }
 .muted {
-  color: var(--muted);
+  color: var(--fg-2);
 }
 .lead {
   font-family: var(--f-display);
@@ -221,10 +221,10 @@
 .body {
   font-size: 16px;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--fg-2);
 }
 .error {
-  color: var(--red-text);
+  color: var(--accent-ink);
   font-size: 16px;
 }
 .stepper {
@@ -301,13 +301,13 @@
 .routed .dock {
   position: sticky;
   bottom: 0;
-  border-top: 1px solid var(--ink);
+  border-top: 1px solid var(--rule);
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
 }
 @media (min-width: 520px) {
   .routed {
-    border-left: 1px solid var(--ink);
-    border-right: 1px solid var(--ink);
+    border-left: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
   }
 }
 

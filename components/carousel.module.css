@@ -24,7 +24,7 @@
   display: none;
 }
 .track:focus-visible {
-  outline: 3px solid var(--ink);
+  outline: 3px solid var(--rule);
   outline-offset: 4px;
 }
 .dragging {
@@ -65,7 +65,7 @@
 }
 .cursorActive {
   background: var(--red);
-  color: var(--ink);
+  color: var(--fg);
 }
 
 .bar {
@@ -73,8 +73,8 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--ink);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
   padding: 4px 0;
   min-height: 52px;
   font-size: 14px;
@@ -85,7 +85,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--fg-2);
 }
 /* the annotation cursor only exists where there is a pointer */
 @media (hover: none) {
@@ -97,7 +97,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--red-text);
+  color: var(--accent-ink);
 }
 .dots {
   display: flex;
@@ -112,7 +112,7 @@
   font-size: 12px;
 }
 .arrow {
-  color: var(--ink);
+  color: var(--fg);
   font-size: 18px;
 }
 

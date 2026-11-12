@@ -1,4 +1,4 @@
-/* Full-screen feature routes: one header with a way back, then the screen. */
+/* Full-screen feature routes: a compact header with a way back, the screen's photographic scene, then the screen. */
 .header {
   position: sticky;
   top: 0;
@@ -8,22 +8,23 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--cream);
-  border-bottom: 1px solid var(--ink);
+  background: var(--glass-ground);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--fg);
 }
 .back {
   flex: none;
   min-height: 44px;
   min-width: 44px;
-  padding: 0 10px 0 8px;
+  padding: 0 12px 0 8px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-family: var(--f-mono);
-  font-size: 12px;
+  gap: 8px;
+  font-family: var(--f-grotesk);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 .back svg {
   width: 20px;
@@ -32,19 +33,89 @@
 .title {
   min-width: 0;
   padding-left: 12px;
-  border-left: 1px solid var(--ink);
+  border-left: 1px solid var(--rule-soft);
   font-family: var(--f-grotesk);
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* the scene below carries the name at the top; the header's copy of it arrives as the scene scrolls away */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .title {
+      animation: title-in linear both;
+      animation-timeline: scroll(root);
+      animation-range: 60px 180px;
+    }
+  }
+}
+@keyframes title-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
 
 .main {
-  background: var(--sand);
+  background: var(--ground);
+  color: var(--fg);
   min-height: calc(100dvh - var(--header-h));
 }
+
+/* ---------- The scene: the feature's photograph with its name set large ---------- */
+.scene {
+  position: relative;
+  isolation: isolate;
+  height: clamp(150px, 24svh, 300px);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--cream);
+}
+.scene img {
+  z-index: -2;
+}
+.scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.1) 0%, rgba(10, 10, 10, 0.35) 45%, rgba(10, 10, 10, 0.88) 100%);
+}
+.sceneTitle {
+  width: 100%;
+  /* lines up with the screen below it (open screens are 1100px wide at most) */
+  padding: 0 max(clamp(16px, 4vw, 56px), calc((100% - 1100px) / 2)) clamp(14px, 2.4vw, 28px);
+  font-family: var(--f-mark);
+  font-weight: 700;
+  font-size: clamp(44px, 12vw, 140px);
+  line-height: 0.86;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sceneTitle {
+    animation: scene-title 900ms var(--ease-arrive) 80ms both;
+  }
+  .scene img {
+    animation: scene-photo 1400ms var(--ease-arrive) both;
+  }
+}
+@keyframes scene-title {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+@keyframes scene-photo {
+  from {
+    transform: scale(1.08);
+  }
+}
+
 .framed {
   max-width: 480px;
   margin: 0 auto;
@@ -55,9 +126,9 @@
 }
 .intro {
   padding: 20px 16px 0;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--fg-2);
   max-width: 60ch;
 }
 .loading {
@@ -69,12 +140,15 @@
     padding: 0 36px 0 28px;
   }
   .title {
-    font-size: 20px;
+    font-size: 18px;
+  }
+  .scene {
+    height: clamp(220px, 34svh, 380px);
   }
   .framed {
     padding-top: 24px;
   }
   .intro {
-    padding: 0 0 16px;
+    padding: 24px 0 16px;
   }
 }

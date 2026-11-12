@@ -85,7 +85,7 @@
   align-items: center;
   justify-content: center;
   background: var(--red);
-  color: var(--ink);
+  color: var(--fg);
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 700;
@@ -123,8 +123,8 @@
   display: flex;
   align-items: center;
   padding: 0 14px;
-  background: var(--cream);
-  border: 1px solid var(--ink);
+  background: var(--raised);
+  border: 1px solid var(--rule);
   font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 700;
@@ -164,7 +164,7 @@
 .askYes {
   background: var(--acid);
   border: 1px solid var(--acid);
-  color: var(--ink);
+  color: var(--fg);
 }
 .askNo {
   background: transparent;
@@ -175,7 +175,7 @@
 /* the moment's prompt at the top of a capture screen */
 .moment {
   border-left: 4px solid var(--red);
-  background: var(--cream);
+  background: var(--raised);
   padding: 12px 14px;
   display: grid;
   gap: 4px;
