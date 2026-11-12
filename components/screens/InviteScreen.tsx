@@ -58,7 +58,7 @@ function Teaser() {
       </h2>
       <ul className={styles.teaserList}>
         {rows.map((t) => (
-          <li key={t.module} className={styles.teaserItem} data-teaser={t.module} data-reveal>
+          <li key={t.module} className={styles.teaserItem} data-teaser={t.module}>
             <span className={styles.teaserPhoto}>
               <Image src={t.src} alt="" fill quality={90} sizes="(max-width: 900px) 96px, 22vw" style={{ objectFit: "cover", objectPosition: t.pos }} />
             </span>
@@ -333,17 +333,67 @@ function Rsvp() {
   );
 }
 
+/** A photograph set into the line of type, at the height of the letters. Decorative: the sentence says it all. */
+function Inline({ src, pos = "50% 50%", wide = false }: { src: string; pos?: string; wide?: boolean }) {
+  return (
+    <span className={`${styles.inline} ${wide ? styles.inlineWide : ""}`} aria-hidden>
+      <Image src={src} alt="" fill quality={90} sizes="(max-width: 900px) 30vw, 220px" style={{ objectFit: "cover", objectPosition: pos }} />
+    </span>
+  );
+}
+
+/**
+ * The opening photograph as a folded print: one leaf, folded over along the crease, opens flat on a guest's first visit
+ * (UN/FOLD's own gesture). Returning guests and reduced motion see it already open. Decoration only.
+ */
+function Sheet({ firstVisit }: { firstVisit: boolean }) {
+  const photos = (cls: string) => (
+    <>
+      <Image className={`${styles.sheetWide} ${cls}`} src="/images/shard.png" alt="" fill priority quality={90} sizes="(max-width: 900px) 1px, 60vw" style={{ objectFit: "cover", objectPosition: "50% 40%" }} />
+      <Image className={`${styles.sheetNarrow} ${cls}`} src="/images/story-mobile.png" alt="" fill priority quality={90} sizes="(max-width: 900px) 100vw, 1px" style={{ objectFit: "cover", objectPosition: "50% 35%" }} />
+    </>
+  );
+  return (
+    <div className={styles.sheet} data-unfold={firstVisit || undefined} aria-hidden>
+      <div className={styles.flat}>{photos("")}</div>
+      <div className={styles.leaf}>
+        {photos("")}
+        <span className={styles.leafShade} />
+      </div>
+      <span className={styles.crease} />
+      <span className={styles.acid} />
+    </div>
+  );
+}
+
+/** Where the photographs sit in the event's one-line story: a quarter in, past halfway, and at the end. */
+const STORY_PHOTOS = [
+  { at: 0.2, src: "/images/gallery1.png", pos: "50% 40%", wide: false },
+  { at: 0.55, src: "/images/gallery2.png", pos: "50% 28%", wide: true },
+  { at: 1, src: "/images/gallery3.png", pos: "50% 50%", wide: false },
+];
+
+/** The event's line (lib/identity.ts), with approved photographs set between its words. */
+function StoryLine({ text }: { text: string }) {
+  const words = text.split(" ");
+  const out: React.ReactNode[] = [];
+  words.forEach((w, i) => {
+    out.push(i ? " " + w : w);
+    for (const ph of STORY_PHOTOS) if (Math.max(1, Math.round(ph.at * words.length)) === i + 1) out.push(" ", <Inline key={ph.src} src={ph.src} pos={ph.pos} wide={ph.wide} />);
+  });
+  return <>{out}</>;
+}
+
 /** The invitation: everything a guest needs before the night, in the order they need it. */
 export default function InviteScreen() {
   const ev = useEvent();
-  // the screen behind the hero warms up on a first visit only
+  // the print unfolds and the screen behind the title warms up on a first visit only
   const firstVisit = useFirstVisit();
   const replied = !!useReply();
-
   return (
-    <div id={SECTION.invite}>
+    <div id={SECTION.invite} className={styles.chapter}>
       <section className={styles.hero} aria-labelledby="invite-title">
-        {/* a slow, faint print-plasma behind the hero: ink on sand, no colour, no shine (decoration only) */}
+        {/* a slow, faint print-plasma behind the title: ink on sand, no colour, no shine (decoration only) */}
         <div className={styles.crt} aria-hidden>
           <CRTWarp
             lightMode
@@ -351,7 +401,7 @@ export default function InviteScreen() {
             backgroundColor="transparent"
             mask="none"
             maskStrength={0}
-            brightness={0.22}
+            brightness={0.2}
             speed={0.22}
             waveAmplitude={0.3}
             waveFrequency={2.2}
@@ -375,15 +425,10 @@ export default function InviteScreen() {
             fps={30}
           />
         </div>
-        <div className={styles.media}>
-          <div className={styles.photo}>
-            <Image className={styles.photoWide} src="/images/shard.png" alt="" width={520} height={690} priority quality={90} sizes="(max-width: 900px) 1px, 640px" />
-            <Image className={styles.photoNarrow} src="/images/shard-mobile.png" alt="" width={300} height={430} priority quality={90} sizes="(max-width: 900px) 62vw, 1px" />
-          </div>
-          <div className={styles.acid} aria-hidden />
-        </div>
+        <Sheet firstVisit={firstVisit} />
         <div className={styles.heroCopy}>
-          {/* the title switches on like a neon sign when the invitation opens */}
+          <p className={styles.kicker}>You are invited to</p>
+          {/* the approved lockup, on solid ground; the title switches on like a neon sign when the invitation opens */}
           <h1 id="invite-title" className={styles.title}>
             <Neon text="UN/" />
             <br />
@@ -392,31 +437,44 @@ export default function InviteScreen() {
               <Neon text="2026" from={7} tone="red" />
             </span>
           </h1>
-          <p className={styles.lede}>A live publishing experiment: type, sound, performance and an audience that edits the ending.</p>
-          <p className={styles.when}>
-            {dateLabel(ev.startsAt, ev.timezone)}, {timeLabel(ev.startsAt, ev.timezone)}
-          </p>
-          {ev.rsvpOpen === true && !replied ? (
-            <a href={`#${SECTION.rsvp}`} className={styles.cta} data-btn>
-              Reply now <Arrow />
-            </a>
-          ) : ev.rsvpOpen !== null ? (
-            <a href={`#${SECTION.programme}`} className={styles.cta} data-btn>
-              See the programme <Arrow />
-            </a>
-          ) : null}
+          <dl className={styles.ticket}>
+            <div>
+              <dt>When</dt>
+              <dd className={styles.when}>
+                <time dateTime={ev.startsAt}>
+                  {new Date(ev.startsAt).toLocaleDateString("en-GB", { timeZone: ev.timezone, weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                  <br />
+                  {timeLabel(ev.startsAt, ev.timezone)}
+                </time>
+              </dd>
+            </div>
+            <div>
+              <dt>Where</dt>
+              <dd>
+                {VENUE}, {CITY}
+              </dd>
+            </div>
+          </dl>
+          <div className={styles.heroActions}>
+            {ev.rsvpOpen === true && !replied ? (
+              <a href={`#${SECTION.rsvp}`} className={styles.cta} data-btn>
+                Reply now <Arrow />
+              </a>
+            ) : ev.rsvpOpen !== null ? (
+              <a href={`#${SECTION.programme}`} className={styles.cta} data-btn>
+                See the programme <Arrow />
+              </a>
+            ) : null}
+          </div>
         </div>
       </section>
 
       <Countdown />
 
       <section id={SECTION.story} className={styles.story} aria-labelledby="story-title" data-reveal>
-        <div className={styles.sectionHead}>
-          <p className={styles.label}>The invitation, in scenes</p>
-          <h2 id="story-title" className={styles.h2}>
-            A visual language made for this moment.
-          </h2>
-        </div>
+        <h2 id="story-title" className={styles.storyLine}>
+          <StoryLine text={EVENT.tagline} />
+        </h2>
         <Carousel slides={SCENES} label="The invitation, in scenes" />
       </section>
 
@@ -440,10 +498,10 @@ export default function InviteScreen() {
       </section>
 
       <section id={SECTION.programme} className={styles.programme} aria-labelledby="programme-title" data-reveal>
-        <div className={styles.sectionHead}>
+        <div className={styles.programmeHead}>
           <p className={styles.label}>Programme, {dateLabel(ev.startsAt, ev.timezone)}</p>
-          <h2 id="programme-title" className={styles.h2}>
-            TIME IS MATERIAL.
+          <h2 id="programme-title" className={styles.bigTitle}>
+            Time is material.
           </h2>
         </div>
         <ScheduleList />
