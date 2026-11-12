@@ -1,4 +1,5 @@
 import { getKV } from "./kv";
+import { previewChapter } from "./previewGuard";
 import { computeEventState, resolveConfig, type ConfigIssue, type EventConfig, type EventState, type ModuleId } from "./eventState";
 
 const KEY = "event:config";
@@ -6,7 +7,11 @@ const KEY = "event:config";
 /** Read the stored config and make it safe. Never throws: a broken or unreachable store falls back to the defaults. */
 export async function getEventConfig(): Promise<{ config: EventConfig; issues: ConfigIssue[] }> {
   try {
-    return resolveConfig(await getKV().get<unknown>(KEY));
+    const r = resolveConfig(await getKV().get<unknown>(KEY));
+    // a preview deployment can show any chapter for review (never in production: see previewChapter)
+    const chapter = await previewChapter();
+    if (chapter) r.config = { ...r.config, override: chapter };
+    return r;
   } catch {
     const r = resolveConfig(null);
     r.issues.push({ level: "error", message: "The settings store could not be read; using defaults." });

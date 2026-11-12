@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Arimo, Roboto_Mono, Space_Grotesk } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
+import PreviewSwitch from "@/components/PreviewSwitch";
 import { EVENT } from "@/lib/identity";
 
 const arimo = Arimo({ variable: "--font-arimo", subsets: ["latin"], weight: ["400", "700"] });
@@ -40,7 +42,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: RETURNING }} />
         <script dangerouslySetInnerHTML={{ __html: SKIPPED_TRANSITION }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* preview deployments only (renders nothing in production) */}
+        <Suspense fallback={null}>
+          <PreviewSwitch />
+        </Suspense>
+      </body>
     </html>
   );
 }
