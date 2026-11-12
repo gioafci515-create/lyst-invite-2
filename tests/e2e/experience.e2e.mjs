@@ -105,10 +105,23 @@ try {
       old3: row("old3", "capsule", { text: "Old capsule name", meta: { unlock: "2027-11-14" } }),
     };
     saveDb(d);
-    for (const t of ["letter", "later", "capsule"]) {
-      const r = await post({ type: t, name: "t", text: "new" });
-      ok(`a new "${t}" is no longer accepted: it points to "Leave something for later"`, r.status === 410 && /Leave something for later/.test(r.body.error ?? ""), `${r.status}`);
-    }
+    // three privacy models, kept distinct: the unsealed message for later is retired ("for later" seals it, hosts
+    // included); the letter (the hosts read it at once) and the time capsule (a name and a day) are accepted again
+    const oldLater = await post({ type: "later", name: "t", text: "new" });
+    ok(`a new unsealed "later" is no longer accepted: it points to "Leave something for later"`, oldLater.status === 410 && /Leave something for later/.test(oldLater.body.error ?? ""), `${oldLater.status}`);
+    // the letter keeps the live room's hours (it lives there): refused before the night, accepted during it
+    const earlyLetter = await post({ type: "letter", name: "Bea", text: "Too early." });
+    ok("a letter before the night is refused (the live room isn't open yet)", earlyLetter.status === 403 || earlyLetter.status === 400, `${earlyLetter.status}`);
+    setConfig({ override: "during" });
+    const letter = await post({ type: "letter", name: "Bea", text: "A letter the hosts can read tonight." });
+    ok("a letter to the hosts is accepted (its own rule: the hosts read it at once)", letter.status === 200, JSON.stringify(letter.body));
+    ok("…and stored readable, with no sealing date", Object.values(db().contribs).some((r) => r.type === "letter" && r.text === "A letter the hosts can read tonight." && !r.openAt));
+    ok("an empty letter is refused", (await post({ type: "letter", name: "Bea", text: "" })).status === 400);
+    setConfig({ override: null });
+    const capsule = await post({ type: "capsule", name: "", text: "UN/FOLD, opened", meta: { unlock: "2027-11-14" } });
+    ok("a time capsule (a name and a day) is accepted", capsule.status === 200, JSON.stringify(capsule.body));
+    ok("a capsule day before the event is over is refused", (await post({ type: "capsule", name: "", text: "Too soon", meta: { unlock: "2026-11-14" } })).status === 400);
+    ok("a capsule without a day is refused", (await post({ type: "capsule", name: "", text: "No day" })).status === 400);
     const sealed = await post({ type: "forlater", name: "Ada", text: "Open me in 2027.", meta: { openAt: "2027-11-14" } });
     ok("something for later is accepted", sealed.status === 200, JSON.stringify(sealed.body));
     const stored = Object.values(db().contribs).find((r) => r.type === "forlater");
@@ -121,6 +134,7 @@ try {
     const a = await admin();
     let t = await a.go("/admin/contributions");
     ok("admin: sealed content is not readable", !/Open me in 2027\.|No day picked\./.test(t) && !/>Ada</.test(await a.page.ev("document.body.innerHTML")));
+    ok("admin: the new letter is readable at once, as its rule says", /A letter the hosts can read tonight\./.test(t));
     ok("admin: only the count and 'Sealed until <date>'", /2 sealed for later/.test(t) && /Sealed until 14 November 2027/.test(t), (t.match(/\d+ sealed for later[^.]*/) || [""])[0]);
     ok("admin: old letters, messages for later and capsules are still listed as they are", /An old live-room letter, readable as always\./.test(t) && /An old message for later, readable as always\./.test(t) && /Old capsule name/.test(t));
     t = await a.go("/admin/capsule");
@@ -142,21 +156,23 @@ try {
   /* ------------------------------------------------------------------ 4. routes and copy */
   console.log("\n--- 4. old routes, copy");
   {
-    for (const from of ["/letter", "/capsule", "/later"]) {
+    for (const [from, to] of [["/later", "/for-later"], ["/letter", "/live"]]) {
       const r = await fetch(ORIGIN + from, { redirect: "manual" });
-      ok(`${from} redirects to /for-later`, r.status >= 300 && r.status < 400 && new URL(r.headers.get("location"), ORIGIN).pathname === "/for-later", `${r.status} ${r.headers.get("location")}`);
+      ok(`${from} redirects to ${to}`, r.status >= 300 && r.status < 400 && new URL(r.headers.get("location"), ORIGIN).pathname === to, `${r.status} ${r.headers.get("location")}`);
     }
+    const cap = await fetch(ORIGIN + "/capsule", { redirect: "manual" });
+    ok("/capsule is its own screen again", cap.status === 200, String(cap.status));
     const f = await open({ path: "/for-later", now: AT.rsvpOpen, wait: 4500 });
     ok("/for-later: one screen with text, an optional photo and an open date (a year after the event by default)", /Leave something for later/.test(await text(f.page, "h1")) && (await f.page.ev(`!!document.querySelector('#later-text') && document.querySelector('input[type=date]').value === '2027-11-14' && [...document.querySelectorAll('button')].some(b => /Add a photo/.test(b.textContent))`)));
     ok("/for-later says nobody can read it before its day, the hosts included", /not even they can read it before 14 November 2027/.test(await body(f)));
     await f.close();
     const live = await open({ path: "/live", now: AT.duringNoTask, wait: 5000 });
-    ok("the live room's letter card links to 'for later' instead of its own form", await live.page.ev(`(() => { const c = document.querySelector('[data-item=letter]'); return !!c && !c.querySelector('textarea') && c.querySelector('a').getAttribute('href') === '/for-later'; })()`));
+    ok("the live room has its own letter again (the hosts read it at once), and points to 'for later' for a sealed one", await live.page.ev(`(() => { const c = document.querySelector('[data-item=letter]'); return !!c && !!c.querySelector('textarea') && /read it right away/.test(c.textContent) && !!c.querySelector('a[href="/for-later"]'); })()`));
     await live.close();
     const h = await open({ path: "/", now: AT.rsvpOpen, wait: 5000 });
     const t = await h.page.ev("document.body.textContent"); // the words as written (labels are upper-cased by CSS)
     ok("plain RSVP words: 'Are you coming?', 'I'm coming', 'Can't make it'", /Are you coming\?/.test(t) && /I’m coming/.test(t) && /Can’t make it/.test(t) && !/claim a position|joyfully|decline\b/i.test(t));
-    ok("the header shows the LYST wordmark without the unexplained '/ 10'", (await h.page.ev(`document.querySelector('header a[aria-label="LYST, home"]').textContent.trim()`)) === "LYST" && !/LYST \/ 10/.test(t));
+    ok("the header shows the approved Lyst. wordmark (the supplied image, not typed text), without the unexplained '/ 10'", (await h.page.ev(`(() => { const a = document.querySelector('header a[aria-label="Lyst., home"]'); const i = a && a.querySelector('img[alt="Lyst."]'); return !!i && i.getAttribute('src').includes('/brand/lyst-wordmark.png') && i.naturalWidth > 0; })()`)) && !/LYST \/ 10/.test(t));
     ok("no dinner, supper, wedding, couple or song copy on the invitation", !/\b(dinner|supper|wedding|couple|song)\b/i.test(t));
     await h.close();
   }

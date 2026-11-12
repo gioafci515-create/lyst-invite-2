@@ -187,10 +187,11 @@ try {
       return { on: on.length, onShown: on.every((e) => e.hasAttribute('data-shown')), below: below.length, waiting: below.filter((e) => !e.hasAttribute('data-shown')).length };
     })()`);
   {
-    // tonight's home: its first screen is full of sections
+    // tonight's home: the first screen is the stage (never waits); the sections below it wait for the scroll
     const t = await open({ path: "/", now: AT.duringNoTask, wait: 5500 });
     const st = await reveal(t.page);
-    ok("what is on screen when the page opens is shown at once", st.on > 0 && st.onShown, JSON.stringify(st));
+    const stage = await t.page.ev(`(() => { const s = document.querySelector("[data-phase=during] article"); return !!s && getComputedStyle(s).opacity === "1" && s.getBoundingClientRect().top < innerHeight; })()`);
+    ok("what is on screen when the page opens is shown at once", stage && st.onShown && st.below > 0, JSON.stringify({ ...st, stage }));
     await t.close();
   }
   {

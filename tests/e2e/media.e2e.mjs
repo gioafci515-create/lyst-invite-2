@@ -230,8 +230,9 @@ for (const p of ["/camera", "/voice", "/video"]) {
 }
 for (const [p, max] of [["/voice", 560], ["/video", 960]]) {
   const c = await media({ path: p, w: 1440, h: 900, mobile: false, now: AT.duringNoTask });
-  const r = JSON.parse(await c.page.ev("JSON.stringify(document.querySelector('main [class*=screen]').getBoundingClientRect())"));
-  ok(`${p} @ 1440px: centred, not stretched (≤ ${max}px)`, r.width <= max && Math.abs(r.left - (1440 - r.right)) < 2, `${Math.round(r.width)}px, ${Math.round(r.left)} / ${Math.round(1440 - r.right)}`);
+  const r = JSON.parse(await c.page.ev("JSON.stringify({ ...document.querySelector('main [class*=screen]').getBoundingClientRect().toJSON(), vw: document.documentElement.clientWidth })"));
+  // measured against the page width (a vertical scrollbar takes its own strip)
+  ok(`${p} @ 1440px: centred, not stretched (≤ ${max}px)`, r.width <= max && Math.abs(r.left - (r.vw - r.right)) < 2, `${Math.round(r.width)}px, ${Math.round(r.left)} / ${Math.round(r.vw - r.right)}`);
   await c.close();
 }
 

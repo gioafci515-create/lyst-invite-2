@@ -215,7 +215,7 @@ for (const [path, title] of ROUTE_TITLES) {
   }
   await c.close();
 }
-for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/for-later"], ["#gallery", "/gallery"], ["#capsule", "/for-later"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/moments"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
+for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", "/live"], ["#later", "/for-later"], ["#gallery", "/gallery"], ["#capsule", "/capsule"], ["#details", "/details"], ["#camera", "/camera"], ["#tasks", "/moments"], ["#updates", "/updates"], ["#hub", "/programme"]]) {
   const c = await open({ path: "/" + hash, now: AT.duringNoTask, wait: 4500 });
   const at = await c.page.ev("location.pathname + location.hash");
   ok(`old link /${hash} forwards to ${to}`, at === to, at);
@@ -229,7 +229,7 @@ for (const [hash, to] of [["#voice", "/voice"], ["#video", "/video"], ["#live", 
   ok("/#programme stays on the invitation before the event", (await b.page.ev("location.pathname === '/' && !!document.getElementById('programme')")) === true);
   await b.close();
 }
-for (const [from, to] of [["/guestbook", "/voice"], ["/later", "/for-later"], ["/letter", "/for-later"], ["/capsule", "/for-later"], ["/hub", "/programme"], ["/respond", "/details"], ["/notifications", "/updates"], ["/interact", "/live"]]) {
+for (const [from, to] of [["/guestbook", "/voice"], ["/later", "/for-later"], ["/letter", "/live"], ["/hub", "/programme"], ["/respond", "/details"], ["/notifications", "/updates"], ["/interact", "/live"]]) {
   const r = await fetch(ORIGIN + from, { redirect: "manual" });
   ok(`old address ${from} redirects to ${to}`, r.status >= 300 && r.status < 400 && new URL(r.headers.get("location"), ORIGIN).pathname === to, `${r.status} ${r.headers.get("location")}`);
 }
@@ -278,7 +278,7 @@ console.log("\n--- keyboard and accessibility (during, phone)");
     stops.push(await p.ev(`(() => { const e = document.activeElement; if (!e || e === document.body) return null; const cs = getComputedStyle(e); const name = (e.getAttribute('aria-label') || e.textContent || '').trim().replace(/\\s+/g,' ').slice(0, 36); const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow && cs.boxShadow !== 'none'); return { tag: e.tagName, name, ring, href: e.getAttribute('href') }; })()`));
   }
   const real = stops.filter(Boolean);
-  ok("keyboard: Tab reaches the primary actions in a sensible order", ["Record voice", "Say hello on film", "See the night", "Open camera"].every((n) => real.some((s) => s.name.startsWith(n))), real.map((s) => s.name).join(" > "));
+  ok("keyboard: Tab reaches the primary actions in a sensible order", ["Record voice", "Say it on film", "See the night", "Open camera"].every((n) => real.some((s) => s.name.startsWith(n))), real.map((s) => s.name).join(" > "));
   ok("keyboard: every focus stop has an accessible name", real.every((s) => s.name.length > 0), real.filter((s) => !s.name).length + " unnamed");
   ok("keyboard: every focus stop shows a visible focus indicator", real.every((s) => s.ring), real.filter((s) => !s.ring).map((s) => s.name).join(" | "));
   const dups = await p.ev(`(() => { const ids = [...document.querySelectorAll('[id]')].map(e => e.id); return ids.filter((x, i) => ids.indexOf(x) !== i); })()`);
@@ -362,7 +362,7 @@ for (const scn of ["duringVoiceTask", "after"]) {
     probe('lead button', '[class*=leadCta]');
     probe('row title', '[class*=rowTitle]');
     probe('row line', '[class*=rowLine]');
-    probe('section label', '[class*=moreLabel]');
+    probe('section label', '[class*=moreLabel], [class*=verbsTitle]');
     probe('header status', '${STATUS}');
     probe('bottom bar label', '${BAR} a');
     return out;
@@ -377,7 +377,7 @@ console.log("\n--- disabled modules are gated on the server (real config, cold c
   const ROOT = new URL("../../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
   const KV = ROOT + "data/kv.json";
   const backup = fs.existsSync(KV) ? fs.readFileSync(KV) : null;
-  const OFF = ["voice", "video", "gallery", "later"]; // the capsule has no guest route any more: /capsule leads to /for-later
+  const OFF = ["voice", "video", "gallery", "later", "capsule"];
   try {
     const db = backup ? JSON.parse(backup.toString()) : {};
     db["event:config"] = { ...(db["event:config"] ?? {}), override: "during", modules: Object.fromEntries(OFF.map((m) => [m, false])) };

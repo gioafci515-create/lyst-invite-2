@@ -45,5 +45,5 @@ export async function launch({ port = 9300, w = 390, h = 844, flags = [] } = {})
   const page = await mk(list.find((t) => t.type === "page").webSocketDebuggerUrl);
   const browser = await mk(ver.webSocketDebuggerUrl);
   await page.send("Runtime.enable");
-  return { page, browser, kill: () => { try { proc.kill(); } catch {} } };
+  return { page, browser, connect: mk, kill: () => { try { proc.kill(); } catch {} } };
 }

@@ -179,10 +179,11 @@ try {
   {
     const h = await open({ path: "/", now: AT.after, wait: 5000 });
     const t = await body(h);
-    ok("after: home offers one 'for later' that says what really happens (sealed until the day you pick)", /Leave something for later/.test(t) && /Sealed until the day you pick/.test(t) && !/Time capsule|a year from now/i.test(t));
+    ok("after: home offers 'for later' and says what really happens (sealed until the day you pick)", /Write for later/.test(t) && /Sealed until the day you pick/.test(t) && !/a year from now/i.test(t));
+    ok("after: home offers the time capsule with its own rule (a name and a day, for the hosts)", /Seal the time capsule/.test(t) && /Only the hosts get both/.test(t));
     await h.close();
     const r = await fetch(ORIGIN + "/capsule", { redirect: "manual" });
-    ok("/capsule now leads to the same screen", new URL(r.headers.get("location") ?? "/", ORIGIN).pathname === "/for-later");
+    ok("/capsule is its own screen", r.status === 200, String(r.status));
   }
 
   /* ------------------------------------------------------------------ 7. countdowns and "next" */
@@ -248,7 +249,7 @@ try {
     await c.page.ev(`[...document.querySelectorAll('footer nav button')].find(b => b.textContent.includes('Memories')).click()`);
     await sleep(200);
     const mem = await c.page.ev(`(() => { const b = [...document.querySelectorAll('footer nav button')].find(b => b.textContent.includes('Memories')); const ul = document.getElementById(b.getAttribute('aria-controls')); return b.getAttribute('aria-expanded') + ':' + [...ul.querySelectorAll('a')].map(a => a.textContent.trim()).join('/') + ':' + ul.hidden; })()`);
-    ok("phone footer: opening a group shows its links; nothing of the night is listed before it opens", mem === "true:Gallery/For later:false" && !/Camera|Voice|Video|Live room/.test(await text(c.page, 'footer nav')), mem);
+    ok("phone footer: opening a group shows its links; nothing of the night is listed before it opens", mem === "true:Gallery/For later/Time capsule:false" && !/Camera|Voice|Video|Live room/.test(await text(c.page, 'footer nav')), mem);
     await c.close();
     const dsk = await open({ path: "/", now: AT.rsvpOpen, w: 1440, h: 900, mobile: false, wait: 5000 });
     ok("desktop footer: unchanged, lists visible, no disclosure buttons", await dsk.page.ev(`document.querySelectorAll('footer nav button').length === 0 && [...document.querySelectorAll('footer nav ul')].every(u => !u.hidden && u.offsetHeight > 0)`));
