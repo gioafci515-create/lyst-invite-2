@@ -22,6 +22,8 @@ import { ROUTE, SECTION } from "@/lib/sections";
 import { CITY, VENUE } from "@/lib/venue";
 import styles from "./invite.module.css";
 import { EVENT } from "@/lib/identity";
+import shard from "@/public/images/shard.png";
+import storyMobile from "@/public/images/story-mobile.png";
 
 const SCENES = [
   { src: "/images/gallery1.png", alt: "Torn brutalist typography poster pasted on concrete" },
@@ -349,8 +351,8 @@ function Inline({ src, pos = "50% 50%", wide = false }: { src: string; pos?: str
 function Sheet({ firstVisit }: { firstVisit: boolean }) {
   const photos = (cls: string) => (
     <>
-      <Image className={`${styles.sheetWide} ${cls}`} src="/images/shard.png" alt="" fill priority quality={90} sizes="(max-width: 900px) 1px, 60vw" style={{ objectFit: "cover", objectPosition: "50% 40%" }} />
-      <Image className={`${styles.sheetNarrow} ${cls}`} src="/images/story-mobile.png" alt="" fill priority quality={90} sizes="(max-width: 900px) 100vw, 1px" style={{ objectFit: "cover", objectPosition: "50% 35%" }} />
+      <Image className={`${styles.sheetWide} ${cls}`} src={shard} alt="" fill priority quality={90} placeholder="blur" sizes="(max-width: 900px) 1px, 60vw" style={{ objectFit: "cover", objectPosition: "50% 40%" }} />
+      <Image className={`${styles.sheetNarrow} ${cls}`} src={storyMobile} alt="" fill priority quality={90} placeholder="blur" sizes="(max-width: 900px) 100vw, 1px" style={{ objectFit: "cover", objectPosition: "50% 35%" }} />
     </>
   );
   return (

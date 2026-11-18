@@ -1,5 +1,10 @@
 import { Suspense, ViewTransition, type ReactNode } from "react";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
+import gallery1 from "@/public/images/gallery1.png";
+import gallery2 from "@/public/images/gallery2.png";
+import gallery3 from "@/public/images/gallery3.png";
+import shard from "@/public/images/shard.png";
+import storyMobile from "@/public/images/story-mobile.png";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CaptureKind, ModuleId } from "@/lib/eventState";
@@ -42,23 +47,23 @@ function Header({ title }: { title: string }) {
 }
 
 /** Each feature's approved photograph (crops by object-position only; the images are untouched). */
-const SCENE: Partial<Record<ModuleId, { src: string; pos: string }>> = {
-  voice: { src: "/images/gallery1.png", pos: "50% 40%" },
-  video: { src: "/images/shard.png", pos: "50% 38%" },
-  live: { src: "/images/gallery3.png", pos: "50% 55%" },
-  gallery: { src: "/images/gallery3.png", pos: "50% 40%" },
-  later: { src: "/images/gallery2.png", pos: "50% 26%" },
-  tasks: { src: "/images/story-mobile.png", pos: "50% 30%" },
-  capsule: { src: "/images/gallery3.png", pos: "50% 70%" },
+const SCENE: Partial<Record<ModuleId, { src: StaticImageData; pos: string }>> = {
+  voice: { src: gallery1, pos: "50% 40%" },
+  video: { src: shard, pos: "50% 38%" },
+  live: { src: gallery3, pos: "50% 55%" },
+  gallery: { src: gallery3, pos: "50% 40%" },
+  later: { src: gallery2, pos: "50% 26%" },
+  tasks: { src: storyMobile, pos: "50% 30%" },
+  capsule: { src: gallery3, pos: "50% 70%" },
 };
-const SCENE_DEFAULT = { src: "/images/gallery2.png", pos: "50% 30%" };
+const SCENE_DEFAULT = { src: gallery2, pos: "50% 30%" };
 
 /** The screen's opening scene: its photograph, its name set large (the h1 in the header says the same to assistive tech). */
 function Scene({ title, module }: { title: string; module?: ModuleId }) {
   const ph = (module && SCENE[module]) || SCENE_DEFAULT;
   return (
     <div className={styles.scene} aria-hidden>
-      <Image src={ph.src} alt="" fill priority quality={90} sizes="100vw" style={{ objectFit: "cover", objectPosition: ph.pos }} />
+      <Image src={ph.src} alt="" fill priority quality={90} placeholder="blur" sizes="100vw" style={{ objectFit: "cover", objectPosition: ph.pos }} />
       <p className={styles.sceneTitle}>{title}</p>
     </div>
   );

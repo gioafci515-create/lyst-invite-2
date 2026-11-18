@@ -114,8 +114,16 @@ export default function CapsuleScreen() {
           ]}
         >
           {left && (
-            <p className={r.countdown} aria-live="off">
-              {left.ms > 0 ? `Opens in ${left.text}` : "Its day has come."}
+            <p className={r.capsuleCount} aria-live="off">
+              {left.ms > 0 ? (
+                <>
+                  <span className={r.capsuleDays}>{Math.floor(left.ms / 864e5) || "<1"}</span>
+                  <span>{Math.floor(left.ms / 864e5) === 1 ? "day" : "days"} until it opens</span>
+                  <span className="sr-only">: opens in {left.text}</span>
+                </>
+              ) : (
+                "Its day has come."
+              )}
             </p>
           )}
           <p className={r.body}>It can&rsquo;t be changed now. The hosts have its name and its day.</p>

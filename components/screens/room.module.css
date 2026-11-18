@@ -479,6 +479,34 @@
 .sealed .secondary:focus-visible {
   outline-color: var(--acid);
 }
+/* the sealed time capsule: the days left, set large, in the event's display cut */
+.capsuleCount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  font-family: var(--f-grotesk);
+  font-weight: 700;
+  font-size: 18px;
+}
+.capsuleDays {
+  font-family: var(--f-mark);
+  font-size: clamp(88px, 22vw, 168px);
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .capsuleDays {
+    animation: capsule-days 900ms var(--ease-arrive) 200ms both;
+  }
+}
+@keyframes capsule-days {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
 .countdown {
   font-family: var(--f-grotesk);
   font-size: 28px;

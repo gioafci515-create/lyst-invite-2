@@ -446,6 +446,26 @@
 .prints[data-count="3"] .print:nth-child(3) {
   inset: 44% 6% 0 30%;
 }
+/* the caption written in the print's bottom margin */
+.printCaption {
+  position: absolute;
+  left: clamp(8px, 1vw, 14px);
+  right: clamp(8px, 1vw, 14px);
+  bottom: 0;
+  height: clamp(28px, 3vw, 44px);
+  display: flex;
+  align-items: center;
+  font-family: var(--f-grotesk);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.prints[data-count="2"] .printEmpty {
+  z-index: 1;
+}
 /* nothing approved yet: a blank print, still developing */
 .printEmpty .printImage {
   background: linear-gradient(110deg, var(--sand) 30%, #e6e1d5 50%, var(--sand) 70%);

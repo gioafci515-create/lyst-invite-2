@@ -16,14 +16,18 @@ import { EVENT } from "@/lib/identity";
 import { spoken, VIDEO_MAX_SECONDS } from "@/lib/limits";
 import { readMine, type MineEntry } from "@/lib/mine";
 import { useHydrated } from "@/lib/useClient";
+import gallery1 from "@/public/images/gallery1.png";
+import gallery2 from "@/public/images/gallery2.png";
+import gallery3 from "@/public/images/gallery3.png";
+import shard from "@/public/images/shard.png";
 import { useMoments } from "@/lib/useMoments";
 
 /** Approved event photography only. Crops are done with object-position; the images themselves are untouched. */
 const PHOTO = {
-  poster: { src: "/images/gallery1.png", pos: "50% 40%" },
-  portrait: { src: "/images/gallery2.png", pos: "50% 22%" },
-  hall: { src: "/images/gallery3.png", pos: "50% 50%" },
-  stage: { src: "/images/shard.png", pos: "50% 38%" },
+  poster: { src: gallery1, pos: "50% 40%" },
+  portrait: { src: gallery2, pos: "50% 22%" },
+  hall: { src: gallery3, pos: "50% 50%" },
+  stage: { src: shard, pos: "50% 38%" },
 } as const;
 type PhotoKey = keyof typeof PHOTO;
 
@@ -32,7 +36,7 @@ type Row = { key: string; title: string; line: string; href: string; photo: Phot
 const path = (href: string) => toRoute(href).split("?")[0];
 
 function Photo({ k, sizes, priority }: { k: PhotoKey; sizes: string; priority?: boolean }) {
-  return <Image src={PHOTO[k].src} alt="" fill quality={90} sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
+  return <Image src={PHOTO[k].src} alt="" fill quality={90} placeholder="blur" sizes={sizes} priority={priority} style={{ objectFit: "cover", objectPosition: PHOTO[k].pos }} />;
 }
 
 /**
@@ -262,10 +266,18 @@ function GalleryLead({ items }: { items: GalleryItem[] | null }) {
           ))}
         </div>
       ) : (
-        // nothing approved yet: an empty print frame, never a photo standing in for the guests' own
-        <div className={styles.prints} data-count={0} aria-hidden>
-          <span className={`${styles.print} ${styles.printEmpty}`} style={{ "--tilt": "-1.2deg" } as CSSProperties}>
+        // nothing approved yet: the invitation's own print comes back (captioned as the invitation, never passed off as
+        // a guest's photo) beside a blank print still developing
+        <div className={styles.prints} data-count={2} aria-hidden>
+          <span className={styles.print} style={{ "--tilt": "-1.6deg" } as CSSProperties}>
+            <span className={styles.printImage}>
+              <Image src={PHOTO.stage.src} alt="" fill placeholder="blur" sizes="(max-width: 900px) 70vw, 460px" style={{ objectFit: "cover", objectPosition: "50% 40%" }} />
+            </span>
+            <span className={styles.printCaption}>The invitation</span>
+          </span>
+          <span className={`${styles.print} ${styles.printEmpty}`} style={{ "--tilt": "1.2deg" } as CSSProperties}>
             <span className={styles.printImage} />
+            <span className={styles.printCaption}>Yours, once approved</span>
           </span>
         </div>
       )}
