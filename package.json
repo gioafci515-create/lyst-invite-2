@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:e2e": "node --import ./tests/e2e/fake-clock.mjs node_modules/next/dist/bin/next start -p 3100",
     "lint": "eslint",
     "test": "node --test lib/eventState.test.ts",
     "test:e2e": "node tests/e2e/lifecycle.e2e.mjs",

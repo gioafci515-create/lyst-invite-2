@@ -1,9 +1,10 @@
 // Server-side behaviour: RSVP deadline, disabled modules, invalid config, and the preview write-guard.
-// Needs: the dev server on :3100 (uses the local data/kv.json, restored afterwards) and a production build (npm run build)
-// for the preview-guard part, which starts `next start` twice on :3102 / :3103.
+// Needs: the production server on :3100 (npm run build && npm run start:e2e; uses the local data/kv.json, restored afterwards)
+// The preview-guard part starts the same build twice more, on :3102 and :3103.
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { reporter, sleep } from "./helpers.mjs";
 
 const { ok, done } = reporter();
@@ -49,7 +50,14 @@ try {
   setCfg({ startsAt: "2026-11-14T19:13:00+01:00", endsAt: "2026-11-15T00:30:00+01:00", rsvpClosesAt: "2026-11-12T18:00:00+01:00" });
   ev = await J("/api/event");
   ok("normal config: real clock (days before) is 'before' from the schedule", ev.body.phase === "before" && ev.body.source === "schedule");
-  ok("response carries the server clock", typeof ev.body.now === "number" && Math.abs(ev.body.now - Date.now()) < 60_000);
+  // the server's own clock (it may be shifted for testing): a number that keeps time between two reads
+  {
+    const t0 = Date.now();
+    await sleep(1000);
+    const later = await J("/api/event");
+    const step = later.body.now - ev.body.now;
+    ok("response carries the server clock", typeof ev.body.now === "number" && step >= 900 && step <= Date.now() - t0 + 2000, `advanced ${step} ms`);
+  }
   setCfg({ startsAt: "garbage", endsAt: 5, override: "live", modules: { voice: "no" } });
   ev = await J("/api/event");
   ok("garbage config: still 200, flagged degraded, defaults used, never a live state", ev.status === 200 && ev.body.degraded === true && ev.body.startsAt === "2026-11-14T18:13:00.000Z" && ev.body.phase === "before" && ev.body.modules.voice === true, JSON.stringify(ev.body.startsAt));
@@ -68,6 +76,41 @@ try {
   ok("later off: something for later is refused (403)", l.status === 403, JSON.stringify(l.body));
   const v = await post("/api/contribute", { type: "voice", name: "t", text: "", meta: {} });
   ok("voice off: a voice submission is refused (403)", v.status === 403, JSON.stringify(v.body));
+
+  // a file sent through the server route is stored only after every check passed: refusals leave nothing behind
+  const UPLOADS = ROOT + "data/uploads";
+  const files = () => (fs.existsSync(UPLOADS) ? fs.readdirSync(UPLOADS).length : 0);
+  const multipart = (type, meta = {}) => {
+    const f = new FormData();
+    f.set("type", type);
+    f.set("name", "t");
+    f.set("meta", JSON.stringify(meta));
+    f.set("file", new Blob([Buffer.from("RIFF0000WAVEfmt ")], { type: type === "photo" ? "image/png" : "audio/wav" }), "t.bin");
+    return J("/api/contribute", { method: "POST", body: f });
+  };
+  const before = files();
+  const refused = [
+    ["voice (switched off)", await multipart("voice"), 403],
+    ["an unknown type", await multipart("bogus"), 400],
+    ["the retired 'later'", await multipart("later"), 410],
+  ];
+  setCfg({ modules: {}, override: "during" });
+  refused.push(["a capsule with a file", await multipart("capsule", { unlock: "2027-11-14" }), 400]);
+  refused.push(["a vote without a voter", await multipart("poll", { question: "q" }), 400]);
+  setCfg({ modules: {}, override: "before" });
+  refused.push(["a photo before the event", await multipart("photo"), 403]);
+  for (const [what, r, status] of refused) ok(`multipart ${what}: refused (${status})`, r.status === status, `${r.status} ${JSON.stringify(r.body)}`);
+  ok("none of those refused uploads left a file in storage", files() === before, `${before} -> ${files()}`);
+
+  // the task timeline follows the event's opening until the hosts set their own start
+  {
+    const db = backup ? JSON.parse(backup.toString()) : {};
+    delete db["tasks:start"];
+    db["event:config"] = { startsAt: "2026-11-14T19:00:00.000Z" };
+    fs.writeFileSync(KV, JSON.stringify(db, null, 2));
+    const t = await J("/api/tasks");
+    ok("no start set: the first task unlocks 20 minutes after the opening the hosts set", t.body.tasks[0]?.at === Date.parse("2026-11-14T19:20:00.000Z"), String(t.body.tasks[0]?.at && new Date(t.body.tasks[0].at).toISOString()));
+  }
   setCfg({ modules: {}, override: "during" });
   const q2 = await post("/api/contribute", { type: "question", name: "t", text: "hello?" });
   ok("all on, during the event: the same question is accepted", q2.status === 200, JSON.stringify(q2.body));
@@ -87,8 +130,12 @@ try {
 
 console.log("\n--- preview deployments never write to production data");
 const startedServers = [];
+// the extra servers run on the same clock as the one on :3100 (which may be shifted: npm run start:e2e), so the dates
+// they judge by match the rest of this suite
+const mainNow = (await J("/api/event")).body?.now;
+const CLOCK = { FAKE_NOW: Number.isFinite(mainNow) ? new Date(mainNow).toISOString() : "off" };
 const serve = (port, env) => {
-  const p = spawn(process.execPath, [ROOT + "node_modules/next/dist/bin/next", "start", "-p", String(port)], { cwd: ROOT, env: { ...process.env, ...env }, stdio: "ignore" });
+  const p = spawn(process.execPath, ["--import", pathToFileURL(ROOT + "tests/e2e/fake-clock.mjs").href, ROOT + "node_modules/next/dist/bin/next", "start", "-p", String(port)], { cwd: ROOT, env: { ...process.env, ...CLOCK, ...env }, stdio: "ignore" });
   startedServers.push(p);
   return p;
 };
@@ -110,6 +157,13 @@ try {
     ok("preview: the local data file was not touched either", hash() === before);
     const up2 = await J("/api/blob/upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "blob.generate-client-token", payload: { pathname: "x.jpg", callbackUrl: "http://x", clientPayload: null, multipart: false } }) }, PREVIEW);
     ok("preview: file uploads are refused (503) even though a Blob token is present", up2.status === 503, JSON.stringify(up2.body));
+    const f = new FormData();
+    f.set("type", "voice");
+    f.set("name", "t");
+    f.set("file", new Blob([Buffer.from("RIFF0000WAVE")], { type: "audio/wav" }), "t.wav");
+    // the reviewer's chapter switch puts the preview in the night, when voice takes files, whatever today's date is
+    const mp = await J("/api/contribute", { method: "POST", body: f, headers: { Cookie: "lyst_preview_chapter=during" } }, PREVIEW);
+    ok("preview: a file sent through the server route is refused with a clear 503, not a 500", mp.status === 503, `${mp.status} ${JSON.stringify(mp.body)}`);
     const c = await rsvp(CONTROL);
     ok("control: the SAME build without the preview flag tries the database and fails, proving the guard is what protects", c.status >= 500, "status " + c.status);
   }

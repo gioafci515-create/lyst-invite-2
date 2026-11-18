@@ -1,5 +1,5 @@
 // Captures individual screenshots of every phase on phone and desktop (run against a production build:
-// npm run build && npx next start -p 3100). Usage: node tests/e2e/capture.mjs [outDir]
+// npm run build && npm run start:e2e). Usage: node tests/e2e/capture.mjs [outDir]
 import fs from "node:fs";
 import { open, sleep, AT } from "./helpers.mjs";
 

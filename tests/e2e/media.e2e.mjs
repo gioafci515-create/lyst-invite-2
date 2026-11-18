@@ -2,7 +2,7 @@
 // settings, permission denied, upload failure and retry, success only after the server's OK, the 45-second video
 // limit, keyboard and target size. Uploads are answered by the TEST browser (helpers.mjs), so nothing is written;
 // the frame-count check sets data/kv.json and restores it afterwards.
-// Usage: start the app (npm run build && npx next start -p 3100), then: node tests/e2e/media.e2e.mjs
+// Usage: start the app (npm run build && npm run start:e2e), then: node tests/e2e/media.e2e.mjs
 import fs from "node:fs";
 import path from "node:path";
 import { open, sleep, AT, reporter, FAKE_MEDIA, denyMedia, seedStorage, clickByName, setFile, targetAudit } from "./helpers.mjs";

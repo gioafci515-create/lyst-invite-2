@@ -117,6 +117,31 @@ try {
   await submit("form[action] ");
   await go("/admin/event");
   ok("tasks scheduled after the end produce a visible warning (they no longer silently extend the evening)", /scheduled after the event ends/i.test(await body()));
+
+  console.log("\n--- too many wrong passwords close the login for a while");
+  {
+    const t2 = await launch({ port: 9891, w: 1280, h: 1000 });
+    try {
+      const q = t2.page;
+      await q.send("Page.enable");
+      await q.send("Network.enable");
+      await q.send("Network.setExtraHTTPHeaders", { headers: { "x-forwarded-for": "203.0.113.7" } });
+      await q.send("Page.navigate", { url: ORIGIN + "/admin/login" });
+      await sleep(2500);
+      const attempt = async (pw) => {
+        await q.ev(`(() => { const i = document.querySelector('input[name=password]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(pw)}); i.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('form').requestSubmit(); })()`);
+        await sleep(1400);
+        return q.ev(`(document.querySelector('[role=alert]') || {}).textContent || ''`);
+      };
+      const said = [];
+      for (let i = 0; i < 10; i++) said.push(await attempt("wrong-" + i));
+      ok("ten wrong passwords: each one is told 'Wrong password.'", said.every((s) => s === "Wrong password."), said.slice(-2).join(" | "));
+      const locked = await attempt(env.ADMIN_PASSWORD);
+      ok("then even the right password is refused for a while, with how long to wait", /Too many wrong passwords\. Try again in \d+ minutes?\./.test(locked) && (await q.ev("location.pathname")) === "/admin/login", locked);
+    } finally {
+      try { t2.page.close(); t2.browser.close(); t2.kill(); } catch {}
+    }
+  }
 } finally {
   if (backup) fs.writeFileSync(KV, backup);
   else if (fs.existsSync(KV)) fs.rmSync(KV);

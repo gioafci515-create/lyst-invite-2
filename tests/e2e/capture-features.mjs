@@ -1,5 +1,5 @@
 // Screenshots of the camera, voice and video screens in every state, phone and desktop (run against a production
-// build: npm run build && npx next start -p 3100). Uploads are answered by the test browser, nothing is written.
+// build: npm run build && npm run start:e2e). Uploads are answered by the test browser, nothing is written.
 // Usage: node tests/e2e/capture-features.mjs [outDir] [only: camera|voice|video]
 import fs from "node:fs";
 import { open, sleep, AT, photoMedia, denyMedia, seedStorage, clickByName } from "./helpers.mjs";

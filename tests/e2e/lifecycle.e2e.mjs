@@ -1,7 +1,7 @@
 // Lifecycle, RSVP, enabled-modules, one-tap, routes, navigation, keyboard, typography and contrast checks, in a real
 // (headless) browser. The browser-side mocks (helpers.mjs) move the clock and switch modules off for the TEST browser only;
 // server-side gating is covered at the end with the real config (data/kv.json, restored afterwards).
-// Usage: start the app (npm run build && npx next start -p 3100), then: node tests/e2e/lifecycle.e2e.mjs
+// Usage: start the app (npm run build && npm run start:e2e: the server clock before the event), then: node tests/e2e/lifecycle.e2e.mjs
 import fs from "node:fs";
 import { open, sleep, AT, tappable, FEATURES, ROUTES, text, reporter, launch, ORIGIN, pinTaskSchedule } from "./helpers.mjs";
 
