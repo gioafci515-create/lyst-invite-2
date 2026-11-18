@@ -29,8 +29,10 @@ They are distinct again, each under its own switch:
 ## Files here
 
 - `chapters/`: the home page in each chapter, whole page, desktop 1440 and phone 390, plus first screens at 2x.
+  `III-memory-before-approval-*` is the memory chapter before the hosts approve any photo: the invitation's own
+  photograph beside a blank print ("Yours, once approved").
 - `screens/`: camera, voice, video, live room, tasks, for later, details, gallery and time capsule, phone (2x) and
-  desktop.
+  desktop. `time-capsule-sealed-*` is a capsule this phone sealed, with the days until it opens.
 - `walkthrough-phone.mp4`: a real browser recording of the journey on a production build (see the script header in
   `tests/e2e/record-walkthrough.mjs`).
 
@@ -44,9 +46,13 @@ It answers 404 anywhere else.
 
 ## Test results (production build, local store, put back byte for byte after every run)
 
-Final build: lifecycle 276/276, experience 42/42, living 33/33. On the build before the last change (one component,
-the memory chapter's gallery read): unit 28/28, server 24/24, motion 47/47, fixes 59/59, moments 39/39, media 75/75,
-rooms 43/43, admin 22/22. Typecheck, lint and build clean. The 28 captures here: no sideways overflow, no page errors.
+Final build (memory before approval, photo placeholders, the sealed capsule's count): lifecycle 276/276, admin 22/22,
+living 33/33, server 24/24, motion 47/47, experience 42/42, fixes 59/59, moments 39/39, media 75/75, rooms 43/43,
+unit 28/28. Typecheck, lint and build clean. The 32 captures here: no sideways overflow, no page errors.
+
+Lifecycle, admin, living and server assume the server's date is before the event (14 November 2026). After that date,
+12 of their checks fail for that reason alone; they were run with the server's clock set to 12 November (a test-only
+`--import` preload that shifts `Date`). The captures use the same server.
 
 Not verified: real phones (camera, microphone, uploads to Vercel Blob, the buzz, the fold animation's smoothness on
 low-end devices), real screen readers, the preview deployment's own storage settings beyond what its responses show.

@@ -6,6 +6,16 @@ import path from "node:path";
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CHROME = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
+/** browsers still running: closed when the test process ends, however it ends */
+const LIVE = new Set();
+process.once("exit", () => {
+  for (const p of LIVE) {
+    try {
+      p.kill();
+    } catch {}
+  }
+});
+
 /** minimal CDP client: launch(), page.send(), page.ev(), browser.send() */
 export async function launch({ port = 9300, w = 390, h = 844, flags = [] } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cdp-"));
@@ -45,5 +55,14 @@ export async function launch({ port = 9300, w = 390, h = 844, flags = [] } = {})
   const page = await mk(list.find((t) => t.type === "page").webSocketDebuggerUrl);
   const browser = await mk(ver.webSocketDebuggerUrl);
   await page.send("Runtime.enable");
+  // killing the browser also removes its throwaway profile (each one is tens of MB; left behind, they fill the disk)
+  const removeProfile = () => {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch {}
+  };
+  proc.once("exit", removeProfile);
+  LIVE.add(proc);
+  proc.once("exit", () => LIVE.delete(proc));
   return { page, browser, connect: mk, kill: () => { try { proc.kill(); } catch {} } };
 }

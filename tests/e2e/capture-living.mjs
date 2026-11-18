@@ -123,9 +123,21 @@ try {
   for (const [name, path, extra] of [
     ["gallery", "/gallery", { stub: gallery.length ? { "/api/gallery": gallery } : undefined }],
     ["time-capsule", "/capsule", {}],
+    // this phone sealed one: the days until it opens
+    ["time-capsule-sealed", "/capsule", { init: seedStorage({ lyst_capsule: JSON.stringify({ name: "UN/FOLD, a year on", day: "2027-11-14" }) }) }],
   ]) {
     await shoot(`screens/${name}-phone`, { path, now: AT.after, ...PHONE, dsf: 2, ...extra });
     await shoot(`screens/${name}-desktop`, { path, now: AT.after, ...DESK, ...extra });
+  }
+
+  /* ---------- the memory before the hosts approve anything (a store without contributions) ---------- */
+  {
+    const d = db();
+    delete d.contribs;
+    save(d);
+    phase("after");
+    await shoot("chapters/III-memory-before-approval-phone", { path: "/", now: AT.after, ...PHONE, dsf: 2 });
+    await shoot("chapters/III-memory-before-approval-desktop", { path: "/", now: AT.after, ...DESK });
   }
 } finally {
   fs.writeFileSync(KV, backup);
