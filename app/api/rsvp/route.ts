@@ -1,5 +1,6 @@
 import { saveRsvp } from "@/lib/store";
 import { getEventState } from "@/lib/eventConfig";
+import { GUESTS_MAX, MEALS } from "@/lib/limits";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -32,8 +33,9 @@ export async function POST(req: Request) {
       attending,
       companion: clean(body.companion, 100),
       dietary: clean(body.dietary, 500),
-      guests: Math.min(10, Math.max(1, Math.floor(Number(body.guests)) || 1)),
-      meal: clean(body.meal, 50),
+      guests: Math.min(GUESTS_MAX, Math.max(1, Math.floor(Number(body.guests)) || 1)),
+      // one of the menus on the form, or none
+      meal: MEALS.includes(clean(body.meal, 50)) ? clean(body.meal, 50) : "",
       requests: clean(body.requests, 500),
     });
   } catch (e) {

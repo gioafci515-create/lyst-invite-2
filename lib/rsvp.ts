@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
+import { GUESTS_MAX, MEALS } from "./limits";
 
 /**
  * One reply, one shape: the quick form on the invitation and the details screen both read and write this, the server
@@ -20,8 +21,7 @@ export type Reply = {
   requests: string;
 };
 
-export const MEALS = ["Garden menu", "Fish", "Children's"];
-export const GUESTS_MAX = 10;
+export { GUESTS_MAX, MEALS } from "./limits";
 
 export const EMPTY_REPLY: Reply = { attending: "accept", name: "", email: "", guests: 1, companion: "", meal: "", dietary: "", requests: "" };
 

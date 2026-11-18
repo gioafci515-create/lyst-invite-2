@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, createElement, useContext, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
-import { computeEventState, countdownLabel, DEFAULT_CONFIG, MODULE_IDS, type EventConfig, type EventState, type ModuleId, type Phase } from "./eventState";
+import { computeEventState, countdownLabel, DEFAULT_CONFIG, MODULE_IDS, type EventConfig, type EventState, type ModuleId, type Phase, type Wire } from "./eventState";
 
 /** What the browser knows about the event. The server stays authoritative: this is re-fetched every 20 s and on focus. */
 export type EventView = {
@@ -26,7 +26,7 @@ export type EventView = {
   now: number;
 };
 
-export type Wire = EventState & { now: number };
+export type { Wire } from "./eventState";
 const CACHE = "lyst_event_v1";
 
 const SERVER_VIEW: EventView = {

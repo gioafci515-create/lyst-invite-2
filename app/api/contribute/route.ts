@@ -1,5 +1,6 @@
 import { addContribution, castVote, GALLERY_TYPES, LEGACY_LATER, newOwnerKey, TYPES, type ContribType } from "@/lib/contrib";
 import { isBlobUrl, MAX_FILE, MEDIA_MIME, storeBuffer, type MediaFile } from "@/lib/media";
+import { isGuardedPreview } from "@/lib/previewGuard";
 
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const fail = (error: string, status: number) => Response.json({ error }, { status });
@@ -26,6 +27,9 @@ export async function POST(req: Request) {
     let text: string;
     let meta: Record<string, string>;
     let file: MediaFile | undefined;
+    // a file sent through this route is held here and stored only once every check below has passed, so a refused
+    // submission never leaves a file behind
+    let upload: { data: File; name: string; mime: string } | undefined;
 
     if ((req.headers.get("content-type") ?? "").includes("application/json")) {
       const body = await req.json().catch(() => null);
@@ -63,7 +67,7 @@ export async function POST(req: Request) {
         if (f.size > MAX_FILE) return fail("File is too large (25 MB max).", 413);
         const mime = f.type.split(";")[0];
         if (!MEDIA_MIME.test(mime)) return fail("Unsupported file type.", 415);
-        file = await storeBuffer(Buffer.from(await f.arrayBuffer()), clean(f.name, 120) || "upload", mime);
+        upload = { data: f, name: clean(f.name, 120) || "upload", mime };
       }
     }
 
@@ -98,7 +102,8 @@ export async function POST(req: Request) {
         if (slot !== "open") return fail(captureRefusal(slot, state), 403);
       }
     }
-    if (!text && !file && !Object.keys(meta).length) return fail("Nothing to submit.", 400);
+    const hasFile = !!file || !!upload;
+    if (!text && !hasFile && !Object.keys(meta).length) return fail("Nothing to submit.", 400);
 
     // for later: sealed until the day the guest picked (default: a year after the event), even for the hosts
     let openAt: string | undefined;
@@ -118,7 +123,7 @@ export async function POST(req: Request) {
     // time capsule: a name for the archive and the day it opens (within the same bounds as "for later"); nothing else
     if (type === "capsule") {
       if (!text) return fail("Give the capsule a name first. Nothing was saved.", 400);
-      if (file) return fail("A capsule holds a name and a day only. Nothing was saved.", 400);
+      if (hasFile) return fail("A capsule holds a name and a day only. Nothing was saved.", 400);
       const { getEventConfig } = await import("@/lib/eventConfig");
       const { forLaterBounds } = await import("@/lib/eventState");
       const b = forLaterBounds((await getEventConfig()).config);
@@ -131,6 +136,12 @@ export async function POST(req: Request) {
     if (type === "poll") {
       if (!meta.voter || !meta.question || !meta.choice) return fail("Invalid vote.", 400);
       if (!(await castVote(meta.question, meta.voter, meta.choice))) return fail("You have already voted.", 409);
+    }
+
+    // every check passed: only now does a file sent through this route reach storage
+    if (upload) {
+      if (isGuardedPreview()) return fail("Uploads are disabled on preview deployments, so production data is never touched. Nothing was saved.", 503);
+      file = await storeBuffer(Buffer.from(await upload.data.arrayBuffer()), upload.name, upload.mime);
     }
 
     // gallery media: the uploader's phone gets a key so it (and nobody else) can see its own upload while it waits for approval

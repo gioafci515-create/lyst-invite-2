@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { countByType, isGalleryMedia, isSealed, listContributions, TYPES } from "@/lib/contrib";
+import { getEventConfig } from "@/lib/eventConfig";
 import { removeContribution, setMediaApproval } from "../actions";
 import styles from "../admin.module.css";
 
@@ -30,6 +31,7 @@ async function List({ type }: { type?: string }) {
   const sealed = all.filter((r) => isSealed(r, now));
   const rows = all.filter((r) => !isSealed(r, now));
   const firstOpen = sealed.map((r) => r.openAt!).sort()[0];
+  const { timezone } = (await getEventConfig()).config;
 
   return (
     <main className={styles.page}>
@@ -50,7 +52,7 @@ async function List({ type }: { type?: string }) {
 
       {sealed.length > 0 && (
         <p className={styles.note} data-sealed={sealed.length}>
-          {sealed.length} sealed for later. Sealed until {new Date(firstOpen!).toLocaleDateString("en-GB", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", year: "numeric" })}
+          {sealed.length} sealed for later. Sealed until {new Date(firstOpen!).toLocaleDateString("en-GB", { timeZone: timezone, day: "numeric", month: "long", year: "numeric" })}
           {sealed.length > 1 ? " (the first one)" : ""}: you can&apos;t read {sealed.length > 1 ? "them" : "it"} before then. <Link href="/admin/capsule">See when each opens</Link>.
         </p>
       )}

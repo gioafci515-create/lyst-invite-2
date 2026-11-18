@@ -23,18 +23,16 @@ export function longDate(day: string): string {
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" });
 }
 
-/** time left until a yyyy-mm-dd date starts in the event's timezone, as "368 days, 4 hours" */
-export function untilDay(day: string, now: number): { ms: number; text: string } {
+/** time left until a yyyy-mm-dd date starts in the event's timezone (the hosts' setting), as "368 days, 4 hours" */
+export function untilDay(day: string, now: number, timeZone: string): { ms: number; text: string } {
   const [y, m, d] = day.split("-").map(Number);
-  // midnight at the start of that day in Rotterdam: the hosts' calendar, not the phone's
+  // midnight at the start of that day in the event's zone: the hosts' calendar, not the phone's
   const guess = Date.UTC(y, m - 1, d);
-  const offset = Number(
-    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", timeZoneName: "shortOffset" })
-      .formatToParts(new Date(guess))
-      .find((p) => p.type === "timeZoneName")
-      ?.value.replace("GMT", "") || 0,
-  );
-  const ms = Math.max(0, guess - offset * 3600_000 - now);
+  // "GMT+1", "GMT-3", "GMT+5:30" or plain "GMT"
+  const name = new Intl.DateTimeFormat("en-GB", { timeZone, timeZoneName: "shortOffset" }).formatToParts(new Date(guess)).find((p) => p.type === "timeZoneName")?.value ?? "";
+  const o = /([+-])(\d{1,2})(?::(\d{2}))?/.exec(name);
+  const offsetMin = o ? (o[1] === "-" ? -1 : 1) * (Number(o[2]) * 60 + Number(o[3] ?? 0)) : 0;
+  const ms = Math.max(0, guess - offsetMin * 60_000 - now);
   const days = Math.floor(ms / 864e5);
   const hours = Math.floor((ms % 864e5) / 36e5);
   const mins = Math.floor((ms % 36e5) / 6e4);

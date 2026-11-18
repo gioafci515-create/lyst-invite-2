@@ -1,10 +1,9 @@
 import { cache } from "react";
 import { connection } from "next/server";
 import { getEventState } from "./eventConfig";
-import type { EventState } from "./eventState";
+import type { Wire } from "./eventState";
 
-/** What the server hands the browser: the authoritative state plus the server clock. Same shape as GET /api/event. */
-export type Wire = EventState & { now: number };
+export type { Wire } from "./eventState";
 
 /**
  * The event state for this request, read on the server. Guest pages render from it directly, so the first paint already

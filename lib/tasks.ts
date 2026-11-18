@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { getKV } from "./kv";
 import { EVENT } from "./identity";
+import { getEventConfig } from "./eventConfig";
 
 /**
  * The rhythm of the night's tasks is a host setting (/admin/tasks), not a constant: how many minutes between two
@@ -28,8 +29,10 @@ export const notifyBody = (taskTitle: string, windowMin: number) =>
 export const REMIND_TITLE = `⏰ 1 min left to ${EVENT.name}`;
 export const remindBody = (taskTitle: string) => `${taskTitle} — everyone else is already in. Don't miss it.`;
 export const TIMEZONE: string = EVENT.timezone;
-/** first task unlocks 20 minutes after doors: Sat 14 Nov 2026, 19:33 Rotterdam time */
-export const DEFAULT_START = "2026-11-14T18:33:00.000Z";
+/** until the hosts start or move the timeline in /admin/tasks, the first task unlocks this long after the doors open */
+export const FIRST_TASK_AFTER_MIN = 20;
+/** the default timeline start, from the event's opening (a host setting in /admin/event), so moving the event moves it */
+export const defaultTaskStart = (startsAt: string) => new Date(Date.parse(startsAt) + FIRST_TASK_AFTER_MIN * 60_000).toISOString();
 
 export type TaskType = "photo" | "voice" | "text" | "video";
 
@@ -40,7 +43,7 @@ export type TaskDef = {
   count: number;
   title: string;
   text: string;
-  /** auto: unlocks on the 20-minute timeline. manual: only goes out when the hosts press send. */
+  /** auto: unlocks on the timeline (every intervalMin, a host setting). manual: only goes out when the hosts press send. */
   mode: "auto" | "manual";
 };
 
@@ -130,7 +133,7 @@ export async function clearTaskData(id: string): Promise<void> {
 
 export type TaskState = { start: string | null; defs: TaskDef[]; sentAt: Record<string, number>; timing: TaskTiming };
 
-const START = "tasks:start"; // ISO string; "" = stopped; missing = use DEFAULT_START
+const START = "tasks:start"; // ISO string; "" = stopped; missing = defaultTaskStart(the event's opening)
 const SENT_AT = "tasks:sentat"; // hash: task id -> the moment it went out (epoch ms)
 const REMINDED = "tasks:reminded"; // set of task ids already nudged
 const TIMING = "tasks:timing"; // { intervalMin, windowMin }; missing or invalid = DEFAULT_TIMING
@@ -149,15 +152,16 @@ export async function setTaskTiming(t: TaskTiming): Promise<boolean> {
 
 export async function getTaskState(): Promise<TaskState> {
   const kv = getKV();
-  const [start, defs, sent, timing] = await Promise.all([
+  const [start, defs, sent, timing, { config }] = await Promise.all([
     kv.get<string>(START),
     getTaskDefs(),
     kv.hgetall<number | string>(SENT_AT),
     getTaskTiming(),
+    getEventConfig(),
   ]);
   const sentAt: Record<string, number> = {};
   for (const [k, v] of Object.entries(sent)) if (Number.isFinite(Number(v))) sentAt[k] = Number(v);
-  return { start: start === null ? DEFAULT_START : start === "" ? null : start, defs, sentAt, timing };
+  return { start: start === null ? defaultTaskStart(config.startsAt) : start === "" ? null : start, defs, sentAt, timing };
 }
 
 /** change the start time (or stop with null); clears which tasks were already sent */

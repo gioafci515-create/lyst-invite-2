@@ -102,7 +102,7 @@ export default function CapsuleScreen() {
   }
 
   if (sealed) {
-    const left = sealed !== "unknown" && now ? untilDay(sealed.day, now) : null;
+    const left = sealed !== "unknown" && now ? untilDay(sealed.day, now, ev.timezone) : null;
     return (
       <div className={r.screen} data-capsule="sealed">
         <SealedCard

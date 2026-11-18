@@ -4,11 +4,13 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { isAdmin } from "@/lib/auth";
 import { isSealed, LEGACY_LATER, listContributions } from "@/lib/contrib";
+import { getEventConfig } from "@/lib/eventConfig";
 import styles from "../admin.module.css";
 
 export const metadata: Metadata = { title: "Sealed for later — LYST admin", robots: { index: false } };
 
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { timeZone: "Europe/Amsterdam", weekday: "long", day: "numeric", month: "long", year: "numeric" });
+/** the day a message opens, on the event's calendar (the hosts' timezone setting) */
+const dayIn = (iso: string, timeZone: string) => new Date(iso).toLocaleDateString("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
 /**
  * The archive, as the hosts may see it: what is sealed, how many, and when each opens. Never the content: a "for later"
@@ -17,6 +19,8 @@ const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { timeZon
 async function Archive() {
   if (!(await isAdmin())) redirect("/admin/login");
   const now = new Date().getTime();
+  const { timezone } = (await getEventConfig()).config;
+  const day = (iso: string) => dayIn(iso, timezone);
   const all = await listContributions();
   const forLater = all.filter((r) => r.type === "forlater");
   const sealed = forLater.filter((r) => isSealed(r, now));
@@ -25,7 +29,7 @@ async function Archive() {
   for (const r of sealed) byDay.set(r.openAt!, (byDay.get(r.openAt!) ?? 0) + 1);
   const days = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b));
   const legacy = LEGACY_LATER.map((t) => [t, all.filter((r) => r.type === t).length] as const).filter(([, n]) => n > 0);
-  const legacyName: Record<string, string> = { letter: "letters from the live room", later: "messages for later", capsule: "time capsules" };
+  const legacyName: Record<string, string> = { later: "messages for later" };
 
   return (
     <main className={styles.page}>

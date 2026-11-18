@@ -2,14 +2,18 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { checkPassword, createSession, destroySession, isAdmin } from "@/lib/auth";
+import { checkPassword, clearLoginFailures, createSession, destroySession, isAdmin, loginLockedFor, recordLoginFailure } from "@/lib/auth";
 import { deleteRsvp } from "@/lib/store";
 import type { EventConfig, ProgrammeItem } from "@/lib/eventState";
 
 export async function login(_prev: { error?: string } | undefined, formData: FormData) {
+  const wait = await loginLockedFor();
+  if (wait) return { error: `Too many wrong passwords. Try again in ${wait} minute${wait === 1 ? "" : "s"}.` };
   if (!checkPassword(String(formData.get("password") ?? ""))) {
+    await recordLoginFailure();
     return { error: "Wrong password." };
   }
+  await clearLoginFailures();
   await createSession();
   redirect("/admin");
 }

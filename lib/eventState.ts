@@ -171,6 +171,9 @@ export type EventState = {
   next: { at: string; to: Phase } | null;
 };
 
+/** What the server hands the browser: the authoritative state plus the server clock (GET /api/event, and the first paint). */
+export type Wire = EventState & { now: number };
+
 /** Phase and RSVP state at an instant. `now` is epoch ms from the SERVER clock. */
 export function computeEventState(cfg: EventConfig, now: number): EventState {
   const start = Date.parse(cfg.startsAt);
