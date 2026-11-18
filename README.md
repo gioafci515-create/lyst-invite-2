@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# UN/FOLD 2026: the living invitation
 
-## Getting Started
+The invitation site for UN/FOLD 2026 (LYST). One invitation that lives through the event in three chapters: the
+invitation before the night, the night itself, and the memory after it. Guests reply, take part during the evening
+(camera, voice, video, live room, tasks with phone alerts) and find the gallery, their messages "for later" and the time
+capsule afterwards. The hosts run everything from `/admin`.
 
-First, run the development server:
+Built with Next.js 16 (App Router), React 19 and TypeScript; deployed on Vercel with Upstash Redis and Vercel Blob.
+
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev            # http://localhost:3000, no accounts needed (data in ./data, uploads on disk)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.example` to `.env.local` and fill in at least `ADMIN_PASSWORD` and `ADMIN_SECRET` to use `/admin`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Check it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsc --noEmit && npm run lint && npm test && npm run build
+npm run start:e2e      # the production build on :3100, server clock at 12 Nov 2026 (FAKE_NOW to change it)
+node tests/e2e/lifecycle.e2e.mjs   # and the other suites in tests/e2e/
+```
 
-## Learn More
+## Where to read more
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [BLUEPRINT.md](BLUEPRINT.md): how it is built, the repository map, every recipe and trap, the QA protocol.
+- [DEPLOY.md](DEPLOY.md): putting it on Vercel, step by step, and changing settings later.
+- [docs/redesign-review/](docs/redesign-review/): screenshots and notes from each review round.
+- [AGENTS.md](AGENTS.md): this Next.js version differs from older ones; read its docs in `node_modules/next/dist/docs/`.
