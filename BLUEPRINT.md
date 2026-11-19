@@ -90,6 +90,7 @@ lib/
   submit.ts       client upload pipeline (shrink, direct or server route, task crediting)
   taskProgress.ts per-device task progress     useTasks / useLive / usePush / useMoments / useClient  client hooks
 public/sw.js      service worker (shows pushes, opens the site on tap)     public/icons  PWA icons
+public/images/    the event's own photographs (gallery1–3, shard, story-mobile); photos/ = CC0 photos, CREDITS.md
 tests/e2e/        the browser suites, captures and the walkthrough recorder (section 10)
 docs/redesign-review/  screenshots and notes for each review round (v2 … v6)
 ```
@@ -264,12 +265,22 @@ The chapter is the phase, for every screen at once, from the first paint:
 
 | Chapter | Phase | Light | Home page |
 | --- | --- | --- | --- |
-| I. The invitation | before | daylight: sand paper, ink type | the photograph as a folded print that opens once (first visit only), the lockup, the idea, the programme as large times, the reply as its own dark scene, practical details |
+| I. The invitation | before | daylight: sand paper, ink type | the photograph as a folded print that opens once (first visit only), the lockup, the idea as one sentence with three photographs beside it (under it on phones), the programme as large times, the press clock (days, hours, minutes, seconds to the doors) opening the reply as its own dark scene, practical details, a strip of what opens on the night |
 | II. The night | during | projection: ink ground, cream type, red = live, acid = what you did | a full-bleed stage for what is happening now (the open task, or the camera) with the night's actions docked along its foot |
 | III. The memory | after | developed print: cream ground, ink type | the hosts' word, what the night left (only counts above zero), the newest photographs as prints (before any are approved: the invitation's own photo beside a blank print), what this phone left, for later and the capsule |
 
 Every feature screen opens on its own photographic scene with its name set large, and takes the chapter's light.
 Big photos load from a blurred placeholder. Review rounds live in `docs/redesign-review/v*` with a README each.
+
+- **Photos.** Give every feature its own photograph (the first version reused five photos in about twenty places). Keep
+  photos out of running text: set into a line of type they break its rhythm and wrap badly; put them beside it.
+  Watch for other names in a photo (a bar's neon sign, a shop front): on an invitation they read as part of the event.
+- **More photos, legally.** Openverse (`api.openverse.org/v1/images/?q=…&license=cc0,pdm&category=photograph`, no key)
+  finds CC0 photos; rawpixel serves them openly (~1024 px WebP). Unsplash's search needs a key and StockSnap blocks
+  direct downloads: don't work around either. Keep a `CREDITS.md` next to the files.
+- **The press clock** counts on the server's clock; it sits right above the reply scene. If chapter I is still shown
+  after the doors opened (a preview, or the hosts kept it), it rests at 00:00:00 and says "The doors are open".
+- **Opening banners** have a minimum height, not a fixed one, so a two-line name on a short screen is never clipped.
 
 ## 8. Deployment checklist (Vercel)
 
@@ -312,6 +323,8 @@ From the terminal (Vercel CLI, logged in): `vercel link` fails non-interactively
 | Hydration mismatch (console exception) | something browser-only decided during render (`document.fullscreenEnabled`, `localStorage`, `Date.now`) → state + effect, or `useSyncExternalStore` |
 | React "two children with the same key" | two sibling elements used the same counter as key → prefix keys (`blink-1`, `hold-1`) |
 | Two `<h1>` on the page | the Figma hero had its own → keep exactly one |
+| "The timer is gone" when reviewing chapter I after the event date | it returned nothing once the start had passed → keep it in place at zero with an honest label |
+| A long screen name clipped at the top on short laptop screens | the opening banner had a fixed height → `min-height` |
 | Sealed capsule could be sealed again after reload | remember it in localStorage |
 | Empty `<input type=date>` produced `Invalid Date`/`NaN` | ignore empty values in `onChange` |
 | Misleading placeholder copy ("ready to open" while sealed, a fake `00:38` timer) | audit all design copy that implies state |
@@ -417,6 +430,8 @@ browser, so most suites write nothing.
   instead of needing the fake clock.
 - Approved media can stay visible for up to an hour after it is unapproved (browser cache); use a shorter `max-age`
   or versioned URLs if that matters.
+- The browser suites wait fixed times (5–7 s) for the page; under load (e.g. the first run after a build, while the
+  server resizes new photos) a dozen checks fail and pass on a rerun. Wait for a condition instead of a time.
 - Merge `review/living-invitation` (and the branches under it) into `main` once the owner approves the review.
 - Optional extras discussed: gallery locked until the guest has posted (BeReal), simultaneous front+back capture,
   multiple polls with history, poll-as-a-task, a projector view for live results.
