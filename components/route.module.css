@@ -68,7 +68,9 @@
 .scene {
   position: relative;
   isolation: isolate;
-  height: clamp(150px, 24svh, 300px);
+  /* at least this tall, and taller when a long name wraps to two lines on a short screen (never clipped) */
+  min-height: clamp(150px, 24svh, 300px);
+  padding-top: 24px;
   display: flex;
   align-items: flex-end;
   overflow: hidden;

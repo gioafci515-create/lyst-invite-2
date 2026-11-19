@@ -19,9 +19,10 @@ const UNITS = [
 const DIGIT = { minWidth: "0.64em" };
 
 /**
- * The press clock under the invitation: days, hours, minutes and seconds until the doors open, each digit rolling to
- * its next value. It counts on the server's clock (corrected for this phone), so it is the same on every phone; until
- * the server has answered it shows nothing rather than a guess. Gone once the evening starts (the page folds to tonight).
+ * The press clock that opens the reply scene: days, hours, minutes and seconds until the doors open, each digit rolling
+ * to its next value. It counts on the server's clock (corrected for this phone), so it is the same on every phone; until
+ * the server has answered it shows nothing rather than a guess. When the evening starts the page folds to tonight; if the
+ * invitation is still shown after that, the clock rests at zero.
  * Screen readers get one sentence, updated by the minute, never a voice reading seconds.
  */
 export default function Countdown() {
@@ -39,8 +40,11 @@ export default function Countdown() {
   // first paint (server and browser alike): the server's own clock from the page it rendered, so the band is there
   // from the start and nothing below it jumps; then the corrected clock, every second
   const t = now || ev.now;
-  const left = t ? Date.parse(ev.startsAt) - t : 0;
-  if (ev.phase !== "before" || left <= 0) return null;
+  if (ev.phase !== "before" || !t) return null;
+  // the invitation can still be showing once the doors have opened (the hosts kept it, or a preview shows chapter I):
+  // the clock stays in its place at zero and says so, rather than disappearing
+  const left = Math.max(0, Date.parse(ev.startsAt) - t);
+  const open = left === 0;
 
   const parts = UNITS.map(([unit, ms], i) => [unit, Math.floor((i === 0 ? left : left % UNITS[i - 1][1]) / ms)] as const);
   const shown = parts[0][1] > 0 ? parts : parts.slice(1);
@@ -53,13 +57,14 @@ export default function Countdown() {
         <div className={s.head}>
           <h2 id="countdown-title" className={s.label}>
             <span className={s.dot} aria-hidden />
-            Doors open in
+            {open ? "The doors are open" : "Doors open in"}
           </h2>
           <p className={s.at}>
+            {open ? "Since " : ""}
             {timeLabel(ev.startsAt, ev.timezone)} {zoneLabel(ev.timezone)}
           </p>
         </div>
-        <p className="sr-only">{words}.</p>
+        <p className="sr-only">{open ? "The doors are open." : `${words}.`}</p>
         <div className={s.clock} aria-hidden>
           {shown.map(([unit, n], i) => (
             <Fragment key={unit}>

@@ -30,6 +30,8 @@ const SCENES = [
   { src: "/images/gallery2.png", alt: "Dancer in red walking over projected letters" },
   { src: "/images/gallery3.png", alt: "Audience seated in the former print works" },
   { src: "/images/story-mobile.png", alt: "Performers in front of projected type" },
+  { src: "/images/photos/press-newsprint.webp", alt: "Bundles of newsprint stacked high, tied with string" },
+  { src: "/images/photos/print-poster.webp", alt: "An old printer's poster: Royal Victoria lithographic and copper-plate printing booth" },
 ];
 
 /**
@@ -37,11 +39,11 @@ const SCENES = [
  * to five words. Not links: nothing here works before the doors open.
  */
 const TEASER: { module: ModuleId; what: string; line: (frames: number) => string; src: string; pos: string }[] = [
-  { module: "camera", what: "Disposable camera", line: (n) => `${n} frames. One night.`, src: "/images/gallery2.png", pos: "50% 30%" },
-  { module: "tasks", what: "Tasks", line: () => "Small missions, one by one.", src: "/images/gallery1.png", pos: "50% 40%" },
-  { module: "voice", what: "Voice guestbook", line: () => "Leave a voice.", src: "/images/story-mobile.png", pos: "50% 30%" },
+  { module: "camera", what: "Disposable camera", line: (n) => `${n} frames. One night.`, src: "/images/photos/camera-folding.webp", pos: "40% 50%" },
+  { module: "tasks", what: "Tasks", line: () => "Small missions, one by one.", src: "/images/photos/neon-street.webp", pos: "50% 50%" },
+  { module: "voice", what: "Voice guestbook", line: () => "Leave a voice.", src: "/images/photos/mic-spotlight.webp", pos: "55% 50%" },
   { module: "video", what: "Video message", line: () => "Forty-five seconds on film.", src: "/images/shard.png", pos: "50% 35%" },
-  { module: "live", what: "Live room", line: () => "Rewrite the ending.", src: "/images/gallery3.png", pos: "50% 50%" },
+  { module: "live", what: "Live room", line: () => "Rewrite the ending.", src: "/images/photos/hall-crowd.webp", pos: "50% 50%" },
 ];
 
 /** "Opens Sat 14 Nov, 19:13", in the event timezone, from the server's start time */
@@ -335,14 +337,6 @@ function Rsvp() {
   );
 }
 
-/** A photograph set into the line of type, at the height of the letters. Decorative: the sentence says it all. */
-function Inline({ src, pos = "50% 50%", wide = false }: { src: string; pos?: string; wide?: boolean }) {
-  return (
-    <span className={`${styles.inline} ${wide ? styles.inlineWide : ""}`} aria-hidden>
-      <Image src={src} alt="" fill quality={90} sizes="(max-width: 900px) 30vw, 220px" style={{ objectFit: "cover", objectPosition: pos }} />
-    </span>
-  );
-}
 
 /**
  * The opening photograph as a folded print: one leaf, folded over along the crease, opens flat on a guest's first visit
@@ -368,22 +362,24 @@ function Sheet({ firstVisit }: { firstVisit: boolean }) {
   );
 }
 
-/** Where the photographs sit in the event's one-line story: a quarter in, past halfway, and at the end. */
+/** The three photographs beside the event's one-line story: a tall one and two below each other. */
 const STORY_PHOTOS = [
-  { at: 0.2, src: "/images/gallery1.png", pos: "50% 40%", wide: false },
-  { at: 0.55, src: "/images/gallery2.png", pos: "50% 28%", wide: true },
-  { at: 1, src: "/images/gallery3.png", pos: "50% 50%", wide: false },
+  { src: "/images/gallery2.png", pos: "50% 28%" },
+  { src: "/images/photos/type-wood.webp", pos: "50% 50%" },
+  { src: "/images/photos/hall-crowd.webp", pos: "50% 45%" },
 ];
 
-/** The event's line (lib/identity.ts), with approved photographs set between its words. */
-function StoryLine({ text }: { text: string }) {
-  const words = text.split(" ");
-  const out: React.ReactNode[] = [];
-  words.forEach((w, i) => {
-    out.push(i ? " " + w : w);
-    for (const ph of STORY_PHOTOS) if (Math.max(1, Math.round(ph.at * words.length)) === i + 1) out.push(" ", <Inline key={ph.src} src={ph.src} pos={ph.pos} wide={ph.wide} />);
-  });
-  return <>{out}</>;
+/** The photographs beside the sentence (on phones, under it). Decorative: the sentence says it all. */
+function StoryPhotos() {
+  return (
+    <div className={styles.storyPhotos} aria-hidden>
+      {STORY_PHOTOS.map((ph, i) => (
+        <span key={ph.src} className={styles.storyPhoto} data-n={i}>
+          <Image src={ph.src} alt="" fill quality={90} sizes={i === 0 ? "(max-width: 900px) 50vw, 22vw" : "(max-width: 900px) 50vw, 16vw"} style={{ objectFit: "cover", objectPosition: ph.pos }} />
+        </span>
+      ))}
+    </div>
+  );
 }
 
 /** The invitation: everything a guest needs before the night, in the order they need it. */
@@ -471,12 +467,13 @@ export default function InviteScreen() {
         </div>
       </section>
 
-      <Countdown />
-
       <section id={SECTION.story} className={styles.story} aria-labelledby="story-title" data-reveal>
-        <h2 id="story-title" className={styles.storyLine}>
-          <StoryLine text={EVENT.tagline} />
-        </h2>
+        <div className={styles.storyGrid}>
+          <h2 id="story-title" className={styles.storyLine}>
+            {EVENT.tagline}
+          </h2>
+          <StoryPhotos />
+        </div>
         <Carousel slides={SCENES} label="The invitation, in scenes" />
       </section>
 
@@ -509,6 +506,8 @@ export default function InviteScreen() {
         <ScheduleList />
       </section>
 
+      {/* the press clock opens the reply scene: how long until the doors, right above the answer */}
+      <Countdown />
       <Rsvp />
 
       <Essentials />

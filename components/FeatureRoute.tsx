@@ -1,10 +1,13 @@
 import { Suspense, ViewTransition, type ReactNode } from "react";
 import Image, { type StaticImageData } from "next/image";
-import gallery1 from "@/public/images/gallery1.png";
-import gallery2 from "@/public/images/gallery2.png";
 import gallery3 from "@/public/images/gallery3.png";
 import shard from "@/public/images/shard.png";
-import storyMobile from "@/public/images/story-mobile.png";
+import micSpotlight from "@/public/images/photos/mic-spotlight.webp";
+import hallCrowd from "@/public/images/photos/hall-crowd.webp";
+import neonStreet from "@/public/images/photos/neon-street.webp";
+import sealBlack from "@/public/images/photos/seal-black.webp";
+import sealRed from "@/public/images/photos/seal-red.webp";
+import pressNewsprint from "@/public/images/photos/press-newsprint.webp";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { CaptureKind, ModuleId } from "@/lib/eventState";
@@ -46,17 +49,21 @@ function Header({ title }: { title: string }) {
   );
 }
 
-/** Each feature's approved photograph (crops by object-position only; the images are untouched). */
+/**
+ * Each feature's own photograph (crops by object-position only; the images are untouched). The photos in
+ * public/images/photos are CC0 (credits in public/images/photos/CREDITS.md).
+ */
 const SCENE: Partial<Record<ModuleId, { src: StaticImageData; pos: string }>> = {
-  voice: { src: gallery1, pos: "50% 40%" },
+  voice: { src: micSpotlight, pos: "50% 45%" },
   video: { src: shard, pos: "50% 38%" },
-  live: { src: gallery3, pos: "50% 55%" },
+  live: { src: hallCrowd, pos: "50% 60%" },
   gallery: { src: gallery3, pos: "50% 40%" },
-  later: { src: gallery2, pos: "50% 26%" },
-  tasks: { src: storyMobile, pos: "50% 30%" },
-  capsule: { src: gallery3, pos: "50% 70%" },
+  later: { src: sealBlack, pos: "50% 48%" },
+  tasks: { src: neonStreet, pos: "50% 55%" },
+  capsule: { src: sealRed, pos: "50% 45%" },
 };
-const SCENE_DEFAULT = { src: gallery2, pos: "50% 30%" };
+/** details, programme, updates: the night's edition coming off the press */
+const SCENE_DEFAULT = { src: pressNewsprint, pos: "50% 50%" };
 
 /** The screen's opening scene: its photograph, its name set large (the h1 in the header says the same to assistive tech). */
 function Scene({ title, module }: { title: string; module?: ModuleId }) {
